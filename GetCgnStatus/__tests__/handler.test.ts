@@ -4,7 +4,10 @@ import { some } from "fp-ts/lib/Option";
 import { none } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { CgnPendingStatus, StatusEnum } from "../../generated/definitions/CgnPendingStatus";
+import {
+  CgnPendingStatus,
+  StatusEnum
+} from "../../generated/definitions/CgnPendingStatus";
 import { UserCgn } from "../../models/user_cgn";
 import { GetCgnStatusHandler } from "../handler";
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
@@ -16,35 +19,41 @@ const userCgnModelMock = {
 
 const aCgnStatus: CgnPendingStatus = {
   status: StatusEnum.PENDING
-}
+};
 const aUserCgn: UserCgn = {
   fiscalCode: aFiscalCode,
   status: aCgnStatus
-}
+};
 describe("GetCgnStatusHandler", () => {
   it("should return an internal error when a query error occurs", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() => fromLeft(new Error("Query Error")));
+    findLastVersionByModelIdMock.mockImplementationOnce(() =>
+      fromLeft(new Error("Query Error"))
+    );
     const handler = GetCgnStatusHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
   it("should return not found if no userCgn is found", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() => taskEither.of(none));
+    findLastVersionByModelIdMock.mockImplementationOnce(() =>
+      taskEither.of(none)
+    );
     const handler = GetCgnStatusHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorNotFound");
   });
 
   it("should return not found if no userCgn is found", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() => taskEither.of(some(aUserCgn)));
+    findLastVersionByModelIdMock.mockImplementationOnce(() =>
+      taskEither.of(some(aUserCgn))
+    );
     const handler = GetCgnStatusHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseSuccessJson");
-    if (response.kind === "IResponseSuccessJson"){
+    if (response.kind === "IResponseSuccessJson") {
       expect(response.value).toEqual({
         ...aCgnStatus
-      })
+      });
     }
   });
 });
