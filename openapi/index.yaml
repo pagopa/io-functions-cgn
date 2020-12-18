@@ -1,7 +1,7 @@
 swagger: "2.0"
 info:
   version: 1.1.0
-  title: IO Function API
+  title: IO Functions CGN API
   contact:
     name: IO team
     url: https://forum.italia.it/c/progetto-io
@@ -14,6 +14,27 @@ basePath: "/template"
 schemes:
   - https
 paths:
+  "/cgn/status/{fiscalCode}":
+    get:
+      operationId: getCgnStatus
+      summary: |
+        Get the CGN status details 
+        by the provided fiscal code
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
+      responses:
+        "200":
+          description: CGN status details.
+          schema:
+            $ref: "#/definitions/CgnStatus"
+        "401":
+          description: Wrong or missing function key.
+        "404":
+          description: No CGN found.
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
   "/echo/{input}":
     parameters:
       - name: input
@@ -39,7 +60,26 @@ paths:
         "404":
           description: Not found.
       parameters: []
+parameters:
+  FiscalCode:
+    name: fiscalcode
+    in: path
+    type: string
+    maxLength: 16
+    minLength: 16
+    required: true
+    description: The fiscal code of the user, all upper case.
+    pattern: "[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]"
+    x-example: SPNDNL80R13C555X
+
 definitions:
+  Timestamp:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/Timestamp"
+  FiscalCode:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/FiscalCode"
+  ProblemJson:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
+
   Input:
     type: object
     properties:
@@ -47,3 +87,58 @@ definitions:
         type: string
       output:
         type: string
+  CgnPendingStatus:
+    type: object
+    properties:
+      status:
+        type: string
+        x-extensible-enum:
+          - PENDING
+    required:
+      - status
+  CgnActivatedStatus:
+    type: object
+    properties:
+      status:
+        type: string
+        x-extensible-enum:
+          - ACTIVATED
+      activation_date:
+        $ref: "#/definitions/Timestamp"
+      expiration_date:
+        $ref: "#/definitions/Timestamp"
+    required:
+      - status
+  CgnRevokedStatus:
+    type: object
+    properties:
+      status:
+        type: string
+        x-extensible-enum:
+          - REVOKED
+      revokation_date:
+        $ref: "#/definitions/Timestamp"
+      motivation:
+        type: string
+    required:
+      - status
+      - revokation_date
+      - motivation
+  CgnCanceledStatus:
+    type: object
+    properties:
+      status:
+        type: string
+        x-extensible-enum:
+          - CANCELED
+    required:
+      - status
+  CgnStatus:
+    x-one-of: true
+    allOf:
+      - $ref: "#/definitions/CgnPendingStatus"
+      - $ref: "#/definitions/CgnActivatedStatus"
+      - $ref: "#/definitions/CgnRevokedStatus"
+      - $ref: "#/definitions/CgnCanceledStatus"
+
+      
