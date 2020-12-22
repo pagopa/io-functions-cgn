@@ -5,16 +5,21 @@
       "type": "httpTrigger",
       "direction": "in",
       "name": "req",
-      "route": "cgn/status/{fiscalcode}",
+      "route": "cgn/revoke/{fiscalCode}",
       "methods": [
-        "get"
+        "post"
       ]
     },
     {
       "type": "http",
       "direction": "out",
       "name": "res"
+    },
+    {
+      "name": "starter",
+      "type": "durableClient",
+      "direction": "in"
     }
   ],
-  "scriptFile": "../dist/GetCgnStatus/index.js"
+  "scriptFile": "../dist/RevokeCgn/index.js"
 }

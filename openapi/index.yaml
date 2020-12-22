@@ -35,6 +35,44 @@ paths:
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
+  "/cgn/revoke/{fiscalCode}":
+    post:
+      operationId: revokeCgn
+      summary: |
+        Revoke a CGN by the provided fiscal code
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
+        - in: body
+          name: motivation
+          schema:
+            $ref: "#/definitions/CgnRevokationRequest"
+      responses:
+        "201":
+          description: Request created.
+          schema:
+            $ref: "#/definitions/InstanceId"
+          headers:
+            Location:
+              type: string
+              description: |-
+                Location (URL) of created request resource.
+                A GET request to this URL returns the request status and details.
+        "202":
+          description: Processing request.
+          schema:
+            $ref: "#/definitions/InstanceId"
+        "401":
+          description: Wrong or missing function key.
+        "404":
+          description: No CGN found.
+        "409":
+          description: |
+            Cannot revoke the user's cgn because another revokation request was found
+            for this user
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
   "/echo/{input}":
     parameters:
       - name: input
@@ -140,5 +178,22 @@ definitions:
       - $ref: "#/definitions/CgnActivatedStatus"
       - $ref: "#/definitions/CgnRevokedStatus"
       - $ref: "#/definitions/CgnCanceledStatus"
+  CgnRevokationRequest:
+    type: object
+    properties:
+      motivation:
+        type: string
+    required:
+      - motivation
+  InstanceId:
+    type: object
+    properties:
+      id:
+        type: string
+        minLength: 1
+        description: The identifier of the created request.
+    required:
+      - id
+    
 
       
