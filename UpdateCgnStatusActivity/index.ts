@@ -27,4 +27,4 @@ const updateCgnStatusActivityHandler = getUpdateCgnStatusActivityHandler(
   userCgnModel
 );
 
-export default sendMessageActivityHandler;
+export default updateCgnStatusActivityHandler;
