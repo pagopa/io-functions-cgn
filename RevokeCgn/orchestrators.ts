@@ -8,13 +8,13 @@ import {
   ResponseSuccessAccepted
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { StatusEnum } from "../generated/definitions/CgnRevokedStatus";
 import {
   isOrchestratorRunning,
-  makeRevokeCgnOrchestratorId
+  makeUpdateCgnOrchestratorId
 } from "../utils/orchestrators";
-
 /**
- * Check if the current user has a pending dsu validation request.
+ * Check if the current user has a pending cgn status update process.
  */
 export const checkRevokeCgnIsRunning = (
   client: DurableOrchestrationClient,
@@ -22,7 +22,7 @@ export const checkRevokeCgnIsRunning = (
 ): TaskEither<IResponseErrorInternal | IResponseSuccessAccepted, false> =>
   isOrchestratorRunning(
     client,
-    makeRevokeCgnOrchestratorId(fiscalCode)
+    makeUpdateCgnOrchestratorId(fiscalCode, StatusEnum.REVOKED)
   ).foldTaskEither<IResponseErrorInternal | IResponseSuccessAccepted, false>(
     err =>
       fromLeft(

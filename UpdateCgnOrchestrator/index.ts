@@ -6,8 +6,16 @@ import * as df from "durable-functions";
 import { constVoid } from "fp-ts/lib/function";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { StatusEnum } from "../generated/definitions/CgnRevokedStatus";
+import { FiscalCode } from "italia-ts-commons/lib/strings";
+import {
+  CgnCanceledStatus,
+  StatusEnum as CanceledStatusEnum
+} from "../generated/definitions/CgnCanceledStatus";
+import {
+  CgnRevokedStatus,
+  StatusEnum as RevokedStatusEnum
+} from "../generated/definitions/CgnRevokedStatus";
+import { CgnStatus } from "../generated/definitions/CgnStatus";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import {
   ActivityInput,
@@ -19,7 +27,7 @@ import { internalRetryOptions } from "../utils/retry_policies";
 
 export const OrchestratorInput = t.interface({
   fiscalCode: FiscalCode,
-  revokeMotivation: NonEmptyString
+  newStatus: CgnStatus
 });
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
@@ -43,6 +51,17 @@ const trackExceptionAndThrow = (
   throw new Error(String(err));
 };
 
+const getMessageType = (cgnStatus: CgnStatus) => {
+  if (CgnRevokedStatus.is(cgnStatus)) {
+    return "CgnRevokedStatus";
+  }
+  if (CgnCanceledStatus.is(cgnStatus)) {
+    return "CgnCanceledStatus";
+  } else {
+    return "CgnActivatedStatus";
+  }
+};
+
 export const handler = function*(
   context: IOrchestrationFunctionContext,
   logPrefix: string = "RevokeCgnOrchestrator"
@@ -54,23 +73,17 @@ export const handler = function*(
 
   const input = context.df.getInput();
   const decodedInput = OrchestratorInput.decode(input).getOrElseL(e =>
-    trackExAndThrow(e, "cgn.revoke.exception.decode.input")
+    trackExAndThrow(e, "cgn.update.exception.decode.input")
   );
 
-  const fiscalCode = decodedInput.fiscalCode;
+  const { fiscalCode, newStatus } = decodedInput;
   const tagOverrides = {
     "ai.operation.id": fiscalCode,
     "ai.operation.parentId": fiscalCode
   };
 
-  const cgnStatus = {
-    motivation: decodedInput.revokeMotivation,
-    revokation_date: new Date(),
-    status: StatusEnum.REVOKED
-  };
-
   const updateCgnStatusActivityInput = ActivityInput.encode({
-    cgnStatus,
+    cgnStatus: newStatus,
     fiscalCode
   });
   const updateStatusResult = yield context.df.callActivityWithRetry(
@@ -82,10 +95,15 @@ export const handler = function*(
   const updateCgnResult = ActivityResult.decode(
     updateStatusResult
   ).getOrElseL(e =>
-    trackExAndThrow(e, "cgn.revoke.exception.decode.activityOutput")
+    trackExAndThrow(e, "cgn.update.exception.decode.activityOutput")
   );
 
-  if (updateCgnResult.kind === "SUCCESS") {
+  const hasSendMessageActivity = [
+    RevokedStatusEnum.REVOKED.toString(),
+    CanceledStatusEnum.CANCELED.toString()
+  ].includes(newStatus.status);
+
+  if (updateCgnResult.kind === "SUCCESS" && hasSendMessageActivity) {
     // sleep before sending push notification
     // so we can let the get operation stop the flow here
     yield context.df.createTimer(
@@ -93,7 +111,7 @@ export const handler = function*(
     );
 
     trackEventIfNotReplaying({
-      name: "cgn.revoke.timer",
+      name: "cgn.update.timer",
       properties: {
         id: fiscalCode,
         status: `${updateCgnResult.kind}`
@@ -101,7 +119,7 @@ export const handler = function*(
       tagOverrides
     });
 
-    const content = getMessage("CgnRevokedStatus", cgnStatus);
+    const content = getMessage(getMessageType(newStatus), newStatus);
     yield context.df.callActivityWithRetry(
       "SendMessageActivity",
       internalRetryOptions,
@@ -114,7 +132,7 @@ export const handler = function*(
   } else {
     trackExAndThrow(
       new Error("Cannot update CGN Status"),
-      "revokeCgn.exception.decode.activityOutput"
+      "cgn.update.exception.decode.activityOutput"
     );
   }
   context.df.setCustomStatus("COMPLETED");

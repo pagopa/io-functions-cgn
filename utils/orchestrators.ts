@@ -11,8 +11,10 @@ import { PromiseType } from "italia-ts-commons/lib/types";
  * The identifier for StartEligibilityCheckOrchestrator
  * @param fiscalCode the id of the requesting user
  */
-export const makeRevokeCgnOrchestratorId = (fiscalCode: FiscalCode) =>
-  `${fiscalCode}-REVOKE`;
+export const makeUpdateCgnOrchestratorId = (
+  fiscalCode: FiscalCode,
+  status: string
+) => `${fiscalCode}-${status}`;
 
 /**
  * Returns the status of the orchestrator augmented with an isRunning attribute

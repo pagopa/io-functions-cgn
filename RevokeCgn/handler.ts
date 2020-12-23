@@ -23,14 +23,17 @@ import {
   ResponseErrorNotFound,
   ResponseSuccessAccepted
 } from "italia-ts-commons/lib/responses";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { CgnCanceledStatus } from "../generated/definitions/CgnCanceledStatus";
 import { CgnRevokationRequest } from "../generated/definitions/CgnRevokationRequest";
-import { CgnRevokedStatus } from "../generated/definitions/CgnRevokedStatus";
+import {
+  CgnRevokedStatus,
+  StatusEnum
+} from "../generated/definitions/CgnRevokedStatus";
 import { CgnStatus } from "../generated/definitions/CgnStatus";
 import { UserCgnModel } from "../models/user_cgn";
-import { OrchestratorInput } from "../RevokeCgnOrchestrator";
-import { makeRevokeCgnOrchestratorId } from "../utils/orchestrators";
+import { OrchestratorInput } from "../UpdateCgnOrchestrator";
+import { makeUpdateCgnOrchestratorId } from "../utils/orchestrators";
 import { checkRevokeCgnIsRunning } from "./orchestrators";
 
 type ErrorTypes =
@@ -87,11 +90,15 @@ export function RevokeCgnHandler(
             tryCatch(
               () =>
                 client.startNew(
-                  "RevokeCgnOrchestrator",
-                  makeRevokeCgnOrchestratorId(fiscalCode),
+                  "UpdateCgnOrchestrator",
+                  makeUpdateCgnOrchestratorId(fiscalCode, StatusEnum.REVOKED),
                   OrchestratorInput.encode({
                     fiscalCode,
-                    revokeMotivation: revokationReq.motivation as NonEmptyString
+                    newStatus: {
+                      motivation: revokationReq.motivation,
+                      revokation_date: new Date(),
+                      status: StatusEnum.REVOKED
+                    }
                   })
                 ),
               toError
