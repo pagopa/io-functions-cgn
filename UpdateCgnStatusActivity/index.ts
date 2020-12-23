@@ -10,7 +10,6 @@
  */
 
 import { USER_CGN_COLLECTION_NAME, UserCgnModel } from "../models/user_cgn";
-import sendMessageActivityHandler from "../SendMessageActivity";
 import { getConfigOrThrow } from "../utils/config";
 import { cosmosdbClient } from "../utils/cosmosdb";
 import { getUpdateCgnStatusActivityHandler } from "./handler";
