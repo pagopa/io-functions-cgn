@@ -1,5 +1,4 @@
 import { TableService } from "azure-storage";
-import { array } from "fp-ts/lib/Array";
 import { toError } from "fp-ts/lib/Either";
 import { taskEither, tryCatch } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
