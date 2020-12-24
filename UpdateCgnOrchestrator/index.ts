@@ -1,6 +1,9 @@
 ﻿import { IOrchestrationFunctionContext } from "durable-functions/lib/src/classes";
 
-import { EventTelemetry } from "applicationinsights/out/Declarations/Contracts";
+import {
+  EventTelemetry,
+  ExceptionTelemetry
+} from "applicationinsights/out/Declarations/Contracts";
 import { addSeconds } from "date-fns";
 import * as df from "durable-functions";
 import { constVoid } from "fp-ts/lib/function";
@@ -71,6 +74,9 @@ export const handler = function*(
   const trackEventIfNotReplaying = (evt: EventTelemetry) =>
     context.df.isReplaying ? constVoid : trackEvent(evt);
 
+  const trackExceptionIfNotReplaying = (evt: ExceptionTelemetry) =>
+    context.df.isReplaying ? constVoid : trackException(evt);
+
   const input = context.df.getInput();
   const decodedInput = OrchestratorInput.decode(input).getOrElseL(e =>
     trackExAndThrow(e, "cgn.update.exception.decode.input")
@@ -82,58 +88,73 @@ export const handler = function*(
     "ai.operation.parentId": fiscalCode
   };
 
-  const updateCgnStatusActivityInput = ActivityInput.encode({
-    cgnStatus: newStatus,
-    fiscalCode
-  });
-  const updateStatusResult = yield context.df.callActivityWithRetry(
-    "UpdateCgnStatusActivity",
-    internalRetryOptions,
-    updateCgnStatusActivityInput
-  );
-
-  const updateCgnResult = ActivityResult.decode(
-    updateStatusResult
-  ).getOrElseL(e =>
-    trackExAndThrow(e, "cgn.update.exception.decode.activityOutput")
-  );
-
-  const hasSendMessageActivity = [
-    RevokedStatusEnum.REVOKED.toString(),
-    CanceledStatusEnum.CANCELED.toString()
-  ].includes(newStatus.status);
-
-  if (updateCgnResult.kind === "SUCCESS" && hasSendMessageActivity) {
-    // sleep before sending push notification
-    // so we can let the get operation stop the flow here
-    yield context.df.createTimer(
-      addSeconds(context.df.currentUtcDateTime, NOTIFICATION_DELAY_SECONDS)
+  try {
+    const updateCgnStatusActivityInput = ActivityInput.encode({
+      cgnStatus: newStatus,
+      fiscalCode
+    });
+    const updateStatusResult = yield context.df.callActivityWithRetry(
+      "UpdateCgnStatusActivity",
+      internalRetryOptions,
+      updateCgnStatusActivityInput
     );
 
-    trackEventIfNotReplaying({
-      name: "cgn.update.timer",
+    const updateCgnResult = ActivityResult.decode(
+      updateStatusResult
+    ).getOrElseL(e =>
+      trackExAndThrow(e, "cgn.update.exception.decode.activityOutput")
+    );
+
+    const hasSendMessageActivity = [
+      RevokedStatusEnum.REVOKED.toString(),
+      CanceledStatusEnum.CANCELED.toString()
+    ].includes(newStatus.status);
+
+    if (updateCgnResult.kind !== "SUCCESS") {
+      trackExAndThrow(
+        new Error("Cannot update CGN Status"),
+        "cgn.update.exception.failure.activityOutput"
+      );
+    }
+
+    if (hasSendMessageActivity) {
+      // sleep before sending push notification
+      // so we can let the get operation stop the flow here
+      yield context.df.createTimer(
+        addSeconds(context.df.currentUtcDateTime, NOTIFICATION_DELAY_SECONDS)
+      );
+
+      trackEventIfNotReplaying({
+        name: "cgn.update.timer",
+        properties: {
+          id: fiscalCode,
+          status: `${updateCgnResult.kind}`
+        },
+        tagOverrides
+      });
+
+      const content = getMessage(getMessageType(newStatus), newStatus);
+      yield context.df.callActivityWithRetry(
+        "SendMessageActivity",
+        internalRetryOptions,
+        SendMessageActivityInput.encode({
+          checkProfile: false,
+          content,
+          fiscalCode
+        })
+      );
+    }
+  } catch (err) {
+    context.log.error(`${logPrefix}|ERROR|${String(err)}`);
+    trackExceptionIfNotReplaying({
+      exception: err,
       properties: {
         id: fiscalCode,
-        status: `${updateCgnResult.kind}`
+        name: "cgn.update.error"
       },
       tagOverrides
     });
-
-    const content = getMessage(getMessageType(newStatus), newStatus);
-    yield context.df.callActivityWithRetry(
-      "SendMessageActivity",
-      internalRetryOptions,
-      SendMessageActivityInput.encode({
-        checkProfile: false,
-        content,
-        fiscalCode
-      })
-    );
-  } else {
-    trackExAndThrow(
-      new Error("Cannot update CGN Status"),
-      "cgn.update.exception.decode.activityOutput"
-    );
+    return false;
   }
   context.df.setCustomStatus("COMPLETED");
 };
