@@ -1,0 +1,16 @@
+{
+  "bindings": [
+    {
+        "schedule": "0 0 * * * *",
+        "name": "updateExpiredCgnTimer",
+        "type": "timerTrigger",
+        "direction": "in"
+    },
+    {
+      "name": "starter",
+      "type": "orchestrationClient",
+      "direction": "in"
+    }
+  ],
+  "scriptFile": "./index.js"
+}
