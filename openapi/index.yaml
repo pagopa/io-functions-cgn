@@ -1,7 +1,7 @@
 swagger: "2.0"
 info:
   version: 1.1.0
-  title: IO Function API
+  title: IO Functions CGN
   contact:
     name: IO team
     url: https://forum.italia.it/c/progetto-io
