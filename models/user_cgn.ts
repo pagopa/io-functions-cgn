@@ -9,7 +9,7 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { CgnStatus } from "../generated/definitions/CgnStatus";
 
 export const USER_CGN_COLLECTION_NAME = "user-cgns";
-export const USER_CGN_MODEL_PK_FIELD = "fiscalCode";
+export const USER_CGN_MODEL_PK_FIELD = "fiscalCode" as const;
 
 const UserCgn = t.interface({
   // The id of the user
@@ -43,6 +43,6 @@ export class UserCgnModel extends CosmosdbModelVersioned<
    *
    */
   constructor(container: Container) {
-    super(container, NewUserCgn, RetrievedUserCgn, "fiscalCode" as const);
+    super(container, NewUserCgn, RetrievedUserCgn, USER_CGN_MODEL_PK_FIELD);
   }
 }
