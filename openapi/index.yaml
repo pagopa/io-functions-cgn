@@ -70,10 +70,6 @@ definitions:
         type: string
         x-extensible-enum:
           - ACTIVATED
-      activation_date:
-        $ref: "#/definitions/Timestamp"
-      expiration_date:
-        $ref: "#/definitions/Timestamp"
     required:
       - status
   CgnRevokedStatus:
@@ -83,14 +79,8 @@ definitions:
         type: string
         x-extensible-enum:
           - REVOKED
-      revokation_date:
-        $ref: "#/definitions/Timestamp"
-      motivation:
-        type: string
     required:
       - status
-      - revokation_date
-      - motivation
   CgnCanceledStatus:
     type: object
     properties:
