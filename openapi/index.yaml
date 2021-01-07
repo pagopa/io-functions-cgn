@@ -40,6 +40,13 @@ paths:
           description: Not found.
       parameters: []
 definitions:
+  Timestamp:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/Timestamp"
+  FiscalCode:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/FiscalCode"
+  ProblemJson:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
+
   Input:
     type: object
     properties:
@@ -47,3 +54,56 @@ definitions:
         type: string
       output:
         type: string
+  CgnPendingStatus:
+    type: object
+    properties:
+      status:
+        type: string
+        x-extensible-enum:
+          - PENDING
+    required:
+      - status
+  CgnActivatedStatus:
+    type: object
+    properties:
+      status:
+        type: string
+        x-extensible-enum:
+          - ACTIVATED
+      activation_date:
+        $ref: "#/definitions/Timestamp"
+      expiration_date:
+        $ref: "#/definitions/Timestamp"
+    required:
+      - status
+  CgnRevokedStatus:
+    type: object
+    properties:
+      status:
+        type: string
+        x-extensible-enum:
+          - REVOKED
+      revokation_date:
+        $ref: "#/definitions/Timestamp"
+      motivation:
+        type: string
+    required:
+      - status
+      - revokation_date
+      - motivation
+  CgnCanceledStatus:
+    type: object
+    properties:
+      status:
+        type: string
+        x-extensible-enum:
+          - CANCELED
+    required:
+      - status
+  CgnStatus:
+    x-one-of: true
+    allOf:
+      - $ref: "#/definitions/CgnPendingStatus"
+      - $ref: "#/definitions/CgnActivatedStatus"
+      - $ref: "#/definitions/CgnRevokedStatus"
+      - $ref: "#/definitions/CgnCanceledStatus"
