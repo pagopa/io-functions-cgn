@@ -43,7 +43,7 @@ produces:
   - application/json
 parameters:
   FiscalCode:
-    name: fiscalcode
+    name: fiscalCode
     in: path
     type: string
     maxLength: 16
