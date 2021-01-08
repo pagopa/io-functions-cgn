@@ -10,9 +10,11 @@ info:
   description: >
     Documentation of the IO Function API here.
 host: api.cd.italia.it
-basePath: "/template"
+basePath: "/api/v1"
 schemes:
   - https
+security:
+  - ApiKey: []
 paths:
   "/cgn/status/{fiscalCode}":
     get:
@@ -35,31 +37,10 @@ paths:
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
-  "/echo/{input}":
-    parameters:
-      - name: input
-        in: path
-        type: string
-        required: true
-        description: test input.
-    get:
-      operationId: echo
-      summary: Echo API
-      description: Some API description here.
-      responses:
-        "200":
-          description: Found.
-          schema:
-            "$ref": "#/definitions/Input"
-          examples:
-            application/json:
-              id: "10000AAAA"
-              output: "hello world !"
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not found.
-      parameters: []
+consumes:
+  - application/json
+produces:
+  - application/json
 parameters:
   FiscalCode:
     name: fiscalcode
@@ -72,21 +53,21 @@ parameters:
     pattern: "[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]"
     x-example: SPNDNL80R13C555X
 
+securityDefinitions:
+  ApiKey:
+    type: apiKey
+    name: X-Functions-Key
+    in: header
+    description: The API key to access this function app.
+
 definitions:
   Timestamp:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/Timestamp"
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/Timestamp"
   FiscalCode:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/FiscalCode"
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/FiscalCode"
   ProblemJson:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/ProblemJson"
 
-  Input:
-    type: object
-    properties:
-      id:
-        type: string
-      output:
-        type: string
   CgnPendingStatus:
     type: object
     properties:
@@ -103,10 +84,6 @@ definitions:
         type: string
         x-extensible-enum:
           - ACTIVATED
-      activation_date:
-        $ref: "#/definitions/Timestamp"
-      expiration_date:
-        $ref: "#/definitions/Timestamp"
     required:
       - status
   CgnRevokedStatus:
@@ -116,14 +93,8 @@ definitions:
         type: string
         x-extensible-enum:
           - REVOKED
-      revokation_date:
-        $ref: "#/definitions/Timestamp"
-      motivation:
-        type: string
     required:
       - status
-      - revokation_date
-      - motivation
   CgnCanceledStatus:
     type: object
     properties:
