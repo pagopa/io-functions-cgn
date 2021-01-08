@@ -16,7 +16,7 @@ schemes:
 security:
   - ApiKey: []
 paths:
-  "/cgn/status/{fiscalCode}":
+  "/cgn/status/{fiscalcode}":
     get:
       operationId: getCgnStatus
       summary: |
@@ -43,7 +43,7 @@ produces:
   - application/json
 parameters:
   FiscalCode:
-    name: fiscalCode
+    name: fiscalcode
     in: path
     type: string
     maxLength: 16
