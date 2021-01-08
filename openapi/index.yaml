@@ -1,7 +1,7 @@
 swagger: "2.0"
 info:
   version: 1.1.0
-  title: IO Function API
+  title: IO Functions CGN
   contact:
     name: IO team
     url: https://forum.italia.it/c/progetto-io
@@ -15,35 +15,66 @@ schemes:
   - https
 paths:
   "/echo/{input}":
-    parameters:
-      - name: input
-        in: path
-        type: string
-        required: true
-        description: test input.
     get:
       operationId: echo
       summary: Echo API
-      description: Some API description here.
+      description: An echo API to check input
       responses:
         "200":
           description: Found.
-          schema:
-            "$ref": "#/definitions/Input"
-          examples:
-            application/json:
-              id: "10000AAAA"
-              output: "hello world !"
         "401":
           description: Unauthorized
         "404":
           description: Not found.
       parameters: []
 definitions:
-  Input:
+  Timestamp:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/Timestamp"
+  FiscalCode:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/FiscalCode"
+  ProblemJson:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
+
+  CgnPendingStatus:
     type: object
     properties:
-      id:
+      status:
         type: string
-      output:
+        x-extensible-enum:
+          - PENDING
+    required:
+      - status
+  CgnActivatedStatus:
+    type: object
+    properties:
+      status:
         type: string
+        x-extensible-enum:
+          - ACTIVATED
+    required:
+      - status
+  CgnRevokedStatus:
+    type: object
+    properties:
+      status:
+        type: string
+        x-extensible-enum:
+          - REVOKED
+    required:
+      - status
+  CgnCanceledStatus:
+    type: object
+    properties:
+      status:
+        type: string
+        x-extensible-enum:
+          - CANCELED
+    required:
+      - status
+  CgnStatus:
+    x-one-of: true
+    allOf:
+      - $ref: "#/definitions/CgnPendingStatus"
+      - $ref: "#/definitions/CgnActivatedStatus"
+      - $ref: "#/definitions/CgnRevokedStatus"
+      - $ref: "#/definitions/CgnCanceledStatus"
