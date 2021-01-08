@@ -15,12 +15,6 @@ schemes:
   - https
 paths:
   "/echo/{input}":
-    parameters:
-      - name: input
-        in: path
-        type: string
-        required: true
-        description: test input.
     get:
       operationId: echo
       summary: Echo API
@@ -28,12 +22,6 @@ paths:
       responses:
         "200":
           description: Found.
-          schema:
-            "$ref": "#/definitions/Input"
-          examples:
-            application/json:
-              id: "10000AAAA"
-              output: "hello world !"
         "401":
           description: Unauthorized
         "404":
@@ -47,13 +35,6 @@ definitions:
   ProblemJson:
     $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
 
-  Input:
-    type: object
-    properties:
-      id:
-        type: string
-      output:
-        type: string
   CgnPendingStatus:
     type: object
     properties:
