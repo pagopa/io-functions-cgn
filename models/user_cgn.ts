@@ -5,7 +5,7 @@ import {
 } from "io-functions-commons/dist/src/utils/cosmosdb_model_versioned";
 import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
 import * as t from "io-ts";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { CgnStatus } from "../generated/definitions/CgnStatus";
 
 export const USER_CGN_COLLECTION_NAME = "user-cgns";
@@ -14,6 +14,8 @@ export const USER_CGN_MODEL_PK_FIELD = "fiscalCode" as const;
 const UserCgn = t.interface({
   // The id of the user
   fiscalCode: FiscalCode,
+  // The CGN identifier
+  id: NonEmptyString,
   // the status of the CGN related to the user
   status: CgnStatus
 });

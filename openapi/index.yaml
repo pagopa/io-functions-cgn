@@ -18,7 +18,7 @@ paths:
     get:
       operationId: echo
       summary: Echo API
-      description: Some API description here.
+      description: An echo API to check input
       responses:
         "200":
           description: Found.
