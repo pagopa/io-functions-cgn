@@ -80,9 +80,6 @@ definitions:
   CgnActivatedStatus:
     type: object
     properties:
-      id:
-        type: string
-        minLength: 1
       status:
         type: string
         x-extensible-enum:
@@ -92,7 +89,6 @@ definitions:
       expiration_date:
         $ref: "#/definitions/Timestamp"
     required:
-      - id
       - status
       - activation_date
       - expiration_date
