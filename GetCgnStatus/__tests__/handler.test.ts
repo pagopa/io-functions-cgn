@@ -3,7 +3,7 @@
 import { some } from "fp-ts/lib/Option";
 import { none } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import {
   CgnPendingStatus,
   StatusEnum
@@ -22,6 +22,7 @@ const aCgnStatus: CgnPendingStatus = {
 };
 const aUserCgn: UserCgn = {
   fiscalCode: aFiscalCode,
+  id: "A_USER_CGN_ID" as NonEmptyString,
   status: aCgnStatus
 };
 describe("GetCgnStatusHandler", () => {
@@ -43,7 +44,7 @@ describe("GetCgnStatusHandler", () => {
     expect(response.kind).toBe("IResponseErrorNotFound");
   });
 
-  it("should return not found if no userCgn is found", async () => {
+  it("should a correct CgnStatus if a userCgn is found", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       taskEither.of(some(aUserCgn))
     );
