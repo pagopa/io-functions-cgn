@@ -20,7 +20,10 @@ import {
 } from "../../generated/definitions/CgnRevokedStatus";
 import { UserCgn } from "../../models/user_cgn";
 import { GetCgnStatusHandler } from "../handler";
+import { NonEmptyString } from "italia-ts-commons/lib/strings";
+
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
+const aUserCgnId = "AN_ID" as NonEmptyString;
 
 const findLastVersionByModelIdMock = jest.fn();
 const userCgnModelMock = {
@@ -32,19 +35,19 @@ const aPendingCgnStatus: CgnPendingStatus = {
 };
 
 const aRevokedCgnStatus: CgnRevokedStatus = {
-  motivation: "A motivation",
-  revokation_date: now,
   status: RevokedStatusEnum.REVOKED
 };
 
 const anActivatedCgnStatus: CgnActivatedStatus = {
   activation_date: now,
   expiration_date: date_fns.addDays(now, 10),
+  id: aUserCgnId,
   status: ActivatedStatusEnum.ACTIVATED
 };
 
 const aUserCgn: UserCgn = {
   fiscalCode: aFiscalCode,
+  id: aUserCgnId,
   status: aPendingCgnStatus
 };
 
