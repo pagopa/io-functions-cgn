@@ -5,6 +5,7 @@ import { some } from "fp-ts/lib/Option";
 import { none } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { now } from "../../__mocks__/mock";
 import {
   CgnActivatedStatus,
@@ -20,7 +21,6 @@ import {
 } from "../../generated/definitions/CgnRevokedStatus";
 import { UserCgn } from "../../models/user_cgn";
 import { GetCgnStatusHandler } from "../handler";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const aUserCgnId = "AN_ID" as NonEmptyString;
