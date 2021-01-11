@@ -10,30 +10,63 @@ info:
   description: >
     Documentation of the IO Function API here.
 host: api.cd.italia.it
-basePath: "/template"
+basePath: "/api/v1"
 schemes:
   - https
+security:
+  - ApiKey: []
 paths:
-  "/echo/{input}":
+  "/cgn/status/{fiscalcode}":
     get:
-      operationId: echo
-      summary: Echo API
-      description: An echo API to check input
+      operationId: getCgnStatus
+      summary: |
+        Get the CGN status details 
+        by the provided fiscal code
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
       responses:
         "200":
-          description: Found.
+          description: CGN status details.
+          schema:
+            $ref: "#/definitions/CgnStatus"
         "401":
-          description: Unauthorized
+          description: Wrong or missing function key.
         "404":
-          description: Not found.
-      parameters: []
+          description: No CGN found.
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
+consumes:
+  - application/json
+produces:
+  - application/json
+parameters:
+  FiscalCode:
+    name: fiscalcode
+    in: path
+    type: string
+    maxLength: 16
+    minLength: 16
+    required: true
+    description: The fiscal code of the user, all upper case.
+    pattern: "[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]"
+    x-example: SPNDNL80R13C555X
+
+securityDefinitions:
+  ApiKey:
+    type: apiKey
+    name: X-Functions-Key
+    in: header
+    description: The API key to access this function app.
+
 definitions:
   Timestamp:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/Timestamp"
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/Timestamp"
   FiscalCode:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/FiscalCode"
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/FiscalCode"
   ProblemJson:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/ProblemJson"
 
   CgnPendingStatus:
     type: object
@@ -78,3 +111,5 @@ definitions:
       - $ref: "#/definitions/CgnActivatedStatus"
       - $ref: "#/definitions/CgnRevokedStatus"
       - $ref: "#/definitions/CgnCanceledStatus"
+
+      
