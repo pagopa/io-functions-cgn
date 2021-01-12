@@ -36,7 +36,7 @@ const app = express();
 secureExpressApp(app);
 
 // Add express route
-app.get("/cgn/status/:fiscalcode", GetCgnStatus(userCgnModel));
+app.get("/api/v1/cgn/status/:fiscalcode", GetCgnStatus(userCgnModel));
 
 const azureFunctionHandler = createAzureFunctionHandler(app);
 
