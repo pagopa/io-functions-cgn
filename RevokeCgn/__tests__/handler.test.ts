@@ -7,7 +7,7 @@ import {
   ResponseErrorInternal,
   ResponseSuccessAccepted
 } from "italia-ts-commons/lib/responses";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { mockStartNew } from "../../__mocks__/durable-functions";
 import {
   CgnCanceledStatus,
@@ -23,13 +23,13 @@ import {
   StatusEnum as RevokedStatusEnum
 } from "../../generated/definitions/CgnRevokedStatus";
 import { UserCgn } from "../../models/user_cgn";
+import * as orchUtils from "../../utils/orchestrators";
 import { RevokeCgnHandler } from "../handler";
-import * as orchUtils from "../orchestrators";
 
 const now = new Date();
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const aRevokationRequest: CgnRevokationRequest = {
-  motivation: "aMotivation"
+  motivation: "aMotivation" as NonEmptyString
 };
 
 const aUserCgnRevokedStatus: CgnRevokedStatus = {
@@ -48,6 +48,7 @@ const aUserCgnPendingStatus: CgnPendingStatus = {
 
 const aRevokedUserCgn: UserCgn = {
   fiscalCode: aFiscalCode,
+  id: "A_USER_CGN_ID" as NonEmptyString,
   status: aUserCgnRevokedStatus
 };
 
@@ -118,7 +119,7 @@ describe("RevokeCgn", () => {
       taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
     );
     jest
-      .spyOn(orchUtils, "checkRevokeCgnIsRunning")
+      .spyOn(orchUtils, "checkUpdateCgnIsRunning")
       .mockImplementationOnce(() => fromLeft(ResponseErrorInternal("Error")));
     const revokeCgnHandler = RevokeCgnHandler(userCgnModelMock as any);
     const response = await revokeCgnHandler(
@@ -134,7 +135,7 @@ describe("RevokeCgn", () => {
       taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
     );
     jest
-      .spyOn(orchUtils, "checkRevokeCgnIsRunning")
+      .spyOn(orchUtils, "checkUpdateCgnIsRunning")
       .mockImplementationOnce(() => fromLeft(ResponseSuccessAccepted()));
     const revokeCgnHandler = RevokeCgnHandler(userCgnModelMock as any);
     const response = await revokeCgnHandler(
@@ -150,7 +151,7 @@ describe("RevokeCgn", () => {
       taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
     );
     jest
-      .spyOn(orchUtils, "checkRevokeCgnIsRunning")
+      .spyOn(orchUtils, "checkUpdateCgnIsRunning")
       .mockImplementationOnce(() => taskEither.of(false));
     const revokeCgnHandler = RevokeCgnHandler(userCgnModelMock as any);
     await revokeCgnHandler({} as any, aFiscalCode, aRevokationRequest);

@@ -34,7 +34,7 @@ import { CgnStatus } from "../generated/definitions/CgnStatus";
 import { UserCgnModel } from "../models/user_cgn";
 import { OrchestratorInput } from "../UpdateCgnOrchestrator";
 import { makeUpdateCgnOrchestratorId } from "../utils/orchestrators";
-import { checkRevokeCgnIsRunning } from "./orchestrators";
+import { checkUpdateCgnIsRunning } from "../utils/orchestrators";
 
 type ErrorTypes =
   | IResponseErrorInternal
@@ -77,8 +77,8 @@ export function RevokeCgnHandler(
       .foldTaskEither<ErrorTypes, CgnStatus>(fromLeft, userCgn =>
         checkExistingCgnStatus(userCgn.status)
       )
-      .chain(_ =>
-        checkRevokeCgnIsRunning(client, fiscalCode).foldTaskEither<
+      .chain(cgnStatus =>
+        checkUpdateCgnIsRunning(client, fiscalCode, cgnStatus).foldTaskEither<
           ErrorTypes,
           IResponseSuccessAccepted
         >(
@@ -91,7 +91,7 @@ export function RevokeCgnHandler(
               () =>
                 client.startNew(
                   "UpdateCgnOrchestrator",
-                  makeUpdateCgnOrchestratorId(fiscalCode, StatusEnum.REVOKED),
+                  makeUpdateCgnOrchestratorId(fiscalCode, cgnStatus.status),
                   OrchestratorInput.encode({
                     fiscalCode,
                     newStatus: {

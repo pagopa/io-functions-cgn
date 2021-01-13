@@ -69,37 +69,12 @@ paths:
           description: No CGN found.
         "409":
           description: |
-            Cannot revoke the user's cgn because another revokation request was found
+            Cannot revoke the user's cgn because another updateCgn request was found
             for this user
         "500":
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
-  "/echo/{input}":
-    parameters:
-      - name: input
-        in: path
-        type: string
-        required: true
-        description: test input.
-    get:
-      operationId: echo
-      summary: Echo API
-      description: Some API description here.
-      responses:
-        "200":
-          description: Found.
-          schema:
-            "$ref": "#/definitions/Input"
-          examples:
-            application/json:
-              id: "10000AAAA"
-              output: "hello world !"
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not found.
-      parameters: []
 consumes:
   - application/json
 produces:
@@ -192,6 +167,7 @@ definitions:
     properties:
       motivation:
         type: string
+        minLength: 1
     required:
       - motivation
   InstanceId:
