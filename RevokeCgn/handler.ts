@@ -18,12 +18,14 @@ import {
   IResponseErrorInternal,
   IResponseErrorNotFound,
   IResponseSuccessAccepted,
+  IResponseSuccessRedirectToResource,
   ResponseErrorConflict,
   ResponseErrorInternal,
   ResponseErrorNotFound,
-  ResponseSuccessAccepted
+  ResponseSuccessAccepted,
+  ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { CgnCanceledStatus } from "../generated/definitions/CgnCanceledStatus";
 import { CgnRevokationRequest } from "../generated/definitions/CgnRevokationRequest";
 import {
@@ -31,6 +33,7 @@ import {
   StatusEnum
 } from "../generated/definitions/CgnRevokedStatus";
 import { CgnStatus } from "../generated/definitions/CgnStatus";
+import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
 import { OrchestratorInput } from "../UpdateCgnOrchestrator";
 import { makeUpdateCgnOrchestratorId } from "../utils/orchestrators";
@@ -40,7 +43,10 @@ type ErrorTypes =
   | IResponseErrorInternal
   | IResponseErrorNotFound
   | IResponseErrorConflict;
-type ReturnTypes = IResponseSuccessAccepted | ErrorTypes;
+type ReturnTypes =
+  | IResponseSuccessAccepted
+  | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
+  | ErrorTypes;
 
 type IRevokeCgnHandler = (
   context: Context,
@@ -80,7 +86,8 @@ export function RevokeCgnHandler(
       .chain(cgnStatus =>
         checkUpdateCgnIsRunning(client, fiscalCode, cgnStatus).foldTaskEither<
           ErrorTypes,
-          IResponseSuccessAccepted
+          | IResponseSuccessAccepted
+          | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
         >(
           response =>
             response.kind === "IResponseSuccessAccepted"
@@ -104,13 +111,20 @@ export function RevokeCgnHandler(
               toError
             ).bimap(
               () => ResponseErrorInternal("Cannot call RevokeCgnOrchestrator"),
-              () => ResponseSuccessAccepted("Request Accepted")
+              () => {
+                const instanceId: InstanceId = {
+                  id: `${fiscalCode}-${cgnStatus.status}` as NonEmptyString
+                };
+                return ResponseSuccessRedirectToResource(
+                  instanceId,
+                  `/api/v1/cgn/status/${fiscalCode}`,
+                  instanceId
+                );
+              }
             )
         )
       )
-      .fold<ReturnTypes>(identity, () =>
-        ResponseSuccessAccepted("Request accepted")
-      )
+      .fold<ReturnTypes>(identity, identity)
       .run();
   };
 }
