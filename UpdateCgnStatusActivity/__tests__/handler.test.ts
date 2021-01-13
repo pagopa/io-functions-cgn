@@ -95,7 +95,7 @@ describe("UpdateCgnStatusActivity", () => {
       taskEither.of(some(aRevokedUserCgn))
     );
     updateMock.mockImplementationOnce(() =>
-      fromLeft(new Error("cannot update userCgn"))
+      fromLeft(new Error("Cannot update userCgn"))
     );
     const updateCgnStatusActivityHandler = getUpdateCgnStatusActivityHandler(
       userCgnModelMock as any
