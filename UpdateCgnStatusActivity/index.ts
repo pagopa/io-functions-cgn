@@ -1,15 +1,4 @@
-﻿/*
- * This function is not intended to be invoked directly. Instead it will be
- * triggered by an orchestrator function.
- *
- * Before running this sample, please:
- * - create a Durable orchestration function
- * - create a Durable HTTP starter function
- * - run 'yarn add durable-functions' from the wwwroot folder of your
- *   function app in Kudu
- */
-
-import { USER_CGN_COLLECTION_NAME, UserCgnModel } from "../models/user_cgn";
+﻿import { USER_CGN_COLLECTION_NAME, UserCgnModel } from "../models/user_cgn";
 import { getConfigOrThrow } from "../utils/config";
 import { cosmosdbClient } from "../utils/cosmosdb";
 import { getUpdateCgnStatusActivityHandler } from "./handler";

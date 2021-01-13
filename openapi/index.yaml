@@ -1,7 +1,7 @@
 swagger: "2.0"
 info:
   version: 1.1.0
-  title: IO Functions CGN API
+  title: IO Functions CGN
   contact:
     name: IO team
     url: https://forum.italia.it/c/progetto-io
@@ -10,11 +10,13 @@ info:
   description: >
     Documentation of the IO Function API here.
 host: api.cd.italia.it
-basePath: "/template"
+basePath: "/api/v1"
 schemes:
   - https
+security:
+  - ApiKey: []
 paths:
-  "/cgn/status/{fiscalCode}":
+  "/cgn/status/{fiscalcode}":
     get:
       operationId: getCgnStatus
       summary: |
@@ -98,6 +100,10 @@ paths:
         "404":
           description: Not found.
       parameters: []
+consumes:
+  - application/json
+produces:
+  - application/json
 parameters:
   FiscalCode:
     name: fiscalcode
@@ -110,21 +116,21 @@ parameters:
     pattern: "[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]"
     x-example: SPNDNL80R13C555X
 
+securityDefinitions:
+  ApiKey:
+    type: apiKey
+    name: X-Functions-Key
+    in: header
+    description: The API key to access this function app.
+
 definitions:
   Timestamp:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/Timestamp"
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/Timestamp"
   FiscalCode:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/FiscalCode"
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/FiscalCode"
   ProblemJson:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/ProblemJson"
 
-  Input:
-    type: object
-    properties:
-      id:
-        type: string
-      output:
-        type: string
   CgnPendingStatus:
     type: object
     properties:
@@ -147,6 +153,8 @@ definitions:
         $ref: "#/definitions/Timestamp"
     required:
       - status
+      - activation_date
+      - expiration_date
   CgnRevokedStatus:
     type: object
     properties:
@@ -158,6 +166,7 @@ definitions:
         $ref: "#/definitions/Timestamp"
       motivation:
         type: string
+        minLength: 1
     required:
       - status
       - revokation_date

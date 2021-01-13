@@ -2,13 +2,12 @@
 import { none, some } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { toCosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
 import {
   CgnPendingStatus,
   StatusEnum
 } from "../../generated/definitions/CgnPendingStatus";
-import { CgnRevokationRequest } from "../../generated/definitions/CgnRevokationRequest";
 import {
   CgnRevokedStatus,
   StatusEnum as RevokedStatusEnum
@@ -18,8 +17,8 @@ import { ActivityInput, getUpdateCgnStatusActivityHandler } from "../handler";
 
 const now = new Date();
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
-const aRevokationRequest: CgnRevokationRequest = {
-  motivation: "aMotivation"
+const aRevokationRequest = {
+  motivation: "aMotivation" as NonEmptyString
 };
 
 const aUserCgnRevokedStatus: CgnRevokedStatus = {
@@ -30,6 +29,7 @@ const aUserCgnRevokedStatus: CgnRevokedStatus = {
 
 const aRevokedUserCgn: UserCgn = {
   fiscalCode: aFiscalCode,
+  id: "ID" as NonEmptyString,
   status: aUserCgnRevokedStatus
 };
 
@@ -95,7 +95,7 @@ describe("UpdateCgnStatusActivity", () => {
       taskEither.of(some(aRevokedUserCgn))
     );
     updateMock.mockImplementationOnce(() =>
-      fromLeft(new Error("cannot update userCgn"))
+      fromLeft(new Error("Cannot update userCgn"))
     );
     const updateCgnStatusActivityHandler = getUpdateCgnStatusActivityHandler(
       userCgnModelMock as any
