@@ -109,9 +109,8 @@ export const handler = function*(
       );
     }
 
-    const hasSendMessageActivity = [
-      RevokedStatusEnum.REVOKED.toString()
-    ].includes(newStatus.status);
+    const hasSendMessageActivity =
+      RevokedStatusEnum.REVOKED === newStatus.status;
 
     if (hasSendMessageActivity) {
       // sleep before sending push notification
