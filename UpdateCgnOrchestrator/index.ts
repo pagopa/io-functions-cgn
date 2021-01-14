@@ -115,7 +115,6 @@ export const handler = function*(
 
     if (hasSendMessageActivity) {
       // sleep before sending push notification
-      // so we can let the get operation stop the flow here
       yield context.df.createTimer(
         addSeconds(context.df.currentUtcDateTime, NOTIFICATION_DELAY_SECONDS)
       );

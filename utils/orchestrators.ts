@@ -61,7 +61,7 @@ const cgnStatuses: ReadonlyArray<string> = [
   CgnPendingStatusEnum.PENDING.toString()
 ];
 
-type CheckUpdateCgnIsRunningErrorTypes =
+export type CheckUpdateCgnIsRunningErrorTypes =
   | IResponseErrorInternal
   | IResponseSuccessAccepted
   | IResponseErrorConflict;

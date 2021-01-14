@@ -5,7 +5,7 @@
       "type": "httpTrigger",
       "direction": "in",
       "name": "req",
-      "route": "cgn/revoke/{fiscalCode}",
+      "route": "api/v1/cgn/{fiscalCode}",
       "methods": [
         "post"
       ]

@@ -22,7 +22,6 @@ import {
   ResponseErrorConflict,
   ResponseErrorInternal,
   ResponseErrorNotFound,
-  ResponseSuccessAccepted,
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
@@ -64,10 +63,20 @@ const checkExistingCgnStatus = (cgnStatus: CgnStatus) =>
     : taskEither.of<IResponseErrorConflict, CgnStatus>(cgnStatus);
 
 export function RevokeCgnHandler(
-  userCgnModel: UserCgnModel
+  userCgnModel: UserCgnModel,
+  logPrefix: string = "RevokeCgnHandler"
 ): IRevokeCgnHandler {
   return async (context, fiscalCode, revokationReq) => {
     const client = df.getClient(context);
+    const revokedCgnStatus: CgnRevokedStatus = {
+      motivation: revokationReq.motivation,
+      revokation_date: new Date(),
+      status: StatusEnum.REVOKED
+    };
+    const orchestratorId = makeUpdateCgnOrchestratorId(
+      fiscalCode,
+      StatusEnum.REVOKED
+    ) as NonEmptyString;
     return userCgnModel
       .findLastVersionByModelId([fiscalCode])
       .mapLeft<IResponseErrorInternal | IResponseErrorNotFound>(() =>
@@ -83,8 +92,12 @@ export function RevokeCgnHandler(
       .foldTaskEither<ErrorTypes, CgnStatus>(fromLeft, userCgn =>
         checkExistingCgnStatus(userCgn.status)
       )
-      .chain(cgnStatus =>
-        checkUpdateCgnIsRunning(client, fiscalCode, cgnStatus).foldTaskEither<
+      .chain(() =>
+        checkUpdateCgnIsRunning(
+          client,
+          fiscalCode,
+          revokedCgnStatus
+        ).foldTaskEither<
           ErrorTypes,
           | IResponseSuccessAccepted
           | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
@@ -98,22 +111,25 @@ export function RevokeCgnHandler(
               () =>
                 client.startNew(
                   "UpdateCgnOrchestrator",
-                  makeUpdateCgnOrchestratorId(fiscalCode, cgnStatus.status),
+                  orchestratorId,
                   OrchestratorInput.encode({
                     fiscalCode,
-                    newStatus: {
-                      motivation: revokationReq.motivation,
-                      revokation_date: new Date(),
-                      status: StatusEnum.REVOKED
-                    }
+                    newStatus: revokedCgnStatus
                   })
                 ),
               toError
             ).bimap(
-              () => ResponseErrorInternal("Cannot call RevokeCgnOrchestrator"),
+              err => {
+                context.log.error(
+                  `${logPrefix}|Cannot start UpdateCgnOrchestrator|ERROR=${err.message}`
+                );
+                return ResponseErrorInternal(
+                  "Cannot start UpdateCgnOrchestrator"
+                );
+              },
               () => {
                 const instanceId: InstanceId = {
-                  id: `${fiscalCode}-${cgnStatus.status}` as NonEmptyString
+                  id: orchestratorId
                 };
                 return ResponseSuccessRedirectToResource(
                   instanceId,
