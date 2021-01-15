@@ -18,10 +18,15 @@ security:
 paths:
   "/cgn/status/{fiscalcode}":
     get:
+      summary: Get CGN details Status
       operationId: getCgnStatus
-      summary: |
-        Get the CGN status details 
-        by the provided fiscal code
+      description: |
+        Get the CGN status details by the provided fiscal code. 
+        In case of success the response could be one of:
+          - $ref: "CgnPendingStatus"
+          - $ref: "CgnActivatedStatus"
+          - $ref: "CgnRevokedStatus"
+          - $ref: "CgnCanceledStatus"
       parameters:
         - $ref: "#/parameters/FiscalCode"
       responses:
@@ -41,7 +46,10 @@ paths:
     post:
       operationId: revokeCgn
       summary: |
+        Revoke CGN 
+      description: |
         Revoke a CGN by the provided fiscal code
+        and a proper revokation's motivation.
       parameters:
         - $ref: "#/parameters/FiscalCode"
         - in: body
