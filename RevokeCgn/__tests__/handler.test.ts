@@ -53,8 +53,10 @@ const aRevokedUserCgn: UserCgn = {
 };
 
 const findLastVersionByModelIdMock = jest.fn();
+const updateMock = jest.fn();
 const userCgnModelMock = {
-  findLastVersionByModelId: findLastVersionByModelIdMock
+  findLastVersionByModelId: findLastVersionByModelIdMock,
+  update: updateMock
 };
 describe("RevokeCgn", () => {
   beforeEach(() => {
@@ -118,6 +120,7 @@ describe("RevokeCgn", () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
     );
+    updateMock.mockImplementationOnce(() => taskEither.of(some));
     jest
       .spyOn(orchUtils, "checkUpdateCgnIsRunning")
       .mockImplementationOnce(() => fromLeft(ResponseErrorInternal("Error")));
@@ -134,6 +137,7 @@ describe("RevokeCgn", () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
     );
+    updateMock.mockImplementationOnce(() => taskEither.of(some));
     jest
       .spyOn(orchUtils, "checkUpdateCgnIsRunning")
       .mockImplementationOnce(() => fromLeft(ResponseSuccessAccepted()));
@@ -150,6 +154,7 @@ describe("RevokeCgn", () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
     );
+    updateMock.mockImplementationOnce(() => taskEither.of(some));
     jest
       .spyOn(orchUtils, "checkUpdateCgnIsRunning")
       .mockImplementationOnce(() => taskEither.of(false));

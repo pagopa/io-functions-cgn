@@ -31,9 +31,8 @@ import {
   CgnRevokedStatus,
   StatusEnum
 } from "../generated/definitions/CgnRevokedStatus";
-import { CgnStatus } from "../generated/definitions/CgnStatus";
 import { InstanceId } from "../generated/definitions/InstanceId";
-import { UserCgnModel } from "../models/user_cgn";
+import { RetrievedUserCgn, UserCgnModel } from "../models/user_cgn";
 import { OrchestratorInput } from "../UpdateCgnOrchestrator";
 import { makeUpdateCgnOrchestratorId } from "../utils/orchestrators";
 import { checkUpdateCgnIsRunning } from "../utils/orchestrators";
@@ -53,14 +52,14 @@ type IRevokeCgnHandler = (
   cgnRevokationRequest: CgnRevokationRequest
 ) => Promise<ReturnTypes>;
 
-const checkExistingCgnStatus = (cgnStatus: CgnStatus) =>
-  CgnRevokedStatus.is(cgnStatus) || CgnCanceledStatus.is(cgnStatus)
-    ? fromLeft<IResponseErrorConflict, CgnStatus>(
+const checkExistingCgnStatus = (userCgn: RetrievedUserCgn) =>
+  CgnRevokedStatus.is(userCgn.status) || CgnCanceledStatus.is(userCgn.status)
+    ? fromLeft<IResponseErrorConflict, RetrievedUserCgn>(
         ResponseErrorConflict(
           "Cannot revoke the user's cgn because it is already revoked or canceled"
         )
       )
-    : taskEither.of<IResponseErrorConflict, CgnStatus>(cgnStatus);
+    : taskEither.of<IResponseErrorConflict, RetrievedUserCgn>(userCgn);
 
 export function RevokeCgnHandler(
   userCgnModel: UserCgnModel,
@@ -89,8 +88,21 @@ export function RevokeCgnHandler(
           )(maybeUserCgn)
         )
       )
-      .foldTaskEither<ErrorTypes, CgnStatus>(fromLeft, userCgn =>
-        checkExistingCgnStatus(userCgn.status)
+      .foldTaskEither<ErrorTypes, RetrievedUserCgn>(fromLeft, userCgn =>
+        checkExistingCgnStatus(userCgn)
+      )
+      .map(userCgn => ({
+        ...userCgn,
+        status: revokedCgnStatus
+      }))
+      .chain(_ =>
+        userCgnModel
+          .update(_)
+          .mapLeft(err =>
+            ResponseErrorInternal(
+              `Could not update Cgn model ${toError(err).message}`
+            )
+          )
       )
       .chain(() =>
         checkUpdateCgnIsRunning(
