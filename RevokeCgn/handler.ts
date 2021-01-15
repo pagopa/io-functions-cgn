@@ -150,7 +150,7 @@ export function RevokeCgn(userCgnModel: UserCgnModel): express.RequestHandler {
 
   const middlewaresWrap = withRequestMiddlewares(
     ContextMiddleware(),
-    RequiredParamMiddleware("fiscalCode", FiscalCode),
+    RequiredParamMiddleware("fiscalcode", FiscalCode),
     RequiredBodyPayloadMiddleware(CgnRevokationRequest)
   );
 
