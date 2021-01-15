@@ -23,10 +23,10 @@ paths:
       description: |
         Get the CGN status details by the provided fiscal code. 
         In case of success the response could be one of:
-          - $ref: "CgnPendingStatus"
-          - $ref: "CgnActivatedStatus"
-          - $ref: "CgnRevokedStatus"
-          - $ref: "CgnCanceledStatus"
+          - CgnPendingStatus
+          - CgnActivatedStatus
+          - CgnRevokedStatus
+          - CgnCanceledStatus
       parameters:
         - $ref: "#/parameters/FiscalCode"
       responses:
@@ -34,6 +34,11 @@ paths:
           description: CGN status details.
           schema:
             $ref: "#/definitions/CgnStatus"
+          x-example: 
+            application/json:
+              status: ACTIVATED
+              activation_date: "2021-10-13T00:00:00.000Z"
+              expiration_date: "2030-10-13T00:00:00.000Z"
         "401":
           description: Wrong or missing function key.
         "404":
