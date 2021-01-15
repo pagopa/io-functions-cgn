@@ -89,7 +89,7 @@ export const checkUpdateCgnIsRunning = (
     )
     .chain(_ =>
       taskEither.of(
-        cgnStatuses.filter(el => el === cgnStatus.status.toString())
+        cgnStatuses.filter(el => el !== cgnStatus.status.toString())
       )
     )
     .chain(otherStatuses =>
