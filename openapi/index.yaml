@@ -34,11 +34,6 @@ paths:
           description: CGN status details.
           schema:
             $ref: "#/definitions/CgnStatus"
-          x-example: 
-            application/json:
-              status: ACTIVATED
-              activation_date: "2021-10-13T00:00:00.000Z"
-              expiration_date: "2030-10-13T00:00:00.000Z"
         "401":
           description: Wrong or missing function key.
         "404":
@@ -175,6 +170,10 @@ definitions:
       - $ref: "#/definitions/CgnActivatedStatus"
       - $ref: "#/definitions/CgnRevokedStatus"
       - $ref: "#/definitions/CgnCanceledStatus"
+    x-example: 
+      status: ACTIVATED
+      activation_date: "2021-10-13T00:00:00.000Z"
+      expiration_date: "2030-10-13T00:00:00.000Z"
   CgnRevokationRequest:
     type: object
     properties:
