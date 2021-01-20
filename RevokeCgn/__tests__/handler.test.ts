@@ -10,10 +10,6 @@ import {
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { mockStartNew } from "../../__mocks__/durable-functions";
 import {
-  CgnCanceledStatus,
-  StatusEnum as CanceledStatusEnum
-} from "../../generated/definitions/CgnCanceledStatus";
-import {
   CgnPendingStatus,
   StatusEnum
 } from "../../generated/definitions/CgnPendingStatus";
