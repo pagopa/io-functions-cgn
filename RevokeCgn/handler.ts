@@ -19,20 +19,18 @@ import {
   IResponseErrorNotFound,
   IResponseSuccessAccepted,
   IResponseSuccessRedirectToResource,
-  ResponseErrorConflict,
   ResponseErrorInternal,
   ResponseErrorNotFound,
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { CgnCanceledStatus } from "../generated/definitions/CgnCanceledStatus";
 import { CgnRevokationRequest } from "../generated/definitions/CgnRevokationRequest";
 import {
   CgnRevokedStatus,
   StatusEnum
 } from "../generated/definitions/CgnRevokedStatus";
 import { InstanceId } from "../generated/definitions/InstanceId";
-import { RetrievedUserCgn, UserCgnModel } from "../models/user_cgn";
+import { UserCgnModel } from "../models/user_cgn";
 import { OrchestratorInput } from "../UpdateCgnOrchestrator";
 import { makeUpdateCgnOrchestratorId } from "../utils/orchestrators";
 import { checkUpdateCgnIsRunning } from "../utils/orchestrators";
@@ -51,15 +49,6 @@ type IRevokeCgnHandler = (
   fiscalCode: FiscalCode,
   cgnRevokationRequest: CgnRevokationRequest
 ) => Promise<ReturnTypes>;
-
-const checkExistingCgnStatus = (userCgn: RetrievedUserCgn) =>
-  CgnRevokedStatus.is(userCgn.status) || CgnCanceledStatus.is(userCgn.status)
-    ? fromLeft<IResponseErrorConflict, RetrievedUserCgn>(
-        ResponseErrorConflict(
-          "Cannot revoke the user's cgn because it is already revoked or canceled"
-        )
-      )
-    : taskEither.of<IResponseErrorConflict, RetrievedUserCgn>(userCgn);
 
 export function RevokeCgnHandler(
   userCgnModel: UserCgnModel,
@@ -88,23 +77,11 @@ export function RevokeCgnHandler(
           )(maybeUserCgn)
         )
       )
-      .foldTaskEither<ErrorTypes, RetrievedUserCgn>(fromLeft, userCgn =>
-        checkExistingCgnStatus(userCgn)
-      )
-      .map(userCgn => ({
-        ...userCgn,
-        status: revokedCgnStatus
-      }))
-      .chain(_ =>
-        userCgnModel
-          .update(_)
-          .mapLeft(err =>
-            ResponseErrorInternal(
-              `Could not update Cgn model ${toError(err).message}`
-            )
-          )
-      )
-      .chain(() =>
+      .foldTaskEither<
+        ErrorTypes,
+        | IResponseSuccessAccepted
+        | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
+      >(fromLeft, () =>
         checkUpdateCgnIsRunning(
           client,
           fiscalCode,

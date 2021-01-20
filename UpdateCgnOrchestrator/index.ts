@@ -86,30 +86,27 @@ export const handler = function*(
   };
 
   try {
-    const hasAsyncUpdateStatus = RevokedStatusEnum.REVOKED !== newStatus.status;
-    if (hasAsyncUpdateStatus) {
-      const updateCgnStatusActivityInput = ActivityInput.encode({
-        cgnStatus: newStatus,
-        fiscalCode
-      });
-      const updateStatusResult = yield context.df.callActivityWithRetry(
-        "UpdateCgnStatusActivity",
-        internalRetryOptions,
-        updateCgnStatusActivityInput
-      );
+    const updateCgnStatusActivityInput = ActivityInput.encode({
+      cgnStatus: newStatus,
+      fiscalCode
+    });
+    const updateStatusResult = yield context.df.callActivityWithRetry(
+      "UpdateCgnStatusActivity",
+      internalRetryOptions,
+      updateCgnStatusActivityInput
+    );
 
-      const updateCgnResult = ActivityResult.decode(
-        updateStatusResult
-      ).getOrElseL(e =>
-        trackExAndThrow(e, "cgn.update.exception.decode.activityOutput")
-      );
+    const updateCgnResult = ActivityResult.decode(
+      updateStatusResult
+    ).getOrElseL(e =>
+      trackExAndThrow(e, "cgn.update.exception.decode.activityOutput")
+    );
 
-      if (updateCgnResult.kind !== "SUCCESS") {
-        trackExAndThrow(
-          new Error("Cannot update CGN Status"),
-          "cgn.update.exception.failure.activityOutput"
-        );
-      }
+    if (updateCgnResult.kind !== "SUCCESS") {
+      trackExAndThrow(
+        new Error("Cannot update CGN Status"),
+        "cgn.update.exception.failure.activityOutput"
+      );
     }
 
     const hasSendMessageActivity =
@@ -125,7 +122,7 @@ export const handler = function*(
         name: "cgn.update.timer",
         properties: {
           id: fiscalCode,
-          status: `${newStatus.status}`
+          status: `${updateCgnResult.kind}`
         },
         tagOverrides
       });
