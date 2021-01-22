@@ -3,30 +3,23 @@
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context as contextMock } from "../../__mocks__/durable-functions";
 import {
-  CgnCanceledStatus,
-  StatusEnum as CgnCanceledStatusEnum
-} from "../../generated/definitions/CgnCanceledStatus";
-import {
   CgnRevokedStatus,
   StatusEnum as RevokedCgnStatusEnum
 } from "../../generated/definitions/CgnRevokedStatus";
 import { ActivityResult as UpdateCgnStatusActivityResult } from "../../UpdateCgnStatusActivity/handler";
 import { MESSAGES } from "../../utils/messages";
-import { handler, OrchestratorInput } from "../index";
+import { handler } from "../index";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const now = new Date();
-const aMotivation = "aMotivation" as NonEmptyString;
+const aReason = "aMotivation" as NonEmptyString;
 
 const aUserCgnRevokedStatus: CgnRevokedStatus = {
-  motivation: aMotivation,
+  reason: aReason,
   revokation_date: now,
   status: RevokedCgnStatusEnum.REVOKED
 };
 
-const aUserCgnCanceledStatus: CgnCanceledStatus = {
-  status: CgnCanceledStatusEnum.CANCELED
-};
 const getInputMock = jest.fn();
 
 const mockCallActivityWithRetry = jest.fn();

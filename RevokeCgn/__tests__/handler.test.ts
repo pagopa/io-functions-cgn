@@ -25,11 +25,11 @@ import { RevokeCgnHandler } from "../handler";
 const now = new Date();
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const aRevokationRequest: CgnRevokationRequest = {
-  motivation: "aMotivation" as NonEmptyString
+  reason: "aMotivation" as NonEmptyString
 };
 
 const aUserCgnRevokedStatus: CgnRevokedStatus = {
-  motivation: aRevokationRequest.motivation,
+  reason: aRevokationRequest.reason,
   revokation_date: now,
   status: RevokedStatusEnum.REVOKED
 };
