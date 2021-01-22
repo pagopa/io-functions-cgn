@@ -26,7 +26,7 @@ paths:
           - CgnPendingStatus
           - CgnActivatedStatus
           - CgnRevokedStatus
-          - CgnCanceledStatus
+          - CgnExpiredStatus
       parameters:
         - $ref: "#/parameters/FiscalCode"
       responses:
@@ -154,13 +154,13 @@ definitions:
       - status
       - revocation_date
       - revocation_reason
-  CgnCanceledStatus:
+  CgnExpiredStatus:
     type: object
     properties:
       status:
         type: string
         x-extensible-enum:
-          - CANCELED
+          - EXPIRED
     required:
       - status
   CgnStatus:
@@ -169,7 +169,7 @@ definitions:
       - $ref: "#/definitions/CgnPendingStatus"
       - $ref: "#/definitions/CgnActivatedStatus"
       - $ref: "#/definitions/CgnRevokedStatus"
-      - $ref: "#/definitions/CgnCanceledStatus"
+      - $ref: "#/definitions/CgnExpiredStatus"
     x-example: 
       status: ACTIVATED
       activation_date: "2021-10-13T00:00:00.000Z"

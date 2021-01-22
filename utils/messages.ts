@@ -24,7 +24,7 @@ ${status.revocation_reason}
       subject: "TODO",
       markdown: `TODO`
     } as MessageContent),
-  CgnCanceledStatus: () =>
+  CgnExpiredStatus: () =>
     ({
       subject: "La tua Carta Nazionale Giovani è scaduta",
       markdown: `
@@ -45,7 +45,7 @@ export const getMessage = (
     case "CgnActivatedStatus":
       // tslint:disable-next-line: no-useless-cast
       return MESSAGES[messageType](cgnStatus as CgnActivatedStatus);
-    case "CgnCanceledStatus":
+    case "CgnExpiredStatus":
       return MESSAGES[messageType]();
     default:
       return assertNever(messageType);

@@ -2,11 +2,16 @@
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
-import { context, mockStartNew } from "../../__mocks__/durable-functions";
+import {
+  context,
+  mockStartNew,
+  mockTerminate
+} from "../../__mocks__/durable-functions";
 import { getUpdateExpiredCgnHandler } from "../handler";
 import * as tableUtils from "../table";
 
-const aSetOfFiscalCodes: ReadonlyArray<any> = [
+// tslint:disable-next-line: readonly-array
+const aSetOfFiscalCodes: FiscalCode[] = [
   "RODFDS82S10H501T" as FiscalCode,
   "RODEDS80S10H501T" as FiscalCode
 ];
@@ -31,6 +36,18 @@ describe("UpdateExpiredCgn", () => {
     );
     await updateExpiredCgnHandler(context);
     expect(mockStartNew).toBeCalledTimes(aSetOfFiscalCodes.length);
+  });
+
+  it("should terminate other orchestrators running for activation and revocation", async () => {
+    getExpiredCgnUsersMock.mockImplementationOnce(() =>
+      taskEither.of(aSetOfFiscalCodes)
+    );
+    const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
+      tableServiceMock as any,
+      expiredCgnTableName
+    );
+    await updateExpiredCgnHandler(context);
+    expect(mockTerminate).toBeCalledTimes(aSetOfFiscalCodes.length * 2);
   });
 
   it("should not instantiate any orchestrator if there are no elements to process", async () => {

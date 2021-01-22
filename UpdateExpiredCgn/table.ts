@@ -46,5 +46,7 @@ export const getExpiredCgnUsers = (
     )
     .map(pagedQuery => pagedQuery(queryFilterForKey(`${refDate}`)))
     .chain(cgnExpirationQuery =>
-      tryCatch(() => queryUsers(cgnExpirationQuery), toError)
+      tryCatch(() => queryUsers(cgnExpirationQuery), toError).map(readSet =>
+        Array.from(readSet.values())
+      )
     );

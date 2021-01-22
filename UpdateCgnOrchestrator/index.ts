@@ -10,7 +10,7 @@ import { constVoid } from "fp-ts/lib/function";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { CgnCanceledStatus } from "../generated/definitions/CgnCanceledStatus";
+import { CgnExpiredStatus } from "../generated/definitions/CgnExpiredStatus";
 import {
   CgnRevokedStatus,
   StatusEnum as RevokedStatusEnum
@@ -55,8 +55,8 @@ const getMessageType = (cgnStatus: CgnStatus) => {
   if (CgnRevokedStatus.is(cgnStatus)) {
     return "CgnRevokedStatus";
   }
-  if (CgnCanceledStatus.is(cgnStatus)) {
-    return "CgnCanceledStatus";
+  if (CgnExpiredStatus.is(cgnStatus)) {
+    return "CgnExpiredStatus";
   } else {
     return "CgnActivatedStatus";
   }
