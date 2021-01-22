@@ -16,7 +16,7 @@ A seguito di una segnalazione la tua Carta Giovani Nazionale è stata **revocata
         status.revocation_date,
         "dd-MM-yyyy"
       )}** con la seguente motivazione:
-${status.reason}
+${status.revocation_reason}
 `
     } as MessageContent),
   CgnActivatedStatus: (_: CgnActivatedStatus) =>

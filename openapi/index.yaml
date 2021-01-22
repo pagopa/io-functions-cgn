@@ -53,7 +53,7 @@ paths:
       parameters:
         - $ref: "#/parameters/FiscalCode"
         - in: body
-          name: reason
+          name: revocation_reason
           schema:
             $ref: "#/definitions/CgnRevocationRequest"
       responses:
@@ -147,13 +147,13 @@ definitions:
           - REVOKED
       revocation_date:
         $ref: "#/definitions/Timestamp"
-      reason:
+      revocation_reason:
         type: string
         minLength: 1
     required:
       - status
       - revocation_date
-      - reason
+      - revocation_reason
   CgnCanceledStatus:
     type: object
     properties:
@@ -177,11 +177,11 @@ definitions:
   CgnRevocationRequest:
     type: object
     properties:
-      reason:
+      revocation_reason:
         type: string
         minLength: 1
     required:
-      - reason
+      - revocation_reason
   InstanceId:
     type: object
     properties:

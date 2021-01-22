@@ -15,7 +15,7 @@ const now = new Date();
 const aReason = "aMotivation" as NonEmptyString;
 
 const aUserCgnRevokedStatus: CgnRevokedStatus = {
-  reason: aReason,
+  revocation_reason: aReason,
   revocation_date: now,
   status: RevokedCgnStatusEnum.REVOKED
 };

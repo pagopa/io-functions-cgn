@@ -24,7 +24,7 @@ type ActivityResultSuccess = t.TypeOf<typeof ActivityResultSuccess>;
 
 const ActivityResultFailure = t.interface({
   kind: t.literal("FAILURE"),
-  reason: t.string
+  revocation_reason: t.string
 });
 
 type ActivityResultFailure = t.TypeOf<typeof ActivityResultFailure>;
@@ -47,7 +47,7 @@ const failure = (context: Context, logPrefix: string) => (
   context.log.info(logMessage);
   return ActivityResultFailure.encode({
     kind: "FAILURE",
-    reason: err.message
+    revocation_reason: err.message
   });
 };
 

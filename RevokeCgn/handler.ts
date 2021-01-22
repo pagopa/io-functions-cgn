@@ -57,8 +57,8 @@ export function RevokeCgnHandler(
   return async (context, fiscalCode, revocationReq) => {
     const client = df.getClient(context);
     const revokedCgnStatus: CgnRevokedStatus = {
-      reason: revocationReq.reason,
       revocation_date: new Date(),
+      revocation_reason: revocationReq.revocation_reason,
       status: StatusEnum.REVOKED
     };
     const orchestratorId = makeUpdateCgnOrchestratorId(

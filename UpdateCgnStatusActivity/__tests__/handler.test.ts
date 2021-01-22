@@ -18,11 +18,11 @@ import { ActivityInput, getUpdateCgnStatusActivityHandler } from "../handler";
 const now = new Date();
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const aRevocationRequest = {
-  reason: "aMotivation" as NonEmptyString
+  revocation_reason: "aMotivation" as NonEmptyString
 };
 
 const aUserCgnRevokedStatus: CgnRevokedStatus = {
-  reason: aRevocationRequest.reason,
+  revocation_reason: aRevocationRequest.revocation_reason,
   revocation_date: now,
   status: RevokedStatusEnum.REVOKED
 };
@@ -66,7 +66,7 @@ describe("UpdateCgnStatusActivity", () => {
     );
     expect(response.kind).toBe("FAILURE");
     if (response.kind === "FAILURE") {
-      expect(response.reason).toBe(
+      expect(response.revocation_reason).toBe(
         "Cannot retrieve userCgn for the provided fiscalCode"
       );
     }
@@ -85,7 +85,7 @@ describe("UpdateCgnStatusActivity", () => {
     );
     expect(response.kind).toBe("FAILURE");
     if (response.kind === "FAILURE") {
-      expect(response.reason).toBe(
+      expect(response.revocation_reason).toBe(
         "No userCgn found for the provided fiscalCode"
       );
     }
@@ -106,7 +106,7 @@ describe("UpdateCgnStatusActivity", () => {
     );
     expect(response.kind).toBe("FAILURE");
     if (response.kind === "FAILURE") {
-      expect(response.reason).toBe("Cannot update userCgn");
+      expect(response.revocation_reason).toBe("Cannot update userCgn");
     }
   });
 
