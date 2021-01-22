@@ -7,7 +7,7 @@
       "name": "req",
       "route": "api/v1/cgn/{fiscalcode}",
       "methods": [
-        "post"
+        "delete"
       ]
     },
     {

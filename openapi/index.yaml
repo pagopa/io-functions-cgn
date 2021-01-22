@@ -43,7 +43,7 @@ paths:
           schema:
             $ref: "#/definitions/ProblemJson"
   "/cgn/{fiscalCode}":
-    post:
+    delete:
       operationId: revokeCgn
       summary: |
         Revoke CGN 
