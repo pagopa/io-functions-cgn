@@ -18,10 +18,15 @@ security:
 paths:
   "/cgn/status/{fiscalcode}":
     get:
+      summary: Get CGN details Status
       operationId: getCgnStatus
-      summary: |
-        Get the CGN status details 
-        by the provided fiscal code
+      description: |
+        Get the CGN status details by the provided fiscal code. 
+        In case of success the response could be one of:
+          - CgnPendingStatus
+          - CgnActivatedStatus
+          - CgnRevokedStatus
+          - CgnCanceledStatus
       parameters:
         - $ref: "#/parameters/FiscalCode"
       responses:
@@ -33,6 +38,47 @@ paths:
           description: Wrong or missing function key.
         "404":
           description: No CGN found.
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
+  "/cgn/{fiscalCode}":
+    delete:
+      operationId: revokeCgn
+      summary: |
+        Revoke CGN 
+      description: |
+        Revoke a CGN by the provided fiscal code
+        and a proper revocation's reason.
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
+        - in: body
+          name: revocation_reason
+          schema:
+            $ref: "#/definitions/CgnRevocationRequest"
+      responses:
+        "201":
+          description: Request created.
+          schema:
+            $ref: "#/definitions/InstanceId"
+          headers:
+            Location:
+              type: string
+              description: |-
+                Location (URL) of created request resource.
+                A GET request to this URL returns the request status and details.
+        "202":
+          description: Processing request.
+          schema:
+            $ref: "#/definitions/InstanceId"
+        "401":
+          description: Wrong or missing function key.
+        "404":
+          description: No CGN found.
+        "409":
+          description: |
+            Cannot revoke the user's cgn because another updateCgn request was found
+            for this user
         "500":
           description: Service unavailable.
           schema:
@@ -99,15 +145,15 @@ definitions:
         type: string
         x-extensible-enum:
           - REVOKED
-      revokation_date:
+      revocation_date:
         $ref: "#/definitions/Timestamp"
-      motivation:
+      revocation_reason:
         type: string
         minLength: 1
     required:
       - status
-      - revokation_date
-      - motivation
+      - revocation_date
+      - revocation_reason
   CgnCanceledStatus:
     type: object
     properties:
@@ -124,5 +170,27 @@ definitions:
       - $ref: "#/definitions/CgnActivatedStatus"
       - $ref: "#/definitions/CgnRevokedStatus"
       - $ref: "#/definitions/CgnCanceledStatus"
+    x-example: 
+      status: ACTIVATED
+      activation_date: "2021-10-13T00:00:00.000Z"
+      expiration_date: "2030-10-13T00:00:00.000Z"
+  CgnRevocationRequest:
+    type: object
+    properties:
+      revocation_reason:
+        type: string
+        minLength: 1
+    required:
+      - revocation_reason
+  InstanceId:
+    type: object
+    properties:
+      id:
+        type: string
+        minLength: 1
+        description: The identifier of the created request.
+    required:
+      - id
+    
 
       
