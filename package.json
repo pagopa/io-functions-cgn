@@ -35,7 +35,7 @@
     "danger-plugin-digitalcitizenship": "*",
     "dotenv-cli": "^3.1.0",
     "italia-tslint-rules": "*",
-    "italia-utils": "^6.2.2",
+    "italia-utils": "^6.3.0",
     "jest": "^24.8.0",
     "jest-mock-express": "^0.1.1",
     "modclean": "^3.0.0-beta.1",
@@ -53,10 +53,10 @@
     "durable-functions": "^1.4.4",
     "express": "^4.15.3",
     "fp-ts": "1.17.4",
-    "io-functions-commons": "^17.0.0",
+    "io-functions-commons": "^17.3.0",
     "io-functions-express": "^1.1.0",
     "io-ts": "1.8.5",
-    "italia-ts-commons": "^8.5.0",
+    "italia-ts-commons": "^8.6.0",
     "winston": "^3.2.1"
   },
   "resolutions": {

@@ -7,39 +7,31 @@ import {
   ResponseErrorInternal,
   ResponseSuccessAccepted
 } from "italia-ts-commons/lib/responses";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { mockStartNew } from "../../__mocks__/durable-functions";
-import {
-  CgnCanceledStatus,
-  StatusEnum as CanceledStatusEnum
-} from "../../generated/definitions/CgnCanceledStatus";
 import {
   CgnPendingStatus,
   StatusEnum
 } from "../../generated/definitions/CgnPendingStatus";
-import { CgnRevokationRequest } from "../../generated/definitions/CgnRevokationRequest";
+import { CgnRevocationRequest } from "../../generated/definitions/CgnRevocationRequest";
 import {
   CgnRevokedStatus,
   StatusEnum as RevokedStatusEnum
 } from "../../generated/definitions/CgnRevokedStatus";
 import { UserCgn } from "../../models/user_cgn";
+import * as orchUtils from "../../utils/orchestrators";
 import { RevokeCgnHandler } from "../handler";
-import * as orchUtils from "../orchestrators";
 
 const now = new Date();
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
-const aRevokationRequest: CgnRevokationRequest = {
-  motivation: "aMotivation"
+const aRevocationRequest: CgnRevocationRequest = {
+  revocation_reason: "aMotivation" as NonEmptyString
 };
 
 const aUserCgnRevokedStatus: CgnRevokedStatus = {
-  motivation: aRevokationRequest.motivation,
-  revokation_date: now,
+  revocation_reason: aRevocationRequest.revocation_reason,
+  revocation_date: now,
   status: RevokedStatusEnum.REVOKED
-};
-
-const aUserCgnCanceledStatus: CgnCanceledStatus = {
-  status: CanceledStatusEnum.CANCELED
 };
 
 const aUserCgnPendingStatus: CgnPendingStatus = {
@@ -48,6 +40,7 @@ const aUserCgnPendingStatus: CgnPendingStatus = {
 
 const aRevokedUserCgn: UserCgn = {
   fiscalCode: aFiscalCode,
+  id: "A_USER_CGN_ID" as NonEmptyString,
   status: aUserCgnRevokedStatus
 };
 
@@ -67,7 +60,7 @@ describe("RevokeCgn", () => {
     const response = await revokeCgnHandler(
       {} as any,
       aFiscalCode,
-      aRevokationRequest
+      aRevocationRequest
     );
     expect(response.kind).toBe("IResponseErrorInternal");
   });
@@ -80,37 +73,9 @@ describe("RevokeCgn", () => {
     const response = await revokeCgnHandler(
       {} as any,
       aFiscalCode,
-      aRevokationRequest
+      aRevocationRequest
     );
     expect(response.kind).toBe("IResponseErrorNotFound");
-  });
-
-  it("should return a Conflict error if an other UserCgn was found in revoked status for the provided fiscal code", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(aRevokedUserCgn))
-    );
-    const revokeCgnHandler = RevokeCgnHandler(userCgnModelMock as any);
-    const response = await revokeCgnHandler(
-      {} as any,
-      aFiscalCode,
-      aRevokationRequest
-    );
-    expect(response.kind).toBe("IResponseErrorConflict");
-  });
-
-  it("should return a Conflict error if an other UserCgn was found in canceled status for the provided fiscal code", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(
-        some({ ...aRevokedUserCgn, status: aUserCgnCanceledStatus })
-      )
-    );
-    const revokeCgnHandler = RevokeCgnHandler(userCgnModelMock as any);
-    const response = await revokeCgnHandler(
-      {} as any,
-      aFiscalCode,
-      aRevokationRequest
-    );
-    expect(response.kind).toBe("IResponseErrorConflict");
   });
 
   it("should return an Internal Error if it is not possible to check status of an other orchestrator with the same id", async () => {
@@ -118,13 +83,13 @@ describe("RevokeCgn", () => {
       taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
     );
     jest
-      .spyOn(orchUtils, "checkRevokeCgnIsRunning")
+      .spyOn(orchUtils, "checkUpdateCgnIsRunning")
       .mockImplementationOnce(() => fromLeft(ResponseErrorInternal("Error")));
     const revokeCgnHandler = RevokeCgnHandler(userCgnModelMock as any);
     const response = await revokeCgnHandler(
       {} as any,
       aFiscalCode,
-      aRevokationRequest
+      aRevocationRequest
     );
     expect(response.kind).toBe("IResponseErrorInternal");
   });
@@ -134,13 +99,13 @@ describe("RevokeCgn", () => {
       taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
     );
     jest
-      .spyOn(orchUtils, "checkRevokeCgnIsRunning")
+      .spyOn(orchUtils, "checkUpdateCgnIsRunning")
       .mockImplementationOnce(() => fromLeft(ResponseSuccessAccepted()));
     const revokeCgnHandler = RevokeCgnHandler(userCgnModelMock as any);
     const response = await revokeCgnHandler(
       {} as any,
       aFiscalCode,
-      aRevokationRequest
+      aRevocationRequest
     );
     expect(response.kind).toBe("IResponseSuccessAccepted");
   });
@@ -150,10 +115,10 @@ describe("RevokeCgn", () => {
       taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
     );
     jest
-      .spyOn(orchUtils, "checkRevokeCgnIsRunning")
+      .spyOn(orchUtils, "checkUpdateCgnIsRunning")
       .mockImplementationOnce(() => taskEither.of(false));
     const revokeCgnHandler = RevokeCgnHandler(userCgnModelMock as any);
-    await revokeCgnHandler({} as any, aFiscalCode, aRevokationRequest);
+    await revokeCgnHandler({} as any, aFiscalCode, aRevocationRequest);
     expect(mockStartNew).toBeCalledTimes(1);
   });
 });

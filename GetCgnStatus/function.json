@@ -5,7 +5,7 @@
       "type": "httpTrigger",
       "direction": "in",
       "name": "req",
-      "route": "cgn/status/{fiscalcode}",
+      "route": "api/v1/cgn/status/{fiscalcode}",
       "methods": [
         "get"
       ]

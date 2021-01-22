@@ -18,50 +18,53 @@ import {
   IResponseErrorInternal,
   IResponseErrorNotFound,
   IResponseSuccessAccepted,
-  ResponseErrorConflict,
+  IResponseSuccessRedirectToResource,
   ResponseErrorInternal,
   ResponseErrorNotFound,
-  ResponseSuccessAccepted
+  ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { CgnCanceledStatus } from "../generated/definitions/CgnCanceledStatus";
-import { CgnRevokationRequest } from "../generated/definitions/CgnRevokationRequest";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { CgnRevocationRequest } from "../generated/definitions/CgnRevocationRequest";
 import {
   CgnRevokedStatus,
   StatusEnum
 } from "../generated/definitions/CgnRevokedStatus";
-import { CgnStatus } from "../generated/definitions/CgnStatus";
+import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
 import { OrchestratorInput } from "../UpdateCgnOrchestrator";
 import { makeUpdateCgnOrchestratorId } from "../utils/orchestrators";
-import { checkRevokeCgnIsRunning } from "./orchestrators";
+import { checkUpdateCgnIsRunning } from "../utils/orchestrators";
 
 type ErrorTypes =
   | IResponseErrorInternal
   | IResponseErrorNotFound
   | IResponseErrorConflict;
-type ReturnTypes = IResponseSuccessAccepted | ErrorTypes;
+type ReturnTypes =
+  | IResponseSuccessAccepted
+  | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
+  | ErrorTypes;
 
 type IRevokeCgnHandler = (
   context: Context,
   fiscalCode: FiscalCode,
-  cgnRevokationRequest: CgnRevokationRequest
+  CgnRevocationRequest: CgnRevocationRequest
 ) => Promise<ReturnTypes>;
 
-const checkExistingCgnStatus = (cgnStatus: CgnStatus) =>
-  CgnRevokedStatus.is(cgnStatus) || CgnCanceledStatus.is(cgnStatus)
-    ? fromLeft<IResponseErrorConflict, CgnStatus>(
-        ResponseErrorConflict(
-          "Cannot revoke the user's cgn because it is already revoked or canceled"
-        )
-      )
-    : taskEither.of<IResponseErrorConflict, CgnStatus>(cgnStatus);
-
 export function RevokeCgnHandler(
-  userCgnModel: UserCgnModel
+  userCgnModel: UserCgnModel,
+  logPrefix: string = "RevokeCgnHandler"
 ): IRevokeCgnHandler {
-  return async (context, fiscalCode, revokationReq) => {
+  return async (context, fiscalCode, revocationReq) => {
     const client = df.getClient(context);
+    const revokedCgnStatus: CgnRevokedStatus = {
+      revocation_date: new Date(),
+      revocation_reason: revocationReq.revocation_reason,
+      status: StatusEnum.REVOKED
+    };
+    const orchestratorId = makeUpdateCgnOrchestratorId(
+      fiscalCode,
+      StatusEnum.REVOKED
+    ) as NonEmptyString;
     return userCgnModel
       .findLastVersionByModelId([fiscalCode])
       .mapLeft<IResponseErrorInternal | IResponseErrorNotFound>(() =>
@@ -74,13 +77,19 @@ export function RevokeCgnHandler(
           )(maybeUserCgn)
         )
       )
-      .foldTaskEither<ErrorTypes, CgnStatus>(fromLeft, userCgn =>
-        checkExistingCgnStatus(userCgn.status)
-      )
-      .chain(_ =>
-        checkRevokeCgnIsRunning(client, fiscalCode).foldTaskEither<
+      .foldTaskEither<
+        ErrorTypes,
+        | IResponseSuccessAccepted
+        | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
+      >(fromLeft, () =>
+        checkUpdateCgnIsRunning(
+          client,
+          fiscalCode,
+          revokedCgnStatus
+        ).foldTaskEither<
           ErrorTypes,
-          IResponseSuccessAccepted
+          | IResponseSuccessAccepted
+          | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
         >(
           response =>
             response.kind === "IResponseSuccessAccepted"
@@ -91,26 +100,36 @@ export function RevokeCgnHandler(
               () =>
                 client.startNew(
                   "UpdateCgnOrchestrator",
-                  makeUpdateCgnOrchestratorId(fiscalCode, StatusEnum.REVOKED),
+                  orchestratorId,
                   OrchestratorInput.encode({
                     fiscalCode,
-                    newStatus: {
-                      motivation: revokationReq.motivation,
-                      revokation_date: new Date(),
-                      status: StatusEnum.REVOKED
-                    }
+                    newStatus: revokedCgnStatus
                   })
                 ),
               toError
             ).bimap(
-              () => ResponseErrorInternal("Cannot call RevokeCgnOrchestrator"),
-              () => ResponseSuccessAccepted("Request Accepted")
+              err => {
+                context.log.error(
+                  `${logPrefix}|Cannot start UpdateCgnOrchestrator|ERROR=${err.message}`
+                );
+                return ResponseErrorInternal(
+                  "Cannot start UpdateCgnOrchestrator"
+                );
+              },
+              () => {
+                const instanceId: InstanceId = {
+                  id: orchestratorId
+                };
+                return ResponseSuccessRedirectToResource(
+                  instanceId,
+                  `/api/v1/cgn/status/${fiscalCode}`,
+                  instanceId
+                );
+              }
             )
         )
       )
-      .fold<ReturnTypes>(identity, () =>
-        ResponseSuccessAccepted("Request accepted")
-      )
+      .fold<ReturnTypes>(identity, identity)
       .run();
   };
 }
@@ -120,8 +139,8 @@ export function RevokeCgn(userCgnModel: UserCgnModel): express.RequestHandler {
 
   const middlewaresWrap = withRequestMiddlewares(
     ContextMiddleware(),
-    RequiredParamMiddleware("fiscalCode", FiscalCode),
-    RequiredBodyPayloadMiddleware(CgnRevokationRequest)
+    RequiredParamMiddleware("fiscalcode", FiscalCode),
+    RequiredBodyPayloadMiddleware(CgnRevocationRequest)
   );
 
   return wrapRequestHandler(middlewaresWrap(handler));

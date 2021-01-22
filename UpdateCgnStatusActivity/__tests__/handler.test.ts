@@ -2,13 +2,12 @@
 import { none, some } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { toCosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
 import {
   CgnPendingStatus,
   StatusEnum
 } from "../../generated/definitions/CgnPendingStatus";
-import { CgnRevokationRequest } from "../../generated/definitions/CgnRevokationRequest";
 import {
   CgnRevokedStatus,
   StatusEnum as RevokedStatusEnum
@@ -18,18 +17,19 @@ import { ActivityInput, getUpdateCgnStatusActivityHandler } from "../handler";
 
 const now = new Date();
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
-const aRevokationRequest: CgnRevokationRequest = {
-  motivation: "aMotivation"
+const aRevocationRequest = {
+  revocation_reason: "aMotivation" as NonEmptyString
 };
 
 const aUserCgnRevokedStatus: CgnRevokedStatus = {
-  motivation: aRevokationRequest.motivation,
-  revokation_date: now,
+  revocation_reason: aRevocationRequest.revocation_reason,
+  revocation_date: now,
   status: RevokedStatusEnum.REVOKED
 };
 
 const aRevokedUserCgn: UserCgn = {
   fiscalCode: aFiscalCode,
+  id: "ID" as NonEmptyString,
   status: aUserCgnRevokedStatus
 };
 
@@ -66,7 +66,7 @@ describe("UpdateCgnStatusActivity", () => {
     );
     expect(response.kind).toBe("FAILURE");
     if (response.kind === "FAILURE") {
-      expect(response.reason).toBe(
+      expect(response.revocation_reason).toBe(
         "Cannot retrieve userCgn for the provided fiscalCode"
       );
     }
@@ -85,7 +85,7 @@ describe("UpdateCgnStatusActivity", () => {
     );
     expect(response.kind).toBe("FAILURE");
     if (response.kind === "FAILURE") {
-      expect(response.reason).toBe(
+      expect(response.revocation_reason).toBe(
         "No userCgn found for the provided fiscalCode"
       );
     }
@@ -95,7 +95,7 @@ describe("UpdateCgnStatusActivity", () => {
       taskEither.of(some(aRevokedUserCgn))
     );
     updateMock.mockImplementationOnce(() =>
-      fromLeft(new Error("cannot update userCgn"))
+      fromLeft(new Error("Cannot update userCgn"))
     );
     const updateCgnStatusActivityHandler = getUpdateCgnStatusActivityHandler(
       userCgnModelMock as any
@@ -106,7 +106,7 @@ describe("UpdateCgnStatusActivity", () => {
     );
     expect(response.kind).toBe("FAILURE");
     if (response.kind === "FAILURE") {
-      expect(response.reason).toBe("Cannot update userCgn");
+      expect(response.revocation_reason).toBe("Cannot update userCgn");
     }
   });
 

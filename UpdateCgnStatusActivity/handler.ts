@@ -1,5 +1,5 @@
 import { Context } from "@azure/functions";
-import { fromOption } from "fp-ts/lib/Either";
+import { fromOption, toError } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
@@ -24,7 +24,7 @@ type ActivityResultSuccess = t.TypeOf<typeof ActivityResultSuccess>;
 
 const ActivityResultFailure = t.interface({
   kind: t.literal("FAILURE"),
-  reason: t.string
+  revocation_reason: t.string
 });
 
 type ActivityResultFailure = t.TypeOf<typeof ActivityResultFailure>;
@@ -44,10 +44,10 @@ const failure = (context: Context, logPrefix: string) => (
     description === ""
       ? `${logPrefix}|FAILURE=${err.message}`
       : `${logPrefix}|${description}|FAILURE=${err.message}`;
-  context.log.verbose(logMessage);
+  context.log.info(logMessage);
   return ActivityResultFailure.encode({
     kind: "FAILURE",
-    reason: err.message
+    revocation_reason: err.message
   });
 };
 
@@ -83,7 +83,7 @@ export const getUpdateCgnStatusActivityHandler = (
     )
     .chain(_ =>
       userCgnModel.update(_).bimap(
-        () => fail(new Error("Cannot update userCgn")),
+        err => fail(toError(err), "Cannot update userCgn"),
         () => success()
       )
     )

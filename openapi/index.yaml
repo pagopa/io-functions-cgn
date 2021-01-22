@@ -1,7 +1,7 @@
 swagger: "2.0"
 info:
   version: 1.1.0
-  title: IO Functions CGN API
+  title: IO Functions CGN
   contact:
     name: IO team
     url: https://forum.italia.it/c/progetto-io
@@ -10,16 +10,23 @@ info:
   description: >
     Documentation of the IO Function API here.
 host: api.cd.italia.it
-basePath: "/template"
+basePath: "/api/v1"
 schemes:
   - https
+security:
+  - ApiKey: []
 paths:
-  "/cgn/status/{fiscalCode}":
+  "/cgn/status/{fiscalcode}":
     get:
+      summary: Get CGN details Status
       operationId: getCgnStatus
-      summary: |
-        Get the CGN status details 
-        by the provided fiscal code
+      description: |
+        Get the CGN status details by the provided fiscal code. 
+        In case of success the response could be one of:
+          - CgnPendingStatus
+          - CgnActivatedStatus
+          - CgnRevokedStatus
+          - CgnCanceledStatus
       parameters:
         - $ref: "#/parameters/FiscalCode"
       responses:
@@ -35,17 +42,20 @@ paths:
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
-  "/cgn/revoke/{fiscalCode}":
-    post:
+  "/cgn/{fiscalCode}":
+    delete:
       operationId: revokeCgn
       summary: |
+        Revoke CGN 
+      description: |
         Revoke a CGN by the provided fiscal code
+        and a proper revocation's reason.
       parameters:
         - $ref: "#/parameters/FiscalCode"
         - in: body
-          name: motivation
+          name: revocation_reason
           schema:
-            $ref: "#/definitions/CgnRevokationRequest"
+            $ref: "#/definitions/CgnRevocationRequest"
       responses:
         "201":
           description: Request created.
@@ -67,37 +77,16 @@ paths:
           description: No CGN found.
         "409":
           description: |
-            Cannot revoke the user's cgn because another revokation request was found
+            Cannot revoke the user's cgn because another updateCgn request was found
             for this user
         "500":
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
-  "/echo/{input}":
-    parameters:
-      - name: input
-        in: path
-        type: string
-        required: true
-        description: test input.
-    get:
-      operationId: echo
-      summary: Echo API
-      description: Some API description here.
-      responses:
-        "200":
-          description: Found.
-          schema:
-            "$ref": "#/definitions/Input"
-          examples:
-            application/json:
-              id: "10000AAAA"
-              output: "hello world !"
-        "401":
-          description: Unauthorized
-        "404":
-          description: Not found.
-      parameters: []
+consumes:
+  - application/json
+produces:
+  - application/json
 parameters:
   FiscalCode:
     name: fiscalcode
@@ -110,21 +99,21 @@ parameters:
     pattern: "[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]"
     x-example: SPNDNL80R13C555X
 
+securityDefinitions:
+  ApiKey:
+    type: apiKey
+    name: X-Functions-Key
+    in: header
+    description: The API key to access this function app.
+
 definitions:
   Timestamp:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/Timestamp"
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/Timestamp"
   FiscalCode:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/FiscalCode"
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/FiscalCode"
   ProblemJson:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v10.2.3/openapi/definitions.yaml#/ProblemJson"
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/ProblemJson"
 
-  Input:
-    type: object
-    properties:
-      id:
-        type: string
-      output:
-        type: string
   CgnPendingStatus:
     type: object
     properties:
@@ -147,6 +136,8 @@ definitions:
         $ref: "#/definitions/Timestamp"
     required:
       - status
+      - activation_date
+      - expiration_date
   CgnRevokedStatus:
     type: object
     properties:
@@ -154,14 +145,15 @@ definitions:
         type: string
         x-extensible-enum:
           - REVOKED
-      revokation_date:
+      revocation_date:
         $ref: "#/definitions/Timestamp"
-      motivation:
+      revocation_reason:
         type: string
+        minLength: 1
     required:
       - status
-      - revokation_date
-      - motivation
+      - revocation_date
+      - revocation_reason
   CgnCanceledStatus:
     type: object
     properties:
@@ -178,13 +170,18 @@ definitions:
       - $ref: "#/definitions/CgnActivatedStatus"
       - $ref: "#/definitions/CgnRevokedStatus"
       - $ref: "#/definitions/CgnCanceledStatus"
-  CgnRevokationRequest:
+    x-example: 
+      status: ACTIVATED
+      activation_date: "2021-10-13T00:00:00.000Z"
+      expiration_date: "2030-10-13T00:00:00.000Z"
+  CgnRevocationRequest:
     type: object
     properties:
-      motivation:
+      revocation_reason:
         type: string
+        minLength: 1
     required:
-      - motivation
+      - revocation_reason
   InstanceId:
     type: object
     properties:

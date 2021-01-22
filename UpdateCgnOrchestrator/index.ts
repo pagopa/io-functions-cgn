@@ -10,10 +10,7 @@ import { constVoid } from "fp-ts/lib/function";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import {
-  CgnCanceledStatus,
-  StatusEnum as CanceledStatusEnum
-} from "../generated/definitions/CgnCanceledStatus";
+import { CgnCanceledStatus } from "../generated/definitions/CgnCanceledStatus";
 import {
   CgnRevokedStatus,
   StatusEnum as RevokedStatusEnum
@@ -67,7 +64,7 @@ const getMessageType = (cgnStatus: CgnStatus) => {
 
 export const handler = function*(
   context: IOrchestrationFunctionContext,
-  logPrefix: string = "RevokeCgnOrchestrator"
+  logPrefix: string = "UpdateCgnOrchestrator"
 ): Generator {
   const trackExAndThrow = trackExceptionAndThrow(context, logPrefix);
   context.df.setCustomStatus("RUNNING");
@@ -105,11 +102,6 @@ export const handler = function*(
       trackExAndThrow(e, "cgn.update.exception.decode.activityOutput")
     );
 
-    const hasSendMessageActivity = [
-      RevokedStatusEnum.REVOKED.toString(),
-      CanceledStatusEnum.CANCELED.toString()
-    ].includes(newStatus.status);
-
     if (updateCgnResult.kind !== "SUCCESS") {
       trackExAndThrow(
         new Error("Cannot update CGN Status"),
@@ -117,9 +109,11 @@ export const handler = function*(
       );
     }
 
+    const hasSendMessageActivity =
+      RevokedStatusEnum.REVOKED === newStatus.status;
+
     if (hasSendMessageActivity) {
       // sleep before sending push notification
-      // so we can let the get operation stop the flow here
       yield context.df.createTimer(
         addSeconds(context.df.currentUtcDateTime, NOTIFICATION_DELAY_SECONDS)
       );
