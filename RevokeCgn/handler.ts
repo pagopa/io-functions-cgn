@@ -24,7 +24,7 @@ import {
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { CgnRevokationRequest } from "../generated/definitions/CgnRevokationRequest";
+import { CgnRevocationRequest } from "../generated/definitions/CgnRevocationRequest";
 import {
   CgnRevokedStatus,
   StatusEnum
@@ -47,18 +47,18 @@ type ReturnTypes =
 type IRevokeCgnHandler = (
   context: Context,
   fiscalCode: FiscalCode,
-  cgnRevokationRequest: CgnRevokationRequest
+  CgnRevocationRequest: CgnRevocationRequest
 ) => Promise<ReturnTypes>;
 
 export function RevokeCgnHandler(
   userCgnModel: UserCgnModel,
   logPrefix: string = "RevokeCgnHandler"
 ): IRevokeCgnHandler {
-  return async (context, fiscalCode, revokationReq) => {
+  return async (context, fiscalCode, revocationReq) => {
     const client = df.getClient(context);
     const revokedCgnStatus: CgnRevokedStatus = {
-      reason: revokationReq.reason,
-      revokation_date: new Date(),
+      reason: revocationReq.reason,
+      revocation_date: new Date(),
       status: StatusEnum.REVOKED
     };
     const orchestratorId = makeUpdateCgnOrchestratorId(
@@ -140,7 +140,7 @@ export function RevokeCgn(userCgnModel: UserCgnModel): express.RequestHandler {
   const middlewaresWrap = withRequestMiddlewares(
     ContextMiddleware(),
     RequiredParamMiddleware("fiscalcode", FiscalCode),
-    RequiredBodyPayloadMiddleware(CgnRevokationRequest)
+    RequiredBodyPayloadMiddleware(CgnRevocationRequest)
   );
 
   return wrapRequestHandler(middlewaresWrap(handler));

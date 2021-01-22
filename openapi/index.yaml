@@ -49,13 +49,13 @@ paths:
         Revoke CGN 
       description: |
         Revoke a CGN by the provided fiscal code
-        and a proper revokation's reason.
+        and a proper revocation's reason.
       parameters:
         - $ref: "#/parameters/FiscalCode"
         - in: body
           name: reason
           schema:
-            $ref: "#/definitions/CgnRevokationRequest"
+            $ref: "#/definitions/CgnRevocationRequest"
       responses:
         "201":
           description: Request created.
@@ -145,14 +145,14 @@ definitions:
         type: string
         x-extensible-enum:
           - REVOKED
-      revokation_date:
+      revocation_date:
         $ref: "#/definitions/Timestamp"
       reason:
         type: string
         minLength: 1
     required:
       - status
-      - revokation_date
+      - revocation_date
       - reason
   CgnCanceledStatus:
     type: object
@@ -174,7 +174,7 @@ definitions:
       status: ACTIVATED
       activation_date: "2021-10-13T00:00:00.000Z"
       expiration_date: "2030-10-13T00:00:00.000Z"
-  CgnRevokationRequest:
+  CgnRevocationRequest:
     type: object
     properties:
       reason:

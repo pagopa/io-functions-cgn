@@ -13,7 +13,7 @@ export const MESSAGES = {
       subject: "La tua Carta Giovani Nazionale è stata revocata",
       markdown: `
 A seguito di una segnalazione la tua Carta Giovani Nazionale è stata **revocata** in data **${format(
-        status.revokation_date,
+        status.revocation_date,
         "dd-MM-yyyy"
       )}** con la seguente motivazione:
 ${status.reason}

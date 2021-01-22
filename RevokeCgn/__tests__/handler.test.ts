@@ -13,7 +13,7 @@ import {
   CgnPendingStatus,
   StatusEnum
 } from "../../generated/definitions/CgnPendingStatus";
-import { CgnRevokationRequest } from "../../generated/definitions/CgnRevokationRequest";
+import { CgnRevocationRequest } from "../../generated/definitions/CgnRevocationRequest";
 import {
   CgnRevokedStatus,
   StatusEnum as RevokedStatusEnum
@@ -24,13 +24,13 @@ import { RevokeCgnHandler } from "../handler";
 
 const now = new Date();
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
-const aRevokationRequest: CgnRevokationRequest = {
+const aRevocationRequest: CgnRevocationRequest = {
   reason: "aMotivation" as NonEmptyString
 };
 
 const aUserCgnRevokedStatus: CgnRevokedStatus = {
-  reason: aRevokationRequest.reason,
-  revokation_date: now,
+  reason: aRevocationRequest.reason,
+  revocation_date: now,
   status: RevokedStatusEnum.REVOKED
 };
 
@@ -60,7 +60,7 @@ describe("RevokeCgn", () => {
     const response = await revokeCgnHandler(
       {} as any,
       aFiscalCode,
-      aRevokationRequest
+      aRevocationRequest
     );
     expect(response.kind).toBe("IResponseErrorInternal");
   });
@@ -73,7 +73,7 @@ describe("RevokeCgn", () => {
     const response = await revokeCgnHandler(
       {} as any,
       aFiscalCode,
-      aRevokationRequest
+      aRevocationRequest
     );
     expect(response.kind).toBe("IResponseErrorNotFound");
   });
@@ -89,7 +89,7 @@ describe("RevokeCgn", () => {
     const response = await revokeCgnHandler(
       {} as any,
       aFiscalCode,
-      aRevokationRequest
+      aRevocationRequest
     );
     expect(response.kind).toBe("IResponseErrorInternal");
   });
@@ -105,7 +105,7 @@ describe("RevokeCgn", () => {
     const response = await revokeCgnHandler(
       {} as any,
       aFiscalCode,
-      aRevokationRequest
+      aRevocationRequest
     );
     expect(response.kind).toBe("IResponseSuccessAccepted");
   });
@@ -118,7 +118,7 @@ describe("RevokeCgn", () => {
       .spyOn(orchUtils, "checkUpdateCgnIsRunning")
       .mockImplementationOnce(() => taskEither.of(false));
     const revokeCgnHandler = RevokeCgnHandler(userCgnModelMock as any);
-    await revokeCgnHandler({} as any, aFiscalCode, aRevokationRequest);
+    await revokeCgnHandler({} as any, aFiscalCode, aRevocationRequest);
     expect(mockStartNew).toBeCalledTimes(1);
   });
 });

@@ -93,6 +93,9 @@ export const checkUpdateCgnIsRunning = (
       )
     )
     .chain(otherStatuses =>
+      // check over other possible CGN' s statuses if there is other concurrent
+      // orchestrators running. This check allows only one update's orchestrator
+      // is running at once
       array.sequence(taskEither)(
         otherStatuses.map(status =>
           isOrchestratorRunning(

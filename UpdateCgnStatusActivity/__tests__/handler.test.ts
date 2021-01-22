@@ -17,13 +17,13 @@ import { ActivityInput, getUpdateCgnStatusActivityHandler } from "../handler";
 
 const now = new Date();
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
-const aRevokationRequest = {
+const aRevocationRequest = {
   reason: "aMotivation" as NonEmptyString
 };
 
 const aUserCgnRevokedStatus: CgnRevokedStatus = {
-  reason: aRevokationRequest.reason,
-  revokation_date: now,
+  reason: aRevocationRequest.reason,
+  revocation_date: now,
   status: RevokedStatusEnum.REVOKED
 };
 
