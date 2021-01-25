@@ -15,6 +15,8 @@ import {
   CgnRevokedStatus,
   StatusEnum as RevokedStatusEnum
 } from "../generated/definitions/CgnRevokedStatus";
+
+import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CgnExpiredStatus";
 import { CgnStatus } from "../generated/definitions/CgnStatus";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import {
@@ -109,8 +111,10 @@ export const handler = function*(
       );
     }
 
-    const hasSendMessageActivity =
-      RevokedStatusEnum.REVOKED === newStatus.status;
+    const hasSendMessageActivity = [
+      RevokedStatusEnum.REVOKED.toString(),
+      ExpiredStatusEnum.EXPIRED.toString()
+    ].includes(newStatus.status);
 
     if (hasSendMessageActivity) {
       // sleep before sending push notification
