@@ -7,6 +7,7 @@ import {
   mockStartNew,
   mockTerminate
 } from "../../__mocks__/durable-functions";
+import * as orchUtils from "../../utils/orchestrators";
 import { getUpdateExpiredCgnHandler } from "../handler";
 import * as tableUtils from "../table";
 
@@ -22,6 +23,13 @@ const getExpiredCgnUsersMock = jest.fn();
 jest
   .spyOn(tableUtils, "getExpiredCgnUsers")
   .mockImplementation(getExpiredCgnUsersMock);
+
+const terminateOrchestratorMock = jest
+  .fn()
+  .mockImplementation(() => taskEither.of(void 0));
+jest
+  .spyOn(orchUtils, "terminateOrchestratorTask")
+  .mockImplementation(terminateOrchestratorMock);
 describe("UpdateExpiredCgn", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -47,7 +55,9 @@ describe("UpdateExpiredCgn", () => {
       expiredCgnTableName
     );
     await updateExpiredCgnHandler(context);
-    expect(mockTerminate).toBeCalledTimes(aSetOfFiscalCodes.length * 2);
+    expect(terminateOrchestratorMock).toBeCalledTimes(
+      aSetOfFiscalCodes.length * 2
+    );
   });
 
   it("should not instantiate any orchestrator if there are no elements to process", async () => {
