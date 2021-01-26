@@ -10,12 +10,12 @@
  */
 
 import { Context } from "@azure/functions";
-import { TableService } from "azure-storage";
 import * as date_fns from "date-fns";
 import * as df from "durable-functions";
-import { isLeft, toError } from "fp-ts/lib/Either";
+import { toError } from "fp-ts/lib/Either";
+import { fromNullable, isNone } from "fp-ts/lib/Option";
 import { tryCatch } from "fp-ts/lib/TaskEither";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { StatusEnum as CgnActivatedStatusEnum } from "../generated/definitions/CgnActivatedStatus";
 import { StatusEnum as CgnExpiredStatusEnum } from "../generated/definitions/CgnExpiredStatus";
 import { StatusEnum as CgnRevokedStatusEnum } from "../generated/definitions/CgnRevokedStatus";
@@ -24,37 +24,30 @@ import {
   makeUpdateCgnOrchestratorId,
   terminateOrchestratorTask
 } from "../utils/orchestrators";
-import { getExpiredCgnUsers } from "./table";
 
 const finish = () => Promise.resolve(void 0);
 const ORCHESTRATION_TERMINATION_REASON = "An highest priority CGN update orchestrator needs to start" as NonEmptyString;
 
 export const getUpdateExpiredCgnHandler = (
-  tableService: TableService,
-  cgnExpirationTableName: NonEmptyString,
   logPrefix: string = "UpdateExpiredCgnHandler"
 ) => async (context: Context): Promise<void> => {
   const today = date_fns.format(Date.now(), "yyyy-MM-dd");
 
-  const errorOrExpiredCgnUsers = await getExpiredCgnUsers(
-    tableService,
-    cgnExpirationTableName,
-    today
-  ).run();
+  const client = df.getClient(context);
+  // tslint:disable-next-line: readonly-array
+  const expiredCgnUsersState = await client.readEntityState<FiscalCode[]>(
+    new df.EntityId("CgnExpiration", today)
+  );
+  const maybeExpiredCgnUsers = fromNullable(expiredCgnUsersState.entityState);
 
-  if (isLeft(errorOrExpiredCgnUsers)) {
-    context.log.verbose(
-      `${logPrefix}|ERROR=${errorOrExpiredCgnUsers.value.message}`
+  if (isNone(maybeExpiredCgnUsers)) {
+    context.log.info(
+      `${logPrefix}|No CGN expiration is scheduled for today ${today}`
     );
     return finish();
   }
 
-  const expiredCgnUsers = errorOrExpiredCgnUsers.value;
-  context.log.info(
-    `${logPrefix}|Processing ${expiredCgnUsers.length} expired CGNs`
-  );
-
-  const client = df.getClient(context);
+  const expiredCgnUsers = maybeExpiredCgnUsers.value;
   // trigger an update orchestrator for each user's CGN that expires
   expiredCgnUsers.forEach(async fiscalCode => {
     // first we terminate other possible Cgn update orchestrators
