@@ -21,19 +21,8 @@ export const mockTerminate = jest.fn(async (_, __) => {
   return;
 });
 
-export const mockEntityState = {};
-
-export const mockReadEntityState = jest.fn(_ =>
-  Promise.resolve({
-    entityState: mockEntityState
-  })
-);
-
-export const EntityId = jest.fn((_, __) => new df.EntityId(_, __));
-
 export const getClient = jest.fn(() => ({
   getStatus: mockGetStatus,
-  readEntityState: mockReadEntityState,
   startNew: mockStartNew,
   terminate: mockTerminate
 }));
