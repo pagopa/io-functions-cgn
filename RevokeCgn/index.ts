@@ -36,7 +36,7 @@ const app = express();
 secureExpressApp(app);
 
 // Add express route
-app.delete("/api/v1/cgn/:fiscalcode", RevokeCgn(userCgnModel));
+app.post("/api/v1/cgn/:fiscalcode/revocation", RevokeCgn(userCgnModel));
 
 const azureFunctionHandler = createAzureFunctionHandler(app);
 

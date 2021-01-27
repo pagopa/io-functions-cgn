@@ -5,9 +5,9 @@
       "type": "httpTrigger",
       "direction": "in",
       "name": "req",
-      "route": "api/v1/cgn/{fiscalcode}",
+      "route": "api/v1/cgn/{fiscalcode}/revocation",
       "methods": [
-        "delete"
+        "post"
       ]
     },
     {

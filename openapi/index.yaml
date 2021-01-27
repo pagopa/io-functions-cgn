@@ -42,8 +42,8 @@ paths:
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
-  "/cgn/{fiscalCode}":
-    delete:
+  "/cgn/{fiscalCode}/revocation":
+    post:
       operationId: revokeCgn
       summary: |
         Revoke CGN 
