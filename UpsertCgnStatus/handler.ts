@@ -68,14 +68,18 @@ const toCgnStatus = (cgnStatusUpsertRequest: CgnStatusUpsertRequest) => {
         revocation_reason: cgnStatusUpsertRequest.revocation_reason,
         status: StatusEnum.REVOKED
       }
-    : {
+    : // in case upsert request is not a revocation we assume it's
+      // an activation request. This is because we accept only
+      // REVOKE and ACTIVATE actions in upsert operations.
+      // PENDING status is the initial status of the activation process
+      {
         status: PendingStatusEnum.PENDING
       };
 };
 
 export function UpsertCgnStatusHandler(
   userCgnModel: UserCgnModel,
-  logPrefix: string = "UpsertCgnHandler"
+  logPrefix: string = "UpsertCgnStatusHandler"
 ): IUpsertCgnStatusHandler {
   return async (context, fiscalCode, cgnStatusUpsertRequest) => {
     const client = df.getClient(context);
