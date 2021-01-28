@@ -4,7 +4,12 @@ import { Context } from "@azure/functions";
 import * as df from "durable-functions";
 import { fromOption, toError } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
-import { fromLeft, taskEither, tryCatch } from "fp-ts/lib/TaskEither";
+import {
+  fromLeft,
+  fromPredicate,
+  taskEither,
+  tryCatch
+} from "fp-ts/lib/TaskEither";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { RequiredBodyPayloadMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_body_payload";
@@ -15,20 +20,25 @@ import {
 } from "io-functions-commons/dist/src/utils/request_middleware";
 import {
   IResponseErrorConflict,
+  IResponseErrorForbiddenNotAuthorized,
   IResponseErrorInternal,
   IResponseErrorNotFound,
   IResponseSuccessAccepted,
   IResponseSuccessRedirectToResource,
+  ResponseErrorForbiddenNotAuthorized,
   ResponseErrorInternal,
   ResponseErrorNotFound,
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { CgnRevocationRequest } from "../generated/definitions/CgnRevocationRequest";
+import { StatusEnum as PendingStatusEnum } from "../generated/definitions/CgnPendingStatus";
+
+import { StatusEnum } from "../generated/definitions/CgnRevokedStatus";
 import {
-  CgnRevokedStatus,
-  StatusEnum
-} from "../generated/definitions/CgnRevokedStatus";
+  ActionEnum,
+  CgnStatusRevocationRequest
+} from "../generated/definitions/CgnStatusRevocationRequest";
+import { CgnStatusUpsertRequest } from "../generated/definitions/CgnStatusUpsertRequest";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
 import { OrchestratorInput } from "../UpdateCgnOrchestrator";
@@ -38,55 +48,76 @@ import { checkUpdateCgnIsRunning } from "../utils/orchestrators";
 type ErrorTypes =
   | IResponseErrorInternal
   | IResponseErrorNotFound
+  | IResponseErrorForbiddenNotAuthorized
   | IResponseErrorConflict;
 type ReturnTypes =
   | IResponseSuccessAccepted
   | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
   | ErrorTypes;
 
-type IRevokeCgnHandler = (
+type IUpsertCgnStatusHandler = (
   context: Context,
   fiscalCode: FiscalCode,
-  CgnRevocationRequest: CgnRevocationRequest
+  cgnStatusUpsertRequest: CgnStatusUpsertRequest
 ) => Promise<ReturnTypes>;
 
-export function RevokeCgnHandler(
+const toCgnStatus = (cgnStatusUpsertRequest: CgnStatusUpsertRequest) => {
+  return cgnStatusUpsertRequest.action === ActionEnum.REVOKE
+    ? {
+        revocation_date: new Date(),
+        revocation_reason: cgnStatusUpsertRequest.revocation_reason,
+        status: StatusEnum.REVOKED
+      }
+    : // in case upsert request is not a revocation we assume it's
+      // an activation request. This is because we accept only
+      // REVOKE and ACTIVATE actions in upsert operations.
+      // PENDING status is the initial status of the activation process
+      {
+        status: PendingStatusEnum.PENDING
+      };
+};
+
+export function UpsertCgnStatusHandler(
   userCgnModel: UserCgnModel,
-  logPrefix: string = "RevokeCgnHandler"
-): IRevokeCgnHandler {
-  return async (context, fiscalCode, revocationReq) => {
+  logPrefix: string = "UpsertCgnStatusHandler"
+): IUpsertCgnStatusHandler {
+  return async (context, fiscalCode, cgnStatusUpsertRequest) => {
     const client = df.getClient(context);
-    const revokedCgnStatus: CgnRevokedStatus = {
-      revocation_date: new Date(),
-      revocation_reason: revocationReq.revocation_reason,
-      status: StatusEnum.REVOKED
-    };
     const orchestratorId = makeUpdateCgnOrchestratorId(
       fiscalCode,
       StatusEnum.REVOKED
     ) as NonEmptyString;
-    return userCgnModel
-      .findLastVersionByModelId([fiscalCode])
-      .mapLeft<IResponseErrorInternal | IResponseErrorNotFound>(() =>
-        ResponseErrorInternal("Cannot retrieve CGN infos for this user")
+
+    return fromPredicate<
+      | IResponseErrorInternal
+      | IResponseErrorNotFound
+      | IResponseErrorForbiddenNotAuthorized,
+      CgnStatusUpsertRequest
+    >(
+      (upsertRequest: CgnStatusUpsertRequest) =>
+        CgnStatusRevocationRequest.is(upsertRequest),
+      () => ResponseErrorForbiddenNotAuthorized
+    )(cgnStatusUpsertRequest)
+      .chain(_ =>
+        userCgnModel.findLastVersionByModelId([fiscalCode]).bimap(
+          () =>
+            ResponseErrorInternal("Cannot retrieve CGN infos for this user"),
+          maybeUserCgn => ({ maybeUserCgn, cgnStatus: toCgnStatus(_) })
+        )
       )
-      .chain(maybeUserCgn =>
+      .chain(({ cgnStatus, maybeUserCgn }) =>
         fromEither(
           fromOption(
             ResponseErrorNotFound("Not Found", "User's CGN status not found")
           )(maybeUserCgn)
-        )
+        ).map(() => cgnStatus)
       )
       .foldTaskEither<
         ErrorTypes,
         | IResponseSuccessAccepted
         | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
-      >(fromLeft, () =>
-        checkUpdateCgnIsRunning(
-          client,
-          fiscalCode,
-          revokedCgnStatus
-        ).foldTaskEither<
+      >(fromLeft, cgnStatus =>
+        checkUpdateCgnIsRunning(client, fiscalCode, cgnStatus).foldTaskEither<
           ErrorTypes,
           | IResponseSuccessAccepted
           | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
@@ -103,7 +134,7 @@ export function RevokeCgnHandler(
                   orchestratorId,
                   OrchestratorInput.encode({
                     fiscalCode,
-                    newStatus: revokedCgnStatus
+                    newStatus: cgnStatus
                   })
                 ),
               toError
@@ -134,13 +165,15 @@ export function RevokeCgnHandler(
   };
 }
 
-export function RevokeCgn(userCgnModel: UserCgnModel): express.RequestHandler {
-  const handler = RevokeCgnHandler(userCgnModel);
+export function UpsertCgnStatus(
+  userCgnModel: UserCgnModel
+): express.RequestHandler {
+  const handler = UpsertCgnStatusHandler(userCgnModel);
 
   const middlewaresWrap = withRequestMiddlewares(
     ContextMiddleware(),
     RequiredParamMiddleware("fiscalcode", FiscalCode),
-    RequiredBodyPayloadMiddleware(CgnRevocationRequest)
+    RequiredBodyPayloadMiddleware(CgnStatusUpsertRequest)
   );
 
   return wrapRequestHandler(middlewaresWrap(handler));

@@ -42,20 +42,21 @@ paths:
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
-  "/cgn/{fiscalCode}":
-    delete:
-      operationId: revokeCgn
+    post:
+      operationId: upsertCgnStatus
       summary: |
-        Revoke CGN 
+        Upsert a CGN status
       description: |
-        Revoke a CGN by the provided fiscal code
-        and a proper revocation's reason.
+        Upsert the status of a CGN. There are 2 accepted actions:
+        -  REVOKE
+        -  ACTIVATE
+        that allows to update CGN status to REVOKED or ACTIVATED
       parameters:
         - $ref: "#/parameters/FiscalCode"
         - in: body
-          name: revocation_reason
+          name: body
           schema:
-            $ref: "#/definitions/CgnRevocationRequest"
+            $ref: "#/definitions/CgnStatusUpsertRequest"
       responses:
         "201":
           description: Request created.
@@ -73,6 +74,8 @@ paths:
             $ref: "#/definitions/InstanceId"
         "401":
           description: Wrong or missing function key.
+        "403":
+          description: Forbidden.
         "404":
           description: No CGN found.
         "409":
@@ -174,14 +177,33 @@ definitions:
       status: ACTIVATED
       activation_date: "2021-10-13T00:00:00.000Z"
       expiration_date: "2030-10-13T00:00:00.000Z"
-  CgnRevocationRequest:
+  CgnStatusActivationRequest:
     type: object
     properties:
+      action:
+        type: string
+        x-extensible-enum:
+          - ACTIVATE
+    required:
+      - action
+  CgnStatusRevocationRequest:
+    type: object
+    properties:
+      action:
+        type: string
+        x-extensible-enum:
+          - REVOKE
       revocation_reason:
         type: string
         minLength: 1
     required:
+      - action
       - revocation_reason
+  CgnStatusUpsertRequest:
+    x-one-of: true
+    allOf:
+      - $ref: "#/definitions/CgnStatusRevocationRequest"
+      - $ref: "#/definitions/CgnStatusActivationRequest"
   InstanceId:
     type: object
     properties:
