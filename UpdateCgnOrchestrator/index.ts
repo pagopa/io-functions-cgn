@@ -11,6 +11,7 @@ import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { CgnCanceledStatus } from "../generated/definitions/CgnCanceledStatus";
+
 import {
   CgnRevokedStatus,
   StatusEnum as RevokedStatusEnum
