@@ -74,6 +74,8 @@ paths:
             $ref: "#/definitions/InstanceId"
         "401":
           description: Wrong or missing function key.
+        "403":
+          description: Forbidden.
         "404":
           description: No CGN found.
         "409":
