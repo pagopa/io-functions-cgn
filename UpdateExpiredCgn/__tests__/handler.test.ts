@@ -2,11 +2,7 @@
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
-import {
-  context,
-  mockStartNew,
-  mockTerminate
-} from "../../__mocks__/durable-functions";
+import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import * as orchUtils from "../../utils/orchestrators";
 import { getUpdateExpiredCgnHandler } from "../handler";
 import * as tableUtils from "../table";
@@ -80,5 +76,19 @@ describe("UpdateExpiredCgn", () => {
     );
     await updateExpiredCgnHandler(context);
     expect(mockStartNew).not.toHaveBeenCalled();
+  });
+  it("should not instantiate some orchestrator if there are errors terminating other instances for a certain fiscalCode", async () => {
+    getExpiredCgnUsersMock.mockImplementationOnce(() =>
+      taskEither.of(aSetOfFiscalCodes)
+    );
+    terminateOrchestratorMock.mockImplementationOnce(() =>
+      fromLeft(new Error("Error"))
+    );
+    const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
+      tableServiceMock as any,
+      expiredCgnTableName
+    );
+    await updateExpiredCgnHandler(context);
+    expect(mockStartNew).toBeCalledTimes(aSetOfFiscalCodes.length - 1);
   });
 });

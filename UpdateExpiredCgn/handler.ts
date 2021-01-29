@@ -4,12 +4,13 @@ import * as date_fns from "date-fns";
 import * as df from "durable-functions";
 import { array, chunksOf } from "fp-ts/lib/Array";
 import { isLeft, toError } from "fp-ts/lib/Either";
-import { taskEitherSeq, tryCatch } from "fp-ts/lib/TaskEither";
+import { taskEither, tryCatch } from "fp-ts/lib/TaskEither";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { StatusEnum as CgnActivatedStatusEnum } from "../generated/definitions/CgnActivatedStatus";
 import { StatusEnum as CgnExpiredStatusEnum } from "../generated/definitions/CgnExpiredStatus";
 import { StatusEnum as CgnRevokedStatusEnum } from "../generated/definitions/CgnRevokedStatus";
 import { OrchestratorInput } from "../UpdateCgnOrchestrator";
+import { initTelemetryClient, trackException } from "../utils/appinsights";
 import {
   makeUpdateCgnOrchestratorId,
   terminateOrchestratorTask
@@ -17,6 +18,8 @@ import {
 import { getExpiredCgnUsers } from "./table";
 
 const finish = () => Promise.resolve(void 0);
+
+initTelemetryClient();
 const ORCHESTRATION_TERMINATION_REASON = "An highest priority CGN update orchestrator needs to start" as NonEmptyString;
 
 export const getUpdateExpiredCgnHandler = (
@@ -96,6 +99,13 @@ export const getUpdateExpiredCgnHandler = (
             6
           )}|ERROR=${err.message}`
         );
+        trackException({
+          exception: err,
+          properties: {
+            id: fiscalCode,
+            name: "cgn.expire.error"
+          }
+        });
         return err;
       })
   );
@@ -106,7 +116,7 @@ export const getUpdateExpiredCgnHandler = (
   for (const tasksChunk of tasksChunks) {
     taskArray.push(
       array
-        .sequence(taskEitherSeq)(tasksChunk)
+        .sequence(taskEither)(tasksChunk)
         .run()
     );
   }
