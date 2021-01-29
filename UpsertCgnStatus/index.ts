@@ -10,7 +10,7 @@ import createAzureFunctionHandler from "io-functions-express/dist/src/createAzur
 import { USER_CGN_COLLECTION_NAME, UserCgnModel } from "../models/user_cgn";
 import { getConfigOrThrow } from "../utils/config";
 import { cosmosdbClient } from "../utils/cosmosdb";
-import { RevokeCgn } from "./handler";
+import { UpsertCgnStatus } from "./handler";
 
 //
 //  CosmosDB initialization
@@ -36,7 +36,7 @@ const app = express();
 secureExpressApp(app);
 
 // Add express route
-app.delete("/api/v1/cgn/:fiscalcode", RevokeCgn(userCgnModel));
+app.post("/api/v1/cgn/:fiscalcode/status", UpsertCgnStatus(userCgnModel));
 
 const azureFunctionHandler = createAzureFunctionHandler(app);
 

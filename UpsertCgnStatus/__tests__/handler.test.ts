@@ -13,24 +13,31 @@ import {
   CgnPendingStatus,
   StatusEnum
 } from "../../generated/definitions/CgnPendingStatus";
-import { CgnRevocationRequest } from "../../generated/definitions/CgnRevocationRequest";
 import {
   CgnRevokedStatus,
   StatusEnum as RevokedStatusEnum
 } from "../../generated/definitions/CgnRevokedStatus";
+import { ActionEnum as ActivateActionEnum } from "../../generated/definitions/CgnStatusActivationRequest";
+import { ActionEnum } from "../../generated/definitions/CgnStatusRevocationRequest";
+import { CgnStatusUpsertRequest } from "../../generated/definitions/CgnStatusUpsertRequest";
 import { UserCgn } from "../../models/user_cgn";
 import * as orchUtils from "../../utils/orchestrators";
-import { RevokeCgnHandler } from "../handler";
+import { UpsertCgnStatusHandler } from "../handler";
 
 const now = new Date();
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
-const aRevocationRequest: CgnRevocationRequest = {
+const aCgnUpsertStatusRequest: CgnStatusUpsertRequest = {
+  action: ActionEnum.REVOKE,
   revocation_reason: "aMotivation" as NonEmptyString
 };
 
+const aCgnActivationUpsertStatusRequest: CgnStatusUpsertRequest = {
+  action: ActivateActionEnum.ACTIVATE
+};
+
 const aUserCgnRevokedStatus: CgnRevokedStatus = {
-  revocation_reason: aRevocationRequest.revocation_reason,
   revocation_date: now,
+  revocation_reason: aCgnUpsertStatusRequest.revocation_reason,
   status: RevokedStatusEnum.REVOKED
 };
 
@@ -48,19 +55,27 @@ const findLastVersionByModelIdMock = jest.fn();
 const userCgnModelMock = {
   findLastVersionByModelId: findLastVersionByModelIdMock
 };
-describe("RevokeCgn", () => {
+
+const checkUpdateCgnIsRunningMock = jest.fn();
+jest
+  .spyOn(orchUtils, "checkUpdateCgnIsRunning")
+  .mockImplementation(checkUpdateCgnIsRunningMock);
+describe("UpsertCgnStatus", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
+
   it("should return an Internal Error if an error occurs during UserCgn retrieve", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       fromLeft(toCosmosErrorResponse(new Error("query error")))
     );
-    const revokeCgnHandler = RevokeCgnHandler(userCgnModelMock as any);
-    const response = await revokeCgnHandler(
+    const upsertCgnStatusHandler = UpsertCgnStatusHandler(
+      userCgnModelMock as any
+    );
+    const response = await upsertCgnStatusHandler(
       {} as any,
       aFiscalCode,
-      aRevocationRequest
+      aCgnUpsertStatusRequest
     );
     expect(response.kind).toBe("IResponseErrorInternal");
   });
@@ -69,11 +84,13 @@ describe("RevokeCgn", () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       taskEither.of(none)
     );
-    const revokeCgnHandler = RevokeCgnHandler(userCgnModelMock as any);
-    const response = await revokeCgnHandler(
+    const upsertCgnStatusHandler = UpsertCgnStatusHandler(
+      userCgnModelMock as any
+    );
+    const response = await upsertCgnStatusHandler(
       {} as any,
       aFiscalCode,
-      aRevocationRequest
+      aCgnUpsertStatusRequest
     );
     expect(response.kind).toBe("IResponseErrorNotFound");
   });
@@ -82,14 +99,16 @@ describe("RevokeCgn", () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
     );
-    jest
-      .spyOn(orchUtils, "checkUpdateCgnIsRunning")
-      .mockImplementationOnce(() => fromLeft(ResponseErrorInternal("Error")));
-    const revokeCgnHandler = RevokeCgnHandler(userCgnModelMock as any);
-    const response = await revokeCgnHandler(
+    checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
+      fromLeft(ResponseErrorInternal("Error"))
+    );
+    const upsertCgnStatusHandler = UpsertCgnStatusHandler(
+      userCgnModelMock as any
+    );
+    const response = await upsertCgnStatusHandler(
       {} as any,
       aFiscalCode,
-      aRevocationRequest
+      aCgnUpsertStatusRequest
     );
     expect(response.kind).toBe("IResponseErrorInternal");
   });
@@ -98,14 +117,16 @@ describe("RevokeCgn", () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
     );
-    jest
-      .spyOn(orchUtils, "checkUpdateCgnIsRunning")
-      .mockImplementationOnce(() => fromLeft(ResponseSuccessAccepted()));
-    const revokeCgnHandler = RevokeCgnHandler(userCgnModelMock as any);
-    const response = await revokeCgnHandler(
+    checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
+      fromLeft(ResponseSuccessAccepted())
+    );
+    const upsertCgnStatusHandler = UpsertCgnStatusHandler(
+      userCgnModelMock as any
+    );
+    const response = await upsertCgnStatusHandler(
       {} as any,
       aFiscalCode,
-      aRevocationRequest
+      aCgnUpsertStatusRequest
     );
     expect(response.kind).toBe("IResponseSuccessAccepted");
   });
@@ -114,11 +135,32 @@ describe("RevokeCgn", () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
     );
-    jest
-      .spyOn(orchUtils, "checkUpdateCgnIsRunning")
-      .mockImplementationOnce(() => taskEither.of(false));
-    const revokeCgnHandler = RevokeCgnHandler(userCgnModelMock as any);
-    await revokeCgnHandler({} as any, aFiscalCode, aRevocationRequest);
+    checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
+      taskEither.of(false)
+    );
+    const upsertCgnStatusHandler = UpsertCgnStatusHandler(
+      userCgnModelMock as any
+    );
+    await upsertCgnStatusHandler(
+      {} as any,
+      aFiscalCode,
+      aCgnUpsertStatusRequest
+    );
     expect(mockStartNew).toBeCalledTimes(1);
+  });
+
+  it("should return a Forbidden Error if an activation request is triggered", async () => {
+    findLastVersionByModelIdMock.mockImplementationOnce(() =>
+      taskEither.of(none)
+    );
+    const upsertCgnStatusHandler = UpsertCgnStatusHandler(
+      userCgnModelMock as any
+    );
+    const response = await upsertCgnStatusHandler(
+      {} as any,
+      aFiscalCode,
+      aCgnActivationUpsertStatusRequest
+    );
+    expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
   });
 });
