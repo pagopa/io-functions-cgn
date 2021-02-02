@@ -30,7 +30,7 @@ stages:
         steps:
         - template: azure-templates/setup-project.yml
         - bash: |
-            yarn yarn shx rm -rf ./generated/definitions && mkdir -p ./generated/definitions
+            yarn shx rm -rf ./generated/definitions && mkdir -p ./generated/definitions
           displayName: 'Build'
   
   - stage: Static_analysis
