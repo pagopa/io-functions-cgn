@@ -30,7 +30,7 @@ stages:
         steps:
         - template: azure-templates/setup-project.yml
         - bash: |
-            yarn shx rm -rf ./generated/definitions && mkdir -p ./generated/definitions && yarn gen-api-models --api-spec ./openapi/index.yaml --out-dir ./generated/definitions
+            yarn generate:definitions
           displayName: 'Build'
   
   - stage: Static_analysis
