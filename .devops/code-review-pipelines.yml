@@ -29,7 +29,7 @@ stages:
           vmImage: 'windows-2019'         
         steps:
         - template: azure-templates/setup-project.yml
-        - script: call yarn build
+        - script: yarn build
           displayName: 'Build'
   
   - stage: Static_analysis
