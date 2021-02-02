@@ -9,6 +9,10 @@ export const mockStatusCompleted = {
   runtimeStatus: df.OrchestrationRuntimeStatus.Completed
 };
 
+export const mockStatusFailed = {
+  runtimeStatus: df.OrchestrationRuntimeStatus.Failed
+};
+
 export const OrchestrationRuntimeStatus = df.OrchestrationRuntimeStatus;
 
 export const mockStartNew = jest.fn((_, __, ___) =>
