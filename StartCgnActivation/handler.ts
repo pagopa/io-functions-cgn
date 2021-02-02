@@ -82,7 +82,13 @@ const mapOrchestratorStatus = (
   }
 };
 
-const getCgnEligibleDataTask = (fiscalCode: FiscalCode) =>
+/**
+ * Check if a citizen is eligible for CGN activation
+ * A citizen is eligible for a CGN while he's from 18 to 35 years old
+ * If eligible returns the calculated expiration date for the CGN
+ * @param fiscalCode: the citizen's fiscalCode
+ */
+const checkCgnEligibleDataTask = (fiscalCode: FiscalCode) =>
   checkCgnRequirements(fiscalCode).foldTaskEither<
     IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
     Date
@@ -113,7 +119,7 @@ export function StartCgnActivationHandler(
       ActivatedStatusEnum.ACTIVATED
     ) as NonEmptyString;
 
-    const isEligibleResponseOrError = await getCgnEligibleDataTask(
+    const isEligibleResponseOrError = await checkCgnEligibleDataTask(
       fiscalCode
     ).run();
     if (isLeft(isEligibleResponseOrError)) {

@@ -122,29 +122,6 @@ paths:
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
-    get:
-      operationId: getCgnActivation
-      summary: |
-        Get CGN activation process' status
-      description: |
-        Get informations about a CGN activation process
-      parameters:
-        - $ref: "#/parameters/FiscalCode"
-      responses:
-        "200":
-            description: Cgn activation details.
-            schema:
-              $ref: "#/definitions/InstanceId"
-        "401":
-          description: Wrong or missing function key.
-        "403":
-          description: Forbidden.
-        "404":
-          description: No CGN activation found.
-        "500":
-          description: Service unavailable.
-          schema:
-            $ref: "#/definitions/ProblemJson"
 consumes:
   - application/json
 produces:
@@ -263,9 +240,6 @@ definitions:
     allOf:
       - $ref: "#/definitions/CgnStatusRevocationRequest"
       - $ref: "#/definitions/CgnStatusActivationRequest"
-  CgnActivationDetail:
-    type: object
-    properties:
       
   InstanceId:
     type: object

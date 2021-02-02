@@ -16,8 +16,14 @@ import {
   CgnRevokedStatus,
   StatusEnum as RevokedStatusEnum
 } from "../generated/definitions/CgnRevokedStatus";
+
+import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CgnActivatedStatus";
 import { CgnStatus } from "../generated/definitions/CgnStatus";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
+import {
+  ActivityInput as StoreCgnExpirationActivityInput,
+  ActivityResult as StoreCgnExpirationActivityResult
+} from "../StoreCgnExpirationActivity/handler";
 import {
   ActivityInput,
   ActivityResult
@@ -87,6 +93,31 @@ export const handler = function*(
   };
 
   try {
+    if (newStatus.status === ActivatedStatusEnum.ACTIVATED) {
+      const storeCgnExpirationResult = yield context.df.callActivityWithRetry(
+        "StoreCgnExpirationActivity",
+        internalRetryOptions,
+        StoreCgnExpirationActivityInput.encode({
+          expirationDate: newStatus.expiration_date,
+          fiscalCode
+        })
+      );
+      const decodedStoreCgnExpirationResult = StoreCgnExpirationActivityResult.decode(
+        storeCgnExpirationResult
+      ).getOrElseL(e =>
+        trackExAndThrow(
+          e,
+          "cgn.update.exception.decode.storeCgnExpirationActivityOutput"
+        )
+      );
+
+      if (decodedStoreCgnExpirationResult.kind !== "SUCCESS") {
+        trackExAndThrow(
+          new Error("Cannot store CGN Expiration"),
+          "cgn.update.exception.failure.storeCgnExpirationActivityOutput"
+        );
+      }
+    }
     const updateCgnStatusActivityInput = ActivityInput.encode({
       cgnStatus: newStatus,
       fiscalCode
@@ -110,8 +141,10 @@ export const handler = function*(
       );
     }
 
-    const hasSendMessageActivity =
-      RevokedStatusEnum.REVOKED === newStatus.status;
+    const hasSendMessageActivity = [
+      RevokedStatusEnum.REVOKED.toString(),
+      ActivatedStatusEnum.ACTIVATED.toString()
+    ].includes(newStatus.status);
 
     if (hasSendMessageActivity) {
       // sleep before sending push notification
