@@ -125,6 +125,8 @@ export function StartCgnActivationHandler(
       expiration_date: isEligibleResponseOrError.value,
       status: ActivatedStatusEnum.ACTIVATED
     };
+
+    // first we try to get the status of an activation process for the provided fiscalCode
     return tryCatch(() => client.getStatus(orchestratorId), toError)
       .foldTaskEither<
         | IResponseErrorConflict
@@ -144,6 +146,7 @@ export function StartCgnActivationHandler(
           )
       )
       .chain(() =>
+        // now we try to retrieve an existing CGN, if it exists
         userCgnModel
           .findLastVersionByModelId([fiscalCode])
           .mapLeft(() => ResponseErrorInternal("Cannot query CGN data"))
@@ -154,6 +157,7 @@ export function StartCgnActivationHandler(
           maybeUserCgn.foldL(
             () => taskEither.of(fiscalCode),
             userCgn =>
+              // if a CGN is already in a final state we return Conflict
               [
                 ActivatedStatusEnum.ACTIVATED.toString(),
                 ExpiredStatusEnum.EXPIRED.toString(),
@@ -168,6 +172,7 @@ export function StartCgnActivationHandler(
           )
       )
       .chain(() =>
+        // now we check if exists another update process for the same CGN
         checkUpdateCgnIsRunning(client, fiscalCode, cgnStatus).foldTaskEither<
           ErrorTypes,
           | IResponseSuccessAccepted
@@ -178,6 +183,7 @@ export function StartCgnActivationHandler(
               ? taskEither.of(response)
               : fromLeft(response),
           () =>
+            // We can generate an internal CGN identifier and insert a new CGN in a PENDING status
             getCgnCodeTask()
               .chain(cgnId =>
                 userCgnModel
@@ -194,6 +200,7 @@ export function StartCgnActivationHandler(
               .chain(() =>
                 tryCatch(
                   () =>
+                    // Starting a new activation process with proper input
                     client.startNew(
                       "UpdateCgnOrchestrator",
                       orchestratorId,
