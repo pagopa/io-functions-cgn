@@ -141,6 +141,9 @@ export const handler = function*(
       );
     }
 
+    // keep tracking of UserCgn update successfully
+    context.df.setCustomStatus("UPDATED");
+
     const hasSendMessageActivity = [
       RevokedStatusEnum.REVOKED.toString(),
       ActivatedStatusEnum.ACTIVATED.toString()

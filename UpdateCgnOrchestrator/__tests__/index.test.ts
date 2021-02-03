@@ -101,6 +101,10 @@ describe("UpdateCgnOrchestrator", () => {
     );
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
       2,
+      "UPDATED"
+    );
+    expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
+      3,
       "COMPLETED"
     );
   });
@@ -146,6 +150,10 @@ describe("UpdateCgnOrchestrator", () => {
     );
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
       2,
+      "UPDATED"
+    );
+    expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
+      3,
       "COMPLETED"
     );
   });
