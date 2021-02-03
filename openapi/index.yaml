@@ -113,11 +113,9 @@ paths:
           description: Wrong or missing function key.
         "403":
           description: Forbidden.
-        "404":
-          description: No CGN found.
         "409":
           description: |
-            Cannot start a new activation the user's cgn is already activated
+            Cannot start a new activation because the user's cgn is already activated
         "500":
           description: Service unavailable.
           schema:

@@ -23,7 +23,6 @@ import {
   IResponseErrorConflict,
   IResponseErrorForbiddenNotAuthorized,
   IResponseErrorInternal,
-  IResponseErrorNotFound,
   IResponseSuccessAccepted,
   IResponseSuccessRedirectToResource,
   ResponseErrorConflict,
@@ -53,7 +52,6 @@ import { checkUpdateCgnIsRunning } from "../utils/orchestrators";
 
 type ErrorTypes =
   | IResponseErrorInternal
-  | IResponseErrorNotFound
   | IResponseErrorForbiddenNotAuthorized
   | IResponseErrorConflict;
 type ReturnTypes =
