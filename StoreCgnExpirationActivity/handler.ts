@@ -1,6 +1,5 @@
 import { Context } from "@azure/functions";
-import { TableService, TableUtilities } from "azure-storage";
-import * as date_fns from "date-fns";
+import { TableService } from "azure-storage";
 import { identity } from "fp-ts/lib/function";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
@@ -57,8 +56,6 @@ const success = () =>
     kind: "SUCCESS"
   });
 
-const eg = TableUtilities.entityGenerator;
-
 export const getStoreCgnExpirationActivityHandler = (
   tableService: TableService,
   cgnExpirationTableName: NonEmptyString,
@@ -72,12 +69,10 @@ export const getStoreCgnExpirationActivityHandler = (
   return fromEither(ActivityInput.decode(input))
     .mapLeft(errs => fail(errorsToError(errs), "Cannot decode Activity Input"))
     .chain(activityInput =>
-      insertCgnExpirationTask({
-        PartitionKey: eg.String(
-          date_fns.format(activityInput.expirationDate, "yyyy-MM-dd")
-        ),
-        RowKey: eg.String(activityInput.fiscalCode)
-      }).bimap(err => fail(err, "Cannot insert CGN expiration tuple"), success)
+      insertCgnExpirationTask(
+        activityInput.fiscalCode,
+        activityInput.expirationDate
+      ).bimap(err => fail(err, "Cannot insert CGN expiration tuple"), success)
     )
     .fold<ActivityResult>(identity, identity)
     .run();

@@ -86,7 +86,12 @@ const mapOrchestratorStatus = (
  * If eligible returns the calculated expiration date for the CGN
  * @param fiscalCode: the citizen's fiscalCode
  */
-const checkCgnEligibleDataTask = (fiscalCode: FiscalCode) =>
+const getCgnExpirationDataTask = (
+  fiscalCode: FiscalCode
+): TaskEither<
+  IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
+  Date
+> =>
   checkCgnRequirements(fiscalCode).foldTaskEither<
     IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
     Date
@@ -117,16 +122,16 @@ export function StartCgnActivationHandler(
       ActivatedStatusEnum.ACTIVATED
     ) as NonEmptyString;
 
-    const isEligibleResponseOrError = await checkCgnEligibleDataTask(
+    const isExpirationCgnOrError = await getCgnExpirationDataTask(
       fiscalCode
     ).run();
-    if (isLeft(isEligibleResponseOrError)) {
-      return isEligibleResponseOrError.value;
+    if (isLeft(isExpirationCgnOrError)) {
+      return isExpirationCgnOrError.value;
     }
 
     const cgnStatus: CgnActivatedStatus = {
       activation_date: new Date(),
-      expiration_date: isEligibleResponseOrError.value,
+      expiration_date: isExpirationCgnOrError.value,
       status: ActivatedStatusEnum.ACTIVATED
     };
 
