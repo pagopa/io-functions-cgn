@@ -7,7 +7,8 @@ import {
   CgnActivatedStatus,
   StatusEnum
 } from "../../generated/definitions/CgnActivatedStatus";
-import { CgnExpiredStatus,
+import {
+  CgnExpiredStatus,
   StatusEnum as ExpiredStatusEnum
 } from "../../generated/definitions/CgnExpiredStatus";
 import {
@@ -32,7 +33,7 @@ const aUserCgnActivatedStatus: CgnActivatedStatus = {
   activation_date: now,
   expiration_date: date_fns.addYears(now, 5),
   status: StatusEnum.ACTIVATED
-}
+};
 const aUserCgnExpiredStatus: CgnExpiredStatus = {
   status: ExpiredStatusEnum.EXPIRED
 };
