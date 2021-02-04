@@ -10,12 +10,13 @@ import { constVoid } from "fp-ts/lib/function";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { CgnCanceledStatus } from "../generated/definitions/CgnCanceledStatus";
-
+import { CgnExpiredStatus } from "../generated/definitions/CgnExpiredStatus";
 import {
   CgnRevokedStatus,
   StatusEnum as RevokedStatusEnum
 } from "../generated/definitions/CgnRevokedStatus";
+
+import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CgnExpiredStatus";
 import { CgnStatus } from "../generated/definitions/CgnStatus";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import {
@@ -56,8 +57,8 @@ const getMessageType = (cgnStatus: CgnStatus) => {
   if (CgnRevokedStatus.is(cgnStatus)) {
     return "CgnRevokedStatus";
   }
-  if (CgnCanceledStatus.is(cgnStatus)) {
-    return "CgnCanceledStatus";
+  if (CgnExpiredStatus.is(cgnStatus)) {
+    return "CgnExpiredStatus";
   } else {
     return "CgnActivatedStatus";
   }
@@ -110,8 +111,10 @@ export const handler = function*(
       );
     }
 
-    const hasSendMessageActivity =
-      RevokedStatusEnum.REVOKED === newStatus.status;
+    const hasSendMessageActivity = [
+      RevokedStatusEnum.REVOKED.toString(),
+      ExpiredStatusEnum.EXPIRED.toString()
+    ].includes(newStatus.status);
 
     if (hasSendMessageActivity) {
       // sleep before sending push notification

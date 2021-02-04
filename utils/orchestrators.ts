@@ -18,10 +18,10 @@ import {
   ResponseSuccessAccepted
 } from "italia-ts-commons/lib/responses";
 
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { PromiseType } from "italia-ts-commons/lib/types";
 import { StatusEnum as CgnActivatedStatusEnum } from "../generated/definitions/CgnActivatedStatus";
-import { StatusEnum as CgnCanceledStatusEnum } from "../generated/definitions/CgnCanceledStatus";
+import { StatusEnum as CgnExpiredStatusEnum } from "../generated/definitions/CgnExpiredStatus";
 import { StatusEnum as CgnPendingStatusEnum } from "../generated/definitions/CgnPendingStatus";
 import { StatusEnum as CgnRevokedStatusEnum } from "../generated/definitions/CgnRevokedStatus";
 import { CgnStatus } from "../generated/definitions/CgnStatus";
@@ -57,7 +57,7 @@ export const isOrchestratorRunning = (
 const cgnStatuses: ReadonlyArray<string> = [
   CgnRevokedStatusEnum.REVOKED.toString(),
   CgnActivatedStatusEnum.ACTIVATED.toString(),
-  CgnCanceledStatusEnum.CANCELED.toString(),
+  CgnExpiredStatusEnum.EXPIRED.toString(),
   CgnPendingStatusEnum.PENDING.toString()
 ];
 
@@ -121,3 +121,15 @@ export const checkUpdateCgnIsRunning = (
       )
     )
     .map(_ => false);
+
+export const terminateUpdateCgnOrchestratorTask = (
+  client: DurableOrchestrationClient,
+  fiscalCode: FiscalCode,
+  status: string,
+  reason: NonEmptyString
+) =>
+  tryCatch(
+    () =>
+      client.terminate(makeUpdateCgnOrchestratorId(fiscalCode, status), reason),
+    toError
+  );
