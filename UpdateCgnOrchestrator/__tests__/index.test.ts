@@ -7,6 +7,9 @@ import {
   CgnActivatedStatus,
   StatusEnum
 } from "../../generated/definitions/CgnActivatedStatus";
+import { CgnExpiredStatus,
+  StatusEnum as ExpiredStatusEnum
+} from "../../generated/definitions/CgnExpiredStatus";
 import {
   CgnRevokedStatus,
   StatusEnum as RevokedCgnStatusEnum
@@ -29,6 +32,9 @@ const aUserCgnActivatedStatus: CgnActivatedStatus = {
   activation_date: now,
   expiration_date: date_fns.addYears(now, 5),
   status: StatusEnum.ACTIVATED
+}
+const aUserCgnExpiredStatus: CgnExpiredStatus = {
+  status: ExpiredStatusEnum.EXPIRED
 };
 
 const getInputMock = jest.fn();
@@ -138,6 +144,51 @@ describe("UpdateCgnOrchestrator", () => {
     expect(
       contextMockWithDf.df.callActivityWithRetry.mock.calls[1][2].content
     ).toEqual(MESSAGES.CgnRevokedStatus(aUserCgnRevokedStatus));
+
+    expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
+    expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
+      1,
+      "RUNNING"
+    );
+    expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
+      2,
+      "COMPLETED"
+    );
+  });
+
+  it("should send the right message on an expired Cgn", async () => {
+    getInputMock.mockImplementationOnce(() => ({
+      fiscalCode: aFiscalCode,
+      newStatus: aUserCgnExpiredStatus
+    }));
+    mockCallActivityWithRetry
+      // 1 UpdateCgnStauts
+      .mockReturnValueOnce(anUpdateCgnStatusResult)
+      // 5 SendMessageActivity
+      .mockReturnValueOnce("SendMessageActivity");
+    // tslint:disable-next-line: no-any no-useless-cast
+    const orchestrator = handler(contextMockWithDf as any);
+
+    // 1 UpdateCgnStauts
+    const res1 = orchestrator.next();
+    expect(res1.value).toEqual({
+      kind: "SUCCESS"
+    });
+
+    // 2 CreateTimer
+    const res2 = orchestrator.next(res1.value);
+    expect(res2.value).toEqual("CreateTimer");
+
+    // 3 SendMessageActivity
+    const res3 = orchestrator.next(res2.value);
+    expect(res3.value).toEqual("SendMessageActivity");
+
+    // Complete the orchestrator execution
+    orchestrator.next();
+
+    expect(
+      contextMockWithDf.df.callActivityWithRetry.mock.calls[1][2].content
+    ).toEqual(MESSAGES.CgnExpiredStatus());
 
     expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(

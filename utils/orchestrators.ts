@@ -18,7 +18,7 @@ import {
   ResponseSuccessAccepted
 } from "italia-ts-commons/lib/responses";
 
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { PromiseType } from "italia-ts-commons/lib/types";
 import { StatusEnum as CgnActivatedStatusEnum } from "../generated/definitions/CgnActivatedStatus";
 import { StatusEnum as CgnExpiredStatusEnum } from "../generated/definitions/CgnExpiredStatus";
@@ -121,3 +121,15 @@ export const checkUpdateCgnIsRunning = (
       )
     )
     .map(_ => false);
+
+export const terminateUpdateCgnOrchestratorTask = (
+  client: DurableOrchestrationClient,
+  fiscalCode: FiscalCode,
+  status: string,
+  reason: NonEmptyString
+) =>
+  tryCatch(
+    () =>
+      client.terminate(makeUpdateCgnOrchestratorId(fiscalCode, status), reason),
+    toError
+  );
