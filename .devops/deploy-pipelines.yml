@@ -146,7 +146,7 @@ stages:
               appName: '$(PRODUCTION_APP_NAME)'
               endpoint: 'https://$(PRODUCTION_APP_NAME)-staging.azurewebsites.net/api/v1/cgn/info'
               endpointType: 'private'
-              containerInstanceResourceGroup: 'io-p-rg-cgn'
+              containerInstanceResourceGroup: 'io-p-rg-common'
               containerInstanceVNet: 'io-p-vnet-common'
               containerInstanceSubnet: 'azure-devops' 
 
