@@ -1,9 +1,11 @@
 import { addYears, isAfter } from "date-fns";
 import { Option, tryCatch } from "fp-ts/lib/Option";
-import { fromLeft } from "fp-ts/lib/TaskEither";
+import { fromLeft, TaskEither } from "fp-ts/lib/TaskEither";
 import { taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 
+const CGN_UPPER_BOUND_AGE = 36;
+const CGN_LOWER_BOUND_AGE = 18;
 /**
  * Returns a comparator of two dates that returns true if
  * the difference in years is at least the provided value.
@@ -84,7 +86,14 @@ export const toBirthDate = (fiscalCode: FiscalCode): Option<Date> => {
   });
 };
 
-export const extractCgnExpirationDate = (fiscalCode: FiscalCode) =>
+/**
+ * Returns the CGN expiration date by a given fiscalCode.
+ * Namely the CGN expiration date is the 36th birthday
+ * @param fiscalCode: the citizen's fiscalCode
+ */
+export const extractCgnExpirationDate = (
+  fiscalCode: FiscalCode
+): TaskEither<Error, Date> =>
   taskEither
     .of<Error, FiscalCode>(fiscalCode)
     .map(_ => toBirthDate(_))
@@ -97,9 +106,18 @@ export const extractCgnExpirationDate = (fiscalCode: FiscalCode) =>
         birthDate => taskEither.of<Error, Date>(birthDate)
       )
     )
-    .chain(birthDate => taskEither.of(addYears(birthDate, 36)));
+    .chain(birthDate =>
+      taskEither.of(addYears(birthDate, CGN_UPPER_BOUND_AGE))
+    );
 
-export const checkCgnRequirements = (fiscalCode: FiscalCode) =>
+/**
+ * Check if a citizen is eligible for getting a CGN
+ * A citizen is eligible while it is from 18 to 36 years old
+ * @param fiscalCode the citizen's fiscalCode
+ */
+export const checkCgnRequirements = (
+  fiscalCode: FiscalCode
+): TaskEither<Error, boolean> =>
   taskEither
     .of<Error, FiscalCode>(fiscalCode)
     .map(_ => toBirthDate(_))
@@ -114,7 +132,7 @@ export const checkCgnRequirements = (fiscalCode: FiscalCode) =>
     )
     .chain(birthDate =>
       taskEither.of(
-        isOlderThan(18)(birthDate, new Date()) &&
-          isYoungerThan(36)(birthDate, new Date())
+        isOlderThan(CGN_LOWER_BOUND_AGE)(birthDate, new Date()) &&
+          isYoungerThan(CGN_UPPER_BOUND_AGE)(birthDate, new Date())
       )
     );

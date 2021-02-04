@@ -1,16 +1,25 @@
-import { TableService } from "azure-storage";
+import { TableService, TableUtilities } from "azure-storage";
+import * as date_fns from "date-fns";
 import { TaskEither } from "fp-ts/lib/TaskEither";
 import { taskify } from "fp-ts/lib/TaskEither";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 
-export const insertCgnExpiration = <T>(
+const eg = TableUtilities.entityGenerator;
+
+export const insertCgnExpiration = (
   tableService: TableService,
   cgnExpirationTableName: NonEmptyString
-) => (entityDescriptor: T): TaskEither<Error, TableService.EntityMetadata> =>
+) => (
+  fiscalCode: FiscalCode,
+  expirationDate: Date
+): TaskEither<Error, TableService.EntityMetadata> =>
   taskify<Error, TableService.EntityMetadata>(cb =>
     tableService.insertOrReplaceEntity(
       cgnExpirationTableName,
-      entityDescriptor,
+      {
+        PartitionKey: eg.String(date_fns.format(expirationDate, "yyyy-MM-dd")),
+        RowKey: eg.String(fiscalCode)
+      },
       cb
     )
   )();

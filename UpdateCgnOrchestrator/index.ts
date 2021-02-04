@@ -11,13 +11,13 @@ import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { CgnExpiredStatus } from "../generated/definitions/CgnExpiredStatus";
-
 import {
   CgnRevokedStatus,
   StatusEnum as RevokedStatusEnum
 } from "../generated/definitions/CgnRevokedStatus";
 
 import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CgnActivatedStatus";
+import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CgnExpiredStatus";
 import { CgnStatus } from "../generated/definitions/CgnStatus";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import {
@@ -146,7 +146,8 @@ export const handler = function*(
 
     const hasSendMessageActivity = [
       RevokedStatusEnum.REVOKED.toString(),
-      ActivatedStatusEnum.ACTIVATED.toString()
+      ActivatedStatusEnum.ACTIVATED.toString(),
+      ExpiredStatusEnum.EXPIRED.toString()
     ].includes(newStatus.status);
 
     if (hasSendMessageActivity) {

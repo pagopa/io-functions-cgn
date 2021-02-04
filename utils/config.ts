@@ -12,8 +12,9 @@ import { NonEmptyString } from "italia-ts-commons/lib/strings";
 // global app configuration
 export type IConfig = t.TypeOf<typeof IConfig>;
 export const IConfig = t.interface({
-  CGN_EXPIRATION_TABLE_NAME: NonEmptyString,
+  APPINSIGHTS_INSTRUMENTATIONKEY: NonEmptyString,
 
+  CGN_EXPIRATION_TABLE_NAME: NonEmptyString,
   COSMOSDB_KEY: NonEmptyString,
   COSMOSDB_NAME: NonEmptyString,
   COSMOSDB_URI: NonEmptyString,

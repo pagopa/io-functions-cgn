@@ -66,17 +66,16 @@ type IStartCgnActivationHandler = (
 
 const mapOrchestratorStatus = (
   orchestratorStatus: DurableOrchestrationStatus
-): TaskEither<
-  IResponseErrorConflict | IResponseErrorInternal | IResponseSuccessAccepted,
-  void
-> => {
+): TaskEither<IResponseSuccessAccepted, IResponseErrorInternal> => {
   switch (orchestratorStatus.runtimeStatus) {
     case df.OrchestrationRuntimeStatus.Pending:
     case df.OrchestrationRuntimeStatus.Running:
     case df.OrchestrationRuntimeStatus.ContinuedAsNew:
       return fromLeft(ResponseSuccessAccepted());
     default:
-      return taskEither.of(void 0);
+      return taskEither.of(
+        ResponseErrorInternal("Cannot recognize the orchestrator status")
+      );
   }
 };
 
@@ -86,7 +85,12 @@ const mapOrchestratorStatus = (
  * If eligible returns the calculated expiration date for the CGN
  * @param fiscalCode: the citizen's fiscalCode
  */
-const checkCgnEligibleDataTask = (fiscalCode: FiscalCode) =>
+const getCgnExpirationDataTask = (
+  fiscalCode: FiscalCode
+): TaskEither<
+  IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
+  Date
+> =>
   checkCgnRequirements(fiscalCode).foldTaskEither<
     IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
     Date
@@ -117,63 +121,61 @@ export function StartCgnActivationHandler(
       ActivatedStatusEnum.ACTIVATED
     ) as NonEmptyString;
 
-    const isEligibleResponseOrError = await checkCgnEligibleDataTask(
+    const cgnExpirationDateOrError = await getCgnExpirationDataTask(
       fiscalCode
     ).run();
-    if (isLeft(isEligibleResponseOrError)) {
-      return isEligibleResponseOrError.value;
+    if (isLeft(cgnExpirationDateOrError)) {
+      return cgnExpirationDateOrError.value;
     }
 
     const cgnStatus: CgnActivatedStatus = {
       activation_date: new Date(),
-      expiration_date: isEligibleResponseOrError.value,
+      expiration_date: cgnExpirationDateOrError.value,
       status: ActivatedStatusEnum.ACTIVATED
     };
 
-    // first we try to get the status of an activation process for the provided fiscalCode
-    return tryCatch(() => client.getStatus(orchestratorId), toError)
-      .foldTaskEither<
-        | IResponseErrorConflict
-        | IResponseErrorInternal
-        | IResponseSuccessAccepted,
-        void
-      >(
-        () =>
-          fromLeft(ResponseErrorInternal("Cannot retrieve activation status")),
-        maybeStatus =>
-          // client getStatus could respond with undefined if
-          // an orchestrator instance does not exists
-          // see https://docs.microsoft.com/it-it/azure/azure-functions/durable/durable-functions-instance-management?tabs=javascript#query-instances
-          fromNullable(maybeStatus).foldL(
-            () => taskEither.of(void 0),
-            _ => mapOrchestratorStatus(_)
-          )
+    return userCgnModel
+      .findLastVersionByModelId([fiscalCode])
+      .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
+        ResponseErrorInternal("Cannot query CGN data")
       )
-      .chain(() =>
-        // now we try to retrieve an existing CGN, if it exists
-        userCgnModel
-          .findLastVersionByModelId([fiscalCode])
-          .mapLeft(() => ResponseErrorInternal("Cannot query CGN data"))
-      )
-      .foldTaskEither<ErrorTypes | IResponseSuccessAccepted, FiscalCode>(
-        fromLeft,
-        maybeUserCgn =>
-          maybeUserCgn.foldL(
-            () => taskEither.of(fiscalCode),
-            userCgn =>
-              // if a CGN is already in a final state we return Conflict
-              [
-                ActivatedStatusEnum.ACTIVATED.toString(),
-                ExpiredStatusEnum.EXPIRED.toString(),
-                RevokedStatusEnum.REVOKED.toString()
-              ].includes(userCgn.status.status)
-                ? fromLeft(
-                    ResponseErrorConflict(
-                      `Cannot activate a CGN that is already ${userCgn.status.status}`
+      .chain(maybeUserCgn =>
+        maybeUserCgn.foldL(
+          () => taskEither.of(fiscalCode),
+          userCgn =>
+            // if a CGN is already in a final state we return Conflict
+            [
+              ActivatedStatusEnum.ACTIVATED.toString(),
+              ExpiredStatusEnum.EXPIRED.toString(),
+              RevokedStatusEnum.REVOKED.toString()
+            ].includes(userCgn.status.status)
+              ? fromLeft(
+                  ResponseErrorConflict(
+                    `Cannot activate a CGN that is already ${userCgn.status.status}`
+                  )
+                )
+              : // if CGN is in PENDING status, try to get orchestrator status
+                // in order to discriminate if there's an error or not
+                tryCatch(() => client.getStatus(orchestratorId), toError)
+                  .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
+                    ResponseErrorInternal("Cannot retrieve activation status")
+                  )
+                  .chain(maybeStatus =>
+                    // client getStatus could respond with undefined if
+                    // an orchestrator instance does not exists
+                    // see https://docs.microsoft.com/it-it/azure/azure-functions/durable/durable-functions-instance-management?tabs=javascript#query-instances
+                    fromNullable(maybeStatus).foldL(
+                      // if orchestrator does not exists we assume that it expires its storage in TaskHub
+                      // after 30 days so we can try to start a new activation process
+                      () => taskEither.of(fiscalCode),
+                      _ =>
+                        // if orchestrator is running we return an Accepted Response
+                        // otherwise we assume the orchestrator is in error or
+                        // it has been canceled so we can try to start a new activation process
+                        mapOrchestratorStatus(_).map(() => fiscalCode)
                     )
                   )
-                : taskEither.of(fiscalCode)
-          )
+        )
       )
       .chain(() =>
         // now we check if exists another update process for the same CGN
