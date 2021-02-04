@@ -121,16 +121,16 @@ export function StartCgnActivationHandler(
       ActivatedStatusEnum.ACTIVATED
     ) as NonEmptyString;
 
-    const isExpirationCgnOrError = await getCgnExpirationDataTask(
+    const cgnExpirationDateOrError = await getCgnExpirationDataTask(
       fiscalCode
     ).run();
-    if (isLeft(isExpirationCgnOrError)) {
-      return isExpirationCgnOrError.value;
+    if (isLeft(cgnExpirationDateOrError)) {
+      return cgnExpirationDateOrError.value;
     }
 
     const cgnStatus: CgnActivatedStatus = {
       activation_date: new Date(),
-      expiration_date: isExpirationCgnOrError.value,
+      expiration_date: cgnExpirationDateOrError.value,
       status: ActivatedStatusEnum.ACTIVATED
     };
 
