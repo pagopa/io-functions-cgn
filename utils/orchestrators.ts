@@ -122,7 +122,7 @@ export const checkUpdateCgnIsRunning = (
     )
     .map(_ => false);
 
-export const terminateOrchestratorTask = (
+export const terminateUpdateCgnOrchestratorTask = (
   client: DurableOrchestrationClient,
   fiscalCode: FiscalCode,
   status: string,

@@ -24,7 +24,7 @@ const terminateOrchestratorMock = jest
   .fn()
   .mockImplementation(() => taskEither.of(void 0));
 jest
-  .spyOn(orchUtils, "terminateOrchestratorTask")
+  .spyOn(orchUtils, "terminateUpdateCgnOrchestratorTask")
   .mockImplementation(terminateOrchestratorMock);
 describe("UpdateExpiredCgn", () => {
   beforeEach(() => {

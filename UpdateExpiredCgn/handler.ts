@@ -13,7 +13,7 @@ import { OrchestratorInput } from "../UpdateCgnOrchestrator";
 import { initTelemetryClient, trackException } from "../utils/appinsights";
 import {
   makeUpdateCgnOrchestratorId,
-  terminateOrchestratorTask
+  terminateUpdateCgnOrchestratorTask
 } from "../utils/orchestrators";
 import { getExpiredCgnUsers } from "./table";
 
@@ -52,14 +52,14 @@ export const getUpdateExpiredCgnHandler = (
 
   const tasks = expiredCgnUsers.map(fiscalCode =>
     // first we terminate other possible Cgn update orchestrators
-    terminateOrchestratorTask(
+    terminateUpdateCgnOrchestratorTask(
       client,
       fiscalCode,
       CgnActivatedStatusEnum.ACTIVATED,
       ORCHESTRATION_TERMINATION_REASON
     )
       .chain(() =>
-        terminateOrchestratorTask(
+        terminateUpdateCgnOrchestratorTask(
           client,
           fiscalCode,
           CgnRevokedStatusEnum.REVOKED,
