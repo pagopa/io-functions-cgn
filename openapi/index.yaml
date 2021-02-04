@@ -49,8 +49,6 @@ paths:
       description: |
         Upsert the status of a CGN. There are 2 accepted actions:
         -  REVOKE
-        -  ACTIVATE
-        that allows to update CGN status to REVOKED or ACTIVATED
       parameters:
         - $ref: "#/parameters/FiscalCode"
         - in: body
@@ -82,6 +80,42 @@ paths:
           description: |
             Cannot revoke the user's cgn because another updateCgn request was found
             for this user
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
+
+  "/cgn/{fiscalcode}/activation":
+    post:
+      operationId: startCgnActivation
+      summary: |
+        Start a new CGN activation process
+      description: |
+        Start an activation process for a CGN
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
+      responses:
+        "201":
+            description: Request created.
+            schema:
+              $ref: "#/definitions/InstanceId"
+            headers:
+              Location:
+                type: string
+                description: |-
+                  Location (URL) of created request resource.
+                  A GET request to this URL returns the request status and details.
+        "202":
+          description: Processing request.
+          schema:
+            $ref: "#/definitions/InstanceId"
+        "401":
+          description: Wrong or missing function key.
+        "403":
+          description: Forbidden.
+        "409":
+          description: |
+            Cannot start a new activation because the user's cgn is already activated
         "500":
           description: Service unavailable.
           schema:
@@ -204,6 +238,7 @@ definitions:
     allOf:
       - $ref: "#/definitions/CgnStatusRevocationRequest"
       - $ref: "#/definitions/CgnStatusActivationRequest"
+      
   InstanceId:
     type: object
     properties:

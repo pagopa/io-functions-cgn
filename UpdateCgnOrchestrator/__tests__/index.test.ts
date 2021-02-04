@@ -1,7 +1,12 @@
 // tslint:disable: object-literal-sort-keys
 
+import * as date_fns from "date-fns";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context as contextMock } from "../../__mocks__/durable-functions";
+import {
+  CgnActivatedStatus,
+  StatusEnum
+} from "../../generated/definitions/CgnActivatedStatus";
 import {
   CgnExpiredStatus,
   StatusEnum as ExpiredStatusEnum
@@ -24,6 +29,11 @@ const aUserCgnRevokedStatus: CgnRevokedStatus = {
   status: RevokedCgnStatusEnum.REVOKED
 };
 
+const aUserCgnActivatedStatus: CgnActivatedStatus = {
+  activation_date: now,
+  expiration_date: date_fns.addYears(now, 5),
+  status: StatusEnum.ACTIVATED
+};
 const aUserCgnExpiredStatus: CgnExpiredStatus = {
   status: ExpiredStatusEnum.EXPIRED
 };
@@ -52,36 +62,45 @@ describe("UpdateCgnOrchestrator", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
-  it("should send the right message", async () => {
+  it("should send the right message on an activated CGN", async () => {
     getInputMock.mockImplementationOnce(() => ({
       fiscalCode: aFiscalCode,
-      newStatus: aUserCgnRevokedStatus
+      newStatus: aUserCgnActivatedStatus
     }));
     mockCallActivityWithRetry
-      // 1 UpdateCgnStauts
+      // 1 StoreCgnExpiration
+      .mockReturnValueOnce({ kind: "SUCCESS" })
+      // 2 UpdateCgnStatus
       .mockReturnValueOnce(anUpdateCgnStatusResult)
-      // 5 SendMessageActivity
+      // 4 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = handler(contextMockWithDf as any);
 
-    // 1 UpdateCgnStauts
+    // 1 StoreCgnExpiration
     const res1 = orchestrator.next();
     expect(res1.value).toEqual({
       kind: "SUCCESS"
     });
 
-    // 2 CreateTimer
+    // 2 UpdateCgnStatus
     const res2 = orchestrator.next(res1.value);
-    expect(res2.value).toEqual("CreateTimer");
+    expect(res2.value).toEqual({ kind: "SUCCESS" });
 
-    // 3 SendMessageActivity
+    // 3 CreateTimer
     const res3 = orchestrator.next(res2.value);
-    expect(res3.value).toEqual("SendMessageActivity");
+    expect(res3.value).toEqual("CreateTimer");
+
+    // 4 SendMessage
+    const res4 = orchestrator.next(res3.value);
+    expect(res4.value).toEqual("SendMessageActivity");
 
     // Complete the orchestrator execution
     orchestrator.next();
 
+    expect(
+      contextMockWithDf.df.callActivityWithRetry.mock.calls[2][2].content
+    ).toEqual(MESSAGES.CgnActivatedStatus(aUserCgnActivatedStatus));
     expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
       1,
