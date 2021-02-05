@@ -134,6 +134,21 @@ describe("GetCgnActivationHandler", () => {
     }
   });
 
+  it("should return success with COMPLETED status if orchestrator check status raise an error but userCgn is already activated", async () => {
+    getOrchestratorStatusMock.mockImplementationOnce(() =>
+      fromLeft(new Error("Cannot recognize orchestrator status"))
+    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() =>
+      taskEither.of(some({ ...aUserCgn, status: anActivatedCgnStatus }))
+    );
+    const handler = GetCgnActivationHandler(userCgnModelMock as any);
+    const response = await handler({} as any, aFiscalCode);
+    expect(response.kind).toBe("IResponseSuccessJson");
+    if (response.kind === "IResponseSuccessJson") {
+      expect(response.value).toEqual(aCompletedResponse);
+    }
+  });
+
   it("should return success with PENDING status if orchestrator infos are missing and userCgn is PENDING", async () => {
     getOrchestratorStatusMock.mockImplementationOnce(() =>
       taskEither.of(undefined)
