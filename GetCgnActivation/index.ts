@@ -10,7 +10,7 @@ import createAzureFunctionHandler from "io-functions-express/dist/src/createAzur
 import { USER_CGN_COLLECTION_NAME, UserCgnModel } from "../models/user_cgn";
 import { getConfigOrThrow } from "../utils/config";
 import { cosmosdbClient } from "../utils/cosmosdb";
-import { UpsertCgnStatus } from "./handler";
+import { GetCgnActivation } from "./handler";
 
 //
 //  CosmosDB initialization
@@ -36,7 +36,7 @@ const app = express();
 secureExpressApp(app);
 
 // Add express route
-app.post("/api/v1/cgn/:fiscalcode/status", UpsertCgnStatus(userCgnModel));
+app.get("/api/v1/cgn/:fiscalcode/activation", GetCgnActivation(userCgnModel));
 
 const azureFunctionHandler = createAzureFunctionHandler(app);
 

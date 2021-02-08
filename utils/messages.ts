@@ -21,8 +21,10 @@ ${status.revocation_reason}
     } as MessageContent),
   CgnActivatedStatus: (_: CgnActivatedStatus) =>
     ({
-      subject: "TODO",
-      markdown: `TODO`
+      subject: "La tua Carta Nazionale Giovani è attiva",
+      markdown: `A seguito della tua richiesta di attivazione, la tua Carta Giovani Nazionale è
+**attiva** e pronta all' utilizzo.
+`
     } as MessageContent),
   CgnExpiredStatus: () =>
     ({

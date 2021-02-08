@@ -35,8 +35,8 @@ const aPendingCgnStatus: CgnPendingStatus = {
 };
 
 const aRevokedCgnStatus: CgnRevokedStatus = {
-  revocation_reason: "A motivation" as NonEmptyString,
   revocation_date: now,
+  revocation_reason: "A motivation" as NonEmptyString,
   status: RevokedStatusEnum.REVOKED
 };
 

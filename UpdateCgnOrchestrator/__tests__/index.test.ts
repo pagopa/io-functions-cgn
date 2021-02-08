@@ -28,7 +28,6 @@ const aUserCgnRevokedStatus: CgnRevokedStatus = {
   revocation_date: now,
   status: RevokedCgnStatusEnum.REVOKED
 };
-
 const aUserCgnActivatedStatus: CgnActivatedStatus = {
   activation_date: now,
   expiration_date: date_fns.addYears(now, 5),
@@ -108,6 +107,10 @@ describe("UpdateCgnOrchestrator", () => {
     );
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
       2,
+      "UPDATED"
+    );
+    expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
+      3,
       "COMPLETED"
     );
   });
@@ -153,6 +156,10 @@ describe("UpdateCgnOrchestrator", () => {
     );
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
       2,
+      "UPDATED"
+    );
+    expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
+      3,
       "COMPLETED"
     );
   });
@@ -198,6 +205,10 @@ describe("UpdateCgnOrchestrator", () => {
     );
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
       2,
+      "UPDATED"
+    );
+    expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
+      3,
       "COMPLETED"
     );
   });

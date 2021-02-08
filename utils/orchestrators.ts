@@ -35,6 +35,11 @@ export const makeUpdateCgnOrchestratorId = (
   cgnStatus: string
 ) => `${fiscalCode}-UPDCGN-${cgnStatus}`;
 
+export const getOrchestratorStatus = (
+  client: DurableOrchestrationClient,
+  orchestratorId: string
+) => tryCatch(() => client.getStatus(orchestratorId), toError);
+
 /**
  * Returns the status of the orchestrator augmented with an isRunning attribute
  */
@@ -47,7 +52,7 @@ export const isOrchestratorRunning = (
     isRunning: boolean;
   }
 > =>
-  tryCatch(() => client.getStatus(orchestratorId), toError).map(status => ({
+  getOrchestratorStatus(client, orchestratorId).map(status => ({
     ...status,
     isRunning:
       status.runtimeStatus === df.OrchestrationRuntimeStatus.Running ||

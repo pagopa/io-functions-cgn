@@ -12,5 +12,5 @@
       "direction": "in"
     }
   ],
-  "scriptFile": "./index.js"
+  "scriptFile": "../dist/UpdateExpiredCgn/index.js"
 }
