@@ -1,10 +1,7 @@
 /* tslint:disable: no-any */
 
 import * as date_fns from "date-fns";
-import {
-  DurableOrchestrationStatus,
-  OrchestrationRuntimeStatus
-} from "durable-functions/lib/src/classes";
+import { OrchestrationRuntimeStatus } from "durable-functions/lib/src/classes";
 import { some } from "fp-ts/lib/Option";
 import { none } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
@@ -23,10 +20,6 @@ import {
   CgnPendingStatus,
   StatusEnum as PendingStatusEnum
 } from "../../generated/definitions/CgnPendingStatus";
-import {
-  CgnRevokedStatus,
-  StatusEnum as RevokedStatusEnum
-} from "../../generated/definitions/CgnRevokedStatus";
 import { UserCgn } from "../../models/user_cgn";
 import * as orchUtils from "../../utils/orchestrators";
 import { GetCgnActivationHandler } from "../handler";
