@@ -6,7 +6,7 @@ import { getUpdateCgnStatusActivityHandler } from "./handler";
 const config = getConfigOrThrow();
 
 const userCgnsContainer = cosmosdbClient
-  .database(config.COSMOSDB_NAME)
+  .database(config.COSMOSDB_CGN_DATABASE_NAME)
   .container(USER_CGN_COLLECTION_NAME);
 
 const userCgnModel = new UserCgnModel(userCgnsContainer);
