@@ -100,9 +100,24 @@ describe("GetCgnActivationHandler", () => {
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
-  it("should return Not found if there infos about orchestrator and UserCgn are missing", async () => {
+  it("should return Not found if infos about orchestrator status and UserCgn are missing", async () => {
     getOrchestratorStatusMock.mockImplementationOnce(() =>
       taskEither.of(undefined)
+    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() =>
+      taskEither.of(none)
+    );
+    const handler = GetCgnActivationHandler(userCgnModelMock as any);
+    const response = await handler({} as any, aFiscalCode);
+    expect(response.kind).toBe("IResponseErrorNotFound");
+  });
+
+  it("should return Not found if infos about orchestrator status are not recognized and UserCgn are missing", async () => {
+    getOrchestratorStatusMock.mockImplementationOnce(() =>
+      taskEither.of({
+        instanceId: anInstanceId,
+        runtimeStatus: OrchestrationRuntimeStatus.Canceled
+      })
     );
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       taskEither.of(none)
