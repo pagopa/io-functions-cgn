@@ -6,7 +6,7 @@ import { none } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
-import { now } from "../../__mocks__/mock";
+import { cgnActivatedDates, now } from "../../__mocks__/mock";
 import {
   CgnActivatedStatus,
   StatusEnum as ActivatedStatusEnum
@@ -35,6 +35,7 @@ const aPendingCgnStatus: CgnPendingStatus = {
 };
 
 const aRevokedCgnStatus: CgnRevokedStatus = {
+  ...cgnActivatedDates,
   revocation_date: now,
   revocation_reason: "A motivation" as NonEmptyString,
   status: RevokedStatusEnum.REVOKED
