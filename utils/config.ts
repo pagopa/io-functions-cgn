@@ -20,7 +20,7 @@ export const IConfig = t.interface({
   COSMOSDB_CGN_URI: NonEmptyString,
 
   AzureWebJobsStorage: NonEmptyString,
-  QueueStorageConnection: NonEmptyString,
+  CGN_STORAGE_CONNECTION_STRING: NonEmptyString,
 
   isProduction: t.boolean
 });
