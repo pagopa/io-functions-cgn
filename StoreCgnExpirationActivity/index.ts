@@ -4,7 +4,7 @@ import { getStoreCgnExpirationActivityHandler } from "./handler";
 
 const config = getConfigOrThrow();
 
-const tableService = createTableService(config.QueueStorageConnection);
+const tableService = createTableService(config.CGN_STORAGE_CONNECTION_STRING);
 
 const storeCgnExpirationActivityHandler = getStoreCgnExpirationActivityHandler(
   tableService,

@@ -4,7 +4,7 @@ import { getUpdateExpiredCgnHandler } from "./handler";
 
 const config = getConfigOrThrow();
 
-const tableService = createTableService(config.QueueStorageConnection);
+const tableService = createTableService(config.CGN_STORAGE_CONNECTION_STRING);
 
 const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
   tableService,

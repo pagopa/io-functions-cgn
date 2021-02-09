@@ -142,7 +142,7 @@ export const checkApplicationHealth = (): HealthCheck<ProblemSource, true> =>
           config.COSMOSDB_CGN_URI,
           config.COSMOSDB_CGN_KEY
         ),
-        checkAzureStorageHealth(config.QueueStorageConnection)
+        checkAzureStorageHealth(config.CGN_STORAGE_CONNECTION_STRING)
       )
     )
     .map(_ => true);
