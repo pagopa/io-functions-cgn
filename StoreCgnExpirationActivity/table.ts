@@ -19,7 +19,9 @@ export const insertCgnExpiration = (
       cgnExpirationTableName,
       {
         PartitionKey: eg.String(date_fns.format(expirationDate, "yyyy-MM-dd")),
-        RowKey: { fiscalCode, activationDate, expirationDate }
+        RowKey: eg.String(
+          JSON.stringify({ fiscalCode, activationDate, expirationDate })
+        )
       },
       cb
     )

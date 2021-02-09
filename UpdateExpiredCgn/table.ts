@@ -27,7 +27,7 @@ const withExpiredCgnRowFromEntry = (f: (s: ExpiredCgnRowKeyType) => void) => (
   e: TableEntry
 ): void => {
   const rowKey = e.RowKey._;
-  return f((rowKey as unknown) as ExpiredCgnRowKeyType);
+  return f(JSON.parse(rowKey) as ExpiredCgnRowKeyType);
 };
 
 /**
