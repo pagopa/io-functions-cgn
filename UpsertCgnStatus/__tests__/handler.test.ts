@@ -9,6 +9,7 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { mockStartNew } from "../../__mocks__/durable-functions";
+import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
   CgnPendingStatus,
   StatusEnum
@@ -17,9 +18,10 @@ import {
   CgnRevokedStatus,
   StatusEnum as RevokedStatusEnum
 } from "../../generated/definitions/CgnRevokedStatus";
-import { ActionEnum as ActivateActionEnum } from "../../generated/definitions/CgnStatusActivationRequest";
-import { ActionEnum } from "../../generated/definitions/CgnStatusRevocationRequest";
-import { CgnStatusUpsertRequest } from "../../generated/definitions/CgnStatusUpsertRequest";
+import {
+  ActionEnum,
+  CgnStatusUpsertRequest
+} from "../../generated/definitions/CgnStatusUpsertRequest";
 import { UserCgn } from "../../models/user_cgn";
 import * as orchUtils from "../../utils/orchestrators";
 import { UpsertCgnStatusHandler } from "../handler";
@@ -31,11 +33,8 @@ const aCgnUpsertStatusRequest: CgnStatusUpsertRequest = {
   revocation_reason: "aMotivation" as NonEmptyString
 };
 
-const aCgnActivationUpsertStatusRequest: CgnStatusUpsertRequest = {
-  action: ActivateActionEnum.ACTIVATE
-};
-
 const aUserCgnRevokedStatus: CgnRevokedStatus = {
+  ...cgnActivatedDates,
   revocation_date: now,
   revocation_reason: aCgnUpsertStatusRequest.revocation_reason,
   status: RevokedStatusEnum.REVOKED
@@ -147,20 +146,5 @@ describe("UpsertCgnStatus", () => {
       aCgnUpsertStatusRequest
     );
     expect(mockStartNew).toBeCalledTimes(1);
-  });
-
-  it("should return a Forbidden Error if an activation request is triggered", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
-    const upsertCgnStatusHandler = UpsertCgnStatusHandler(
-      userCgnModelMock as any
-    );
-    const response = await upsertCgnStatusHandler(
-      {} as any,
-      aFiscalCode,
-      aCgnActivationUpsertStatusRequest
-    );
-    expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
   });
 });

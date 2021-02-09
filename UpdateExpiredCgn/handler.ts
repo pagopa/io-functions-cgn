@@ -50,64 +50,67 @@ export const getUpdateExpiredCgnHandler = (
   const client = df.getClient(context);
   // trigger an update orchestrator for each user's CGN that expires
 
-  const tasks = expiredCgnUsers.map(fiscalCode =>
-    // first we terminate other possible Cgn update orchestrators
-    terminateUpdateCgnOrchestratorTask(
-      client,
-      fiscalCode,
-      CgnActivatedStatusEnum.ACTIVATED,
-      ORCHESTRATION_TERMINATION_REASON
-    )
-      .chain(() =>
-        terminateUpdateCgnOrchestratorTask(
-          client,
-          fiscalCode,
-          CgnRevokedStatusEnum.REVOKED,
-          ORCHESTRATION_TERMINATION_REASON
-        )
+  const tasks = expiredCgnUsers.map(
+    ({ fiscalCode, activationDate, expirationDate }) =>
+      // first we terminate other possible Cgn update orchestrators
+      terminateUpdateCgnOrchestratorTask(
+        client,
+        fiscalCode,
+        CgnActivatedStatusEnum.ACTIVATED,
+        ORCHESTRATION_TERMINATION_REASON
       )
-      .chain(() => {
-        context.log.info(
-          `${logPrefix}| Starting new expire orchestrator for fiscalCode=${fiscalCode.substr(
-            0,
-            6
-          )}`
-        );
-        // Now we try to start Expire operation
-        return tryCatch(
-          () =>
-            client.startNew(
-              "UpdateCgnOrchestrator",
-              makeUpdateCgnOrchestratorId(
-                fiscalCode,
-                CgnExpiredStatusEnum.EXPIRED
+        .chain(() =>
+          terminateUpdateCgnOrchestratorTask(
+            client,
+            fiscalCode,
+            CgnRevokedStatusEnum.REVOKED,
+            ORCHESTRATION_TERMINATION_REASON
+          )
+        )
+        .chain(() => {
+          context.log.info(
+            `${logPrefix}| Starting new expire orchestrator for fiscalCode=${fiscalCode.substr(
+              0,
+              6
+            )}`
+          );
+          // Now we try to start Expire operation
+          return tryCatch(
+            () =>
+              client.startNew(
+                "UpdateCgnOrchestrator",
+                makeUpdateCgnOrchestratorId(
+                  fiscalCode,
+                  CgnExpiredStatusEnum.EXPIRED
+                ),
+                OrchestratorInput.encode({
+                  fiscalCode,
+                  newStatus: {
+                    activation_date: activationDate,
+                    expiration_date: expirationDate,
+                    status: CgnExpiredStatusEnum.EXPIRED
+                  }
+                })
               ),
-              OrchestratorInput.encode({
-                fiscalCode,
-                newStatus: {
-                  status: CgnExpiredStatusEnum.EXPIRED
-                }
-              })
-            ),
-          toError
-        );
-      })
-      .mapLeft(err => {
-        context.log.error(
-          `${logPrefix}|Error while starting CGN expiration for fiscalCode=${fiscalCode.substr(
-            0,
-            6
-          )}|ERROR=${err.message}`
-        );
-        trackException({
-          exception: err,
-          properties: {
-            id: fiscalCode,
-            name: "cgn.expire.error"
-          }
-        });
-        return err;
-      })
+            toError
+          );
+        })
+        .mapLeft(err => {
+          context.log.error(
+            `${logPrefix}|Error while starting CGN expiration for fiscalCode=${fiscalCode.substr(
+              0,
+              6
+            )}|ERROR=${err.message}`
+          );
+          trackException({
+            exception: err,
+            properties: {
+              id: fiscalCode,
+              name: "cgn.expire.error"
+            }
+          });
+          return err;
+        })
   );
 
   // tslint:disable-next-line: readonly-array

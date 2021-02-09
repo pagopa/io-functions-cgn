@@ -4,12 +4,7 @@ import { Context } from "@azure/functions";
 import * as df from "durable-functions";
 import { fromOption, toError } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
-import {
-  fromLeft,
-  fromPredicate,
-  taskEither,
-  tryCatch
-} from "fp-ts/lib/TaskEither";
+import { fromLeft, taskEither, tryCatch } from "fp-ts/lib/TaskEither";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { RequiredBodyPayloadMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_body_payload";
@@ -20,12 +15,10 @@ import {
 } from "io-functions-commons/dist/src/utils/request_middleware";
 import {
   IResponseErrorConflict,
-  IResponseErrorForbiddenNotAuthorized,
   IResponseErrorInternal,
   IResponseErrorNotFound,
   IResponseSuccessAccepted,
   IResponseSuccessRedirectToResource,
-  ResponseErrorForbiddenNotAuthorized,
   ResponseErrorInternal,
   ResponseErrorNotFound,
   ResponseSuccessRedirectToResource
@@ -34,10 +27,6 @@ import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { StatusEnum as PendingStatusEnum } from "../generated/definitions/CgnPendingStatus";
 
 import { StatusEnum } from "../generated/definitions/CgnRevokedStatus";
-import {
-  ActionEnum,
-  CgnStatusRevocationRequest
-} from "../generated/definitions/CgnStatusRevocationRequest";
 import { CgnStatusUpsertRequest } from "../generated/definitions/CgnStatusUpsertRequest";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
@@ -48,7 +37,6 @@ import { checkUpdateCgnIsRunning } from "../utils/orchestrators";
 type ErrorTypes =
   | IResponseErrorInternal
   | IResponseErrorNotFound
-  | IResponseErrorForbiddenNotAuthorized
   | IResponseErrorConflict;
 type ReturnTypes =
   | IResponseSuccessAccepted
@@ -62,19 +50,11 @@ type IUpsertCgnStatusHandler = (
 ) => Promise<ReturnTypes>;
 
 const toCgnStatus = (cgnStatusUpsertRequest: CgnStatusUpsertRequest) => {
-  return cgnStatusUpsertRequest.action === ActionEnum.REVOKE
-    ? {
-        revocation_date: new Date(),
-        revocation_reason: cgnStatusUpsertRequest.revocation_reason,
-        status: StatusEnum.REVOKED
-      }
-    : // in case upsert request is not a revocation we assume it's
-      // an activation request. This is because we accept only
-      // REVOKE and ACTIVATE actions in upsert operations.
-      // PENDING status is the initial status of the activation process
-      {
-        status: PendingStatusEnum.PENDING
-      };
+  return {
+    revocation_date: new Date(),
+    revocation_reason: cgnStatusUpsertRequest.revocation_reason,
+    status: StatusEnum.REVOKED
+  };
 };
 
 export function UpsertCgnStatusHandler(
@@ -88,16 +68,11 @@ export function UpsertCgnStatusHandler(
       StatusEnum.REVOKED
     ) as NonEmptyString;
 
-    return fromPredicate<
-      | IResponseErrorInternal
-      | IResponseErrorNotFound
-      | IResponseErrorForbiddenNotAuthorized,
-      CgnStatusUpsertRequest
-    >(
-      (upsertRequest: CgnStatusUpsertRequest) =>
-        CgnStatusRevocationRequest.is(upsertRequest),
-      () => ResponseErrorForbiddenNotAuthorized
-    )(cgnStatusUpsertRequest)
+    return taskEither
+      .of<
+        IResponseErrorInternal | IResponseErrorNotFound,
+        CgnStatusUpsertRequest
+      >(cgnStatusUpsertRequest)
       .chain(_ =>
         userCgnModel.findLastVersionByModelId([fiscalCode]).bimap(
           () =>
@@ -110,7 +85,19 @@ export function UpsertCgnStatusHandler(
           fromOption(
             ResponseErrorNotFound("Not Found", "User's CGN status not found")
           )(maybeUserCgn)
-        ).map(() => cgnStatus)
+        ).map(_ =>
+          _.status.status !== PendingStatusEnum.PENDING
+            ? {
+                ...cgnStatus,
+                activation_date: _.status.activation_date,
+                expiration_date: _.status.expiration_date
+              }
+            : {
+                ...cgnStatus,
+                activation_date: new Date(),
+                expiration_date: new Date()
+              }
+        )
       )
       .foldTaskEither<
         ErrorTypes,

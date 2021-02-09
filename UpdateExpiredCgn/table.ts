@@ -1,7 +1,9 @@
 import { TableService } from "azure-storage";
 import { toError } from "fp-ts/lib/Either";
 import { taskEither, tryCatch } from "fp-ts/lib/TaskEither";
+import * as t from "io-ts";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { Timestamp } from "../generated/definitions/Timestamp";
 import {
   getPagedQuery,
   iterateOnPages,
@@ -10,14 +12,22 @@ import {
   TableEntry
 } from "../utils/table_storage";
 
+const ExpiredCgnRowKeyType = t.interface({
+  activationDate: Timestamp,
+  expirationDate: Timestamp,
+  fiscalCode: FiscalCode
+});
+
+export type ExpiredCgnRowKeyType = t.TypeOf<typeof ExpiredCgnRowKeyType>;
+
 /**
  * Do something with the user hash extracted from the table entry
  */
-const withFiscalCodeFromEntry = (f: (s: FiscalCode) => void) => (
+const withExpiredCgnRowFromEntry = (f: (s: ExpiredCgnRowKeyType) => void) => (
   e: TableEntry
 ): void => {
   const rowKey = e.RowKey._;
-  return f(rowKey as FiscalCode);
+  return f((rowKey as unknown) as ExpiredCgnRowKeyType);
 };
 
 /**
@@ -25,9 +35,9 @@ const withFiscalCodeFromEntry = (f: (s: FiscalCode) => void) => (
  */
 export async function queryUsers(
   pagedQuery: PagedQuery
-): Promise<ReadonlySet<FiscalCode>> {
-  const entries = new Set<FiscalCode>();
-  const addToSet = withFiscalCodeFromEntry(s => entries.add(s));
+): Promise<ReadonlySet<ExpiredCgnRowKeyType>> {
+  const entries = new Set<ExpiredCgnRowKeyType>();
+  const addToSet = withExpiredCgnRowFromEntry(s => entries.add(s));
   for await (const page of iterateOnPages(pagedQuery)) {
     page.forEach(addToSet);
   }

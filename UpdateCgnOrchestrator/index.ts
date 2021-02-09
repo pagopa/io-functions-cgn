@@ -98,6 +98,7 @@ export const handler = function*(
         "StoreCgnExpirationActivity",
         internalRetryOptions,
         StoreCgnExpirationActivityInput.encode({
+          activation_date: newStatus.activation_date,
           expirationDate: newStatus.expiration_date,
           fiscalCode
         })
