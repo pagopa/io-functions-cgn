@@ -28,13 +28,21 @@ import { StatusEnum as CardRevokedStatusEnum } from "../generated/definitions/Ca
 import { CardStatus } from "../generated/definitions/CardStatus";
 
 /**
- * The identifier for StartEligibilityCheckOrchestrator
+ * The identifier for UpdateCgnOrchestrator
  * @param fiscalCode the id of the requesting user
+ * @param cardStatus the status of the update's operation
  */
 export const makeUpdateCgnOrchestratorId = (
   fiscalCode: FiscalCode,
   cardStatus: string
 ) => `${fiscalCode}-UPDCGN-${cardStatus}`;
+
+/**
+ * The identifier for StartEligibilityCheckOrchestrator
+ * @param fiscalCode the id of the requesting user
+ */
+export const makeEycaActivationOrchestratorId = (fiscalCode: FiscalCode) =>
+  `${fiscalCode}-EYCA-ACT`;
 
 export const getOrchestratorStatus = (
   client: DurableOrchestrationClient,

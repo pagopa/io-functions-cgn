@@ -1,6 +1,5 @@
 import { QueueService } from "azure-storage";
 import { fromOption } from "fp-ts/lib/Either";
-import { toString } from "fp-ts/lib/function";
 import { fromEither, TaskEither, taskify } from "fp-ts/lib/TaskEither";
 import {
   IResponseErrorInternal,
