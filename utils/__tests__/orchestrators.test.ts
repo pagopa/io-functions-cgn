@@ -3,16 +3,31 @@ import * as df from "durable-functions";
 import { isLeft, isRight } from "fp-ts/lib/Either";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { getClient } from "../../__mocks__/durable-functions";
+import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import { getClient, mockGetStatus } from "../../__mocks__/durable-functions";
 import { StatusEnum } from "../../generated/definitions/CgnPendingStatus";
 import * as orchUtils from "../orchestrators";
 
 const aFiscalCode = "DROLSS85S20H501F" as FiscalCode;
+const aTerminationReason = "aReason" as NonEmptyString;
 
 const mockGetOrchestratorStatus = jest.fn();
 jest
   .spyOn(orchUtils, "getOrchestratorStatus")
   .mockImplementation(mockGetOrchestratorStatus);
+
+const getStatusMock = jest
+  .fn()
+  .mockImplementation(() =>
+    Promise.resolve({ runtimeStatus: df.OrchestrationRuntimeStatus.Pending })
+  );
+const terminateMock = jest
+  .fn()
+  .mockImplementation(() => Promise.resolve(void 0));
+const client = {
+  getStatus: getStatusMock,
+  terminate: terminateMock
+};
 describe("isOrchestratorRunning", () => {
   it("should return true if an orchestrator is running", async () => {
     mockGetOrchestratorStatus.mockImplementationOnce(() =>
@@ -90,5 +105,48 @@ describe("checkUpdateCgnIsRunning", () => {
         "IResponseErrorInternal"
       );
     }
+  });
+});
+
+describe("terminateUpdateCgnOrchestratorTask", () => {
+  it("should return void if a REVOKE orchestrator is terminated successfully", async () => {
+    const terminateUpdateCgnOrchestratorTaskResult = await orchUtils
+      .terminateUpdateCgnOrchestratorTask(
+        client as any,
+        aFiscalCode,
+        "REVOKED",
+        aTerminationReason
+      )
+      .run();
+    expect(isRight(terminateUpdateCgnOrchestratorTaskResult));
+  });
+
+  it("should return void if no info about orchestrator status was retrieved", async () => {
+    getStatusMock.mockImplementationOnce(() => Promise.resolve(undefined));
+    const terminateUpdateCgnOrchestratorTaskResult = await orchUtils
+      .terminateUpdateCgnOrchestratorTask(
+        client as any,
+        aFiscalCode,
+        "REVOKED",
+        aTerminationReason
+      )
+      .run();
+    expect(isRight(terminateUpdateCgnOrchestratorTaskResult));
+  });
+
+  it("should return void if orchestrator's termination fails", async () => {
+    terminateMock.mockImplementationOnce(() =>
+      Promise.reject(new Error("Cannot recognize orchestrator ID"))
+    );
+
+    const terminateUpdateCgnOrchestratorTaskResult = await orchUtils
+      .terminateUpdateCgnOrchestratorTask(
+        client as any,
+        aFiscalCode,
+        "REVOKED",
+        aTerminationReason
+      )
+      .run();
+    expect(isRight(terminateUpdateCgnOrchestratorTaskResult));
   });
 });
