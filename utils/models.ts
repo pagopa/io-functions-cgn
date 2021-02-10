@@ -38,12 +38,10 @@ export const getEnqueueEycaActivation = (
   const createMessage = taskify(queueService.createMessage.bind(queueService));
   return (
     input: string
-  ): TaskEither<IResponseErrorInternal, QueueService.QueueMessageResult> => {
+  ): TaskEither<Error, QueueService.QueueMessageResult> => {
     // see https://github.com/Azure/Azure-Functions/issues/1091
     const message = Buffer.from(JSON.stringify(input)).toString("base64");
-    return createMessage(queueName, message).mapLeft(err =>
-      ResponseErrorInternal(`Cannot enqueue bonus activation: ${toString(err)}`)
-    );
+    return createMessage(queueName, message);
   };
 };
 

@@ -5,19 +5,17 @@ import {
 } from "io-functions-commons/dist/src/utils/cosmosdb_model_versioned";
 import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
 import * as t from "io-ts";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { CardStatus } from "../generated/definitions/CardStatus";
+import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { EycaCardStatus } from "../generated/definitions/EycaCardStatus";
 
 export const USER_EYCA_CARD_COLLECTION_NAME = "user-eyca-cards";
 export const USER_EYCA_CARD_MODEL_PK_FIELD = "fiscalCode" as const;
 
 const UserEycaCard = t.interface({
-  // The EYCA card identifier
-  cardNumber: NonEmptyString,
+  // the status of the EYCA card related to the user
+  cardStatus: EycaCardStatus,
   // The id of the user
-  fiscalCode: FiscalCode,
-  // the status of the CGN related to the user
-  status: CardStatus
+  fiscalCode: FiscalCode
 });
 export type UserEycaCard = t.TypeOf<typeof UserEycaCard>;
 

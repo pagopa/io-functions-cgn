@@ -243,7 +243,52 @@ definitions:
       status: ACTIVATED
       activation_date: "2021-10-13T00:00:00.000Z"
       expiration_date: "2030-10-13T00:00:00.000Z"
-    
+
+  EycaCardPendingStatus:
+    allOf:
+      - $ref: "#/definitions/CardPendingStatus"
+  EycaCardActivatedStatus:
+    allOf:
+      - $ref: "#/definitions/CardActivatedStatus"
+      - type: object
+        properties:
+          card_number:
+            type: string
+            minLength: 1
+        required:
+          - card_number
+  EycaCardExpiredStatus:
+    allOf:
+      - $ref: "#/definitions/CardExpiredStatus"
+      - type: object
+        properties:
+          card_number:
+            type: string
+            minLength: 1
+        required:
+          - card_number
+  EycaCardRevokedStatus:
+    allOf:
+      - $ref: "#/definitions/CardRevokedStatus"
+      - type: object
+        properties:
+          card_number:
+            type: string
+            minLength: 1
+        required:
+          - card_number
+  EycaCardStatus:
+    x-one-of: true
+    allOf:
+      - $ref: "#/definitions/EycaCardPendingStatus"
+      - $ref: "#/definitions/EycaCardActivatedStatus"
+      - $ref: "#/definitions/EycaCardRevokedStatus"
+      - $ref: "#/definitions/EycaCardExpiredStatus"
+    x-example: 
+      status: ACTIVATED
+      activation_date: "2021-10-13T00:00:00.000Z"
+      expiration_date: "2030-10-13T00:00:00.000Z"
+
   CgnStatusUpsertRequest:
     type: object
     properties:
