@@ -16,6 +16,10 @@ import {
   StatusEnum as RevokedStatusEnum
 } from "../generated/definitions/CardRevokedStatus";
 
+import {
+  ActivityInput as EnqueueEycaActivationActivityInput,
+  ActivityResult as EnqueueEycaActivationActivityResult
+} from "../EnqueueEycaActivationActivity/handler";
 import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CardActivatedStatus";
 import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CardExpiredStatus";
 import { CardStatus } from "../generated/definitions/CardStatus";
@@ -29,6 +33,7 @@ import {
   ActivityResult
 } from "../UpdateCgnStatusActivity/handler";
 import { trackEvent, trackException } from "../utils/appinsights";
+import { isEycaEligible } from "../utils/cgn_checks";
 import { getMessage } from "../utils/messages";
 import { internalRetryOptions } from "../utils/retry_policies";
 
@@ -117,6 +122,45 @@ export const handler = function*(
           new Error("Cannot store CGN Expiration"),
           "cgn.update.exception.failure.storeCgnExpirationActivityOutput"
         );
+      }
+
+      // now we try to enqueue an EYCA activation if user is eligible for eyca
+      const isEycaEligibleResult = isEycaEligible(fiscalCode).getOrElseL(e =>
+        trackExAndThrow(e, "cgn.update.exception.eyca.eligibilityCheck")
+      );
+
+      if (isEycaEligibleResult) {
+        // if citizen is eligible to get an EYCA card we try to enqueue an EYCA card activation
+        const enqueueEycaActivationActivityInput = EnqueueEycaActivationActivityInput.encode(
+          {
+            fiscalCode
+          }
+        );
+        const enqueueEycaActivationResult = yield context.df.callActivityWithRetry(
+          "EnqueueEycaActivationActivity",
+          internalRetryOptions,
+          enqueueEycaActivationActivityInput
+        );
+
+        const enqueueEycaActivationOutput = EnqueueEycaActivationActivityResult.decode(
+          enqueueEycaActivationResult
+        ).getOrElseL(e =>
+          trackExAndThrow(
+            e,
+            "cgn.update.exception.eyca.activation.activityOutput"
+          )
+        );
+
+        if (enqueueEycaActivationOutput.kind !== "SUCCESS") {
+          trackExceptionIfNotReplaying({
+            exception: new Error("Cannot enqueue an EYCA Card activation"),
+            properties: {
+              id: fiscalCode,
+              name: "cgn.update.eyca.activation.error"
+            },
+            tagOverrides
+          });
+        }
       }
     }
     const updateCgnStatusActivityInput = ActivityInput.encode({
