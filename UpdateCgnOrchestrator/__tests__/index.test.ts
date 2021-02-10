@@ -5,17 +5,17 @@ import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context as contextMock } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
-  CgnActivatedStatus,
+  CardActivatedStatus,
   StatusEnum
-} from "../../generated/definitions/CgnActivatedStatus";
+} from "../../generated/definitions/CardActivatedStatus";
 import {
-  CgnExpiredStatus,
+  CardExpiredStatus,
   StatusEnum as ExpiredStatusEnum
-} from "../../generated/definitions/CgnExpiredStatus";
+} from "../../generated/definitions/CardExpiredStatus";
 import {
-  CgnRevokedStatus,
+  CardRevokedStatus,
   StatusEnum as RevokedCgnStatusEnum
-} from "../../generated/definitions/CgnRevokedStatus";
+} from "../../generated/definitions/CardRevokedStatus";
 import { ActivityResult as UpdateCgnStatusActivityResult } from "../../UpdateCgnStatusActivity/handler";
 import { MESSAGES } from "../../utils/messages";
 import { handler } from "../index";
@@ -24,18 +24,18 @@ const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const now = new Date();
 const aReason = "aMotivation" as NonEmptyString;
 
-const aUserCgnRevokedStatus: CgnRevokedStatus = {
+const aUserCardRevokedStatus: CardRevokedStatus = {
   ...cgnActivatedDates,
   revocation_reason: aReason,
   revocation_date: now,
   status: RevokedCgnStatusEnum.REVOKED
 };
-const aUserCgnActivatedStatus: CgnActivatedStatus = {
+const aUserCardActivatedStatus: CardActivatedStatus = {
   activation_date: now,
   expiration_date: date_fns.addYears(now, 5),
   status: StatusEnum.ACTIVATED
 };
-const aUserCgnExpiredStatus: CgnExpiredStatus = {
+const aUserCardExpiredStatus: CardExpiredStatus = {
   ...cgnActivatedDates,
   status: ExpiredStatusEnum.EXPIRED
 };
@@ -67,7 +67,7 @@ describe("UpdateCgnOrchestrator", () => {
   it("should send the right message on an activated CGN", async () => {
     getInputMock.mockImplementationOnce(() => ({
       fiscalCode: aFiscalCode,
-      newStatus: aUserCgnActivatedStatus
+      newStatus: aUserCardActivatedStatus
     }));
     mockCallActivityWithRetry
       // 1 StoreCgnExpiration
@@ -102,7 +102,7 @@ describe("UpdateCgnOrchestrator", () => {
 
     expect(
       contextMockWithDf.df.callActivityWithRetry.mock.calls[2][2].content
-    ).toEqual(MESSAGES.CgnActivatedStatus(aUserCgnActivatedStatus));
+    ).toEqual(MESSAGES.CardActivatedStatus(aUserCardActivatedStatus));
     expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
       1,
@@ -121,7 +121,7 @@ describe("UpdateCgnOrchestrator", () => {
   it("should send the right message on a revoked Cgn", async () => {
     getInputMock.mockImplementationOnce(() => ({
       fiscalCode: aFiscalCode,
-      newStatus: aUserCgnRevokedStatus
+      newStatus: aUserCardRevokedStatus
     }));
     mockCallActivityWithRetry
       // 1 UpdateCgnStauts
@@ -150,7 +150,7 @@ describe("UpdateCgnOrchestrator", () => {
 
     expect(
       contextMockWithDf.df.callActivityWithRetry.mock.calls[1][2].content
-    ).toEqual(MESSAGES.CgnRevokedStatus(aUserCgnRevokedStatus));
+    ).toEqual(MESSAGES.CardRevokedStatus(aUserCardRevokedStatus));
 
     expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
@@ -170,7 +170,7 @@ describe("UpdateCgnOrchestrator", () => {
   it("should send the right message on an expired Cgn", async () => {
     getInputMock.mockImplementationOnce(() => ({
       fiscalCode: aFiscalCode,
-      newStatus: aUserCgnExpiredStatus
+      newStatus: aUserCardExpiredStatus
     }));
     mockCallActivityWithRetry
       // 1 UpdateCgnStauts
@@ -199,7 +199,7 @@ describe("UpdateCgnOrchestrator", () => {
 
     expect(
       contextMockWithDf.df.callActivityWithRetry.mock.calls[1][2].content
-    ).toEqual(MESSAGES.CgnExpiredStatus());
+    ).toEqual(MESSAGES.CardExpiredStatus());
 
     expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(

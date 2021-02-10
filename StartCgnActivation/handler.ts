@@ -33,12 +33,12 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import {
-  CgnActivatedStatus,
+  CardActivatedStatus,
   StatusEnum as ActivatedStatusEnum
-} from "../generated/definitions/CgnActivatedStatus";
-import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CgnExpiredStatus";
-import { StatusEnum as PendingStatusEnum } from "../generated/definitions/CgnPendingStatus";
-import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CgnRevokedStatus";
+} from "../generated/definitions/CardActivatedStatus";
+import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CardExpiredStatus";
+import { StatusEnum as PendingStatusEnum } from "../generated/definitions/CardPendingStatus";
+import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CardRevokedStatus";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
 import { OrchestratorInput } from "../UpdateCgnOrchestrator";
@@ -128,7 +128,7 @@ export function StartCgnActivationHandler(
       return cgnExpirationDateOrError.value;
     }
 
-    const cgnStatus: CgnActivatedStatus = {
+    const cardStatus: CardActivatedStatus = {
       activation_date: new Date(),
       expiration_date: cgnExpirationDateOrError.value,
       status: ActivatedStatusEnum.ACTIVATED
@@ -179,7 +179,7 @@ export function StartCgnActivationHandler(
       )
       .chain(() =>
         // now we check if exists another update process for the same CGN
-        checkUpdateCgnIsRunning(client, fiscalCode, cgnStatus).foldTaskEither<
+        checkUpdateCgnIsRunning(client, fiscalCode, cardStatus).foldTaskEither<
           ErrorTypes,
           | IResponseSuccessAccepted
           | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
@@ -212,7 +212,7 @@ export function StartCgnActivationHandler(
                       orchestratorId,
                       OrchestratorInput.encode({
                         fiscalCode,
-                        newStatus: cgnStatus
+                        newStatus: cardStatus
                       })
                     ),
                   toError

@@ -10,15 +10,15 @@ import { constVoid } from "fp-ts/lib/function";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { CgnExpiredStatus } from "../generated/definitions/CgnExpiredStatus";
+import { CardExpiredStatus } from "../generated/definitions/CardExpiredStatus";
 import {
-  CgnRevokedStatus,
+  CardRevokedStatus,
   StatusEnum as RevokedStatusEnum
-} from "../generated/definitions/CgnRevokedStatus";
+} from "../generated/definitions/CardRevokedStatus";
 
-import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CgnActivatedStatus";
-import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CgnExpiredStatus";
-import { CgnStatus } from "../generated/definitions/CgnStatus";
+import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CardActivatedStatus";
+import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CardExpiredStatus";
+import { CardStatus } from "../generated/definitions/CardStatus";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import {
   ActivityInput as StoreCgnExpirationActivityInput,
@@ -34,7 +34,7 @@ import { internalRetryOptions } from "../utils/retry_policies";
 
 export const OrchestratorInput = t.interface({
   fiscalCode: FiscalCode,
-  newStatus: CgnStatus
+  newStatus: CardStatus
 });
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
@@ -58,14 +58,14 @@ const trackExceptionAndThrow = (
   throw new Error(String(err));
 };
 
-const getMessageType = (cgnStatus: CgnStatus) => {
-  if (CgnRevokedStatus.is(cgnStatus)) {
-    return "CgnRevokedStatus";
+const getMessageType = (cardStatus: CardStatus) => {
+  if (CardRevokedStatus.is(cardStatus)) {
+    return "CardRevokedStatus";
   }
-  if (CgnExpiredStatus.is(cgnStatus)) {
-    return "CgnExpiredStatus";
+  if (CardExpiredStatus.is(cardStatus)) {
+    return "CardExpiredStatus";
   } else {
-    return "CgnActivatedStatus";
+    return "CardActivatedStatus";
   }
 };
 
@@ -120,7 +120,7 @@ export const handler = function*(
       }
     }
     const updateCgnStatusActivityInput = ActivityInput.encode({
-      cgnStatus: newStatus,
+      cardStatus: newStatus,
       fiscalCode
     });
     const updateStatusResult = yield context.df.callActivityWithRetry(

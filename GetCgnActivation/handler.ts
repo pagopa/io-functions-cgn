@@ -23,9 +23,9 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import {
-  CgnActivatedStatus,
+  CardActivatedStatus,
   StatusEnum as ActivatedStatusEnum
-} from "../generated/definitions/CgnActivatedStatus";
+} from "../generated/definitions/CardActivatedStatus";
 import {
   CgnActivationDetail,
   StatusEnum
@@ -119,8 +119,8 @@ export function GetCgnActivationHandler(
           // check for CGN status on cosmos
           retrieveUserCgn(userCgnModel, fiscalCode)
             .map(_ => _.status)
-            .chain(cgnStatus =>
-              CgnActivatedStatus.is(cgnStatus)
+            .chain(cardStatus =>
+              CardActivatedStatus.is(cardStatus)
                 ? taskEither.of(StatusEnum.COMPLETED)
                 : taskEither.of(StatusEnum.PENDING)
             )

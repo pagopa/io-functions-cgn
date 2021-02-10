@@ -4,12 +4,12 @@ import { identity } from "fp-ts/lib/function";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { CgnStatus } from "../generated/definitions/CgnStatus";
+import { CardStatus } from "../generated/definitions/CardStatus";
 import { UserCgnModel } from "../models/user_cgn";
 import { errorsToError } from "../utils/conversions";
 
 export const ActivityInput = t.interface({
-  cgnStatus: CgnStatus,
+  cardStatus: CardStatus,
   fiscalCode: FiscalCode
 });
 
@@ -78,7 +78,7 @@ export const getUpdateCgnStatusActivityHandler = (
         )
         .map(userCgn => ({
           ...userCgn,
-          status: activityInput.cgnStatus
+          status: activityInput.cardStatus
         }))
     )
     .chain(_ =>

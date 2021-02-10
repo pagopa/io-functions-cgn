@@ -9,17 +9,17 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { now } from "../../__mocks__/mock";
 import {
-  CgnActivatedStatus,
+  CardActivatedStatus,
   StatusEnum as ActivatedStatusEnum
-} from "../../generated/definitions/CgnActivatedStatus";
+} from "../../generated/definitions/CardActivatedStatus";
 import {
   CgnActivationDetail,
   StatusEnum
 } from "../../generated/definitions/CgnActivationDetail";
 import {
-  CgnPendingStatus,
+  CardPendingStatus,
   StatusEnum as PendingStatusEnum
-} from "../../generated/definitions/CgnPendingStatus";
+} from "../../generated/definitions/CardPendingStatus";
 import { UserCgn } from "../../models/user_cgn";
 import * as orchUtils from "../../utils/orchestrators";
 import { GetCgnActivationHandler } from "../handler";
@@ -41,11 +41,11 @@ const aCompletedResponse: CgnActivationDetail = {
   instance_id: anInstanceId,
   status: StatusEnum.COMPLETED
 };
-const aPendingCgnStatus: CgnPendingStatus = {
+const aPendingCgnStatus: CardPendingStatus = {
   status: PendingStatusEnum.PENDING
 };
 
-const anActivatedCgnStatus: CgnActivatedStatus = {
+const anActivatedCgnStatus: CardActivatedStatus = {
   activation_date: now,
   expiration_date: date_fns.addDays(now, 10),
   status: ActivatedStatusEnum.ACTIVATED

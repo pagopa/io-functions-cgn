@@ -24,9 +24,9 @@ import {
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { StatusEnum as PendingStatusEnum } from "../generated/definitions/CgnPendingStatus";
+import { StatusEnum as PendingStatusEnum } from "../generated/definitions/CardPendingStatus";
 
-import { StatusEnum } from "../generated/definitions/CgnRevokedStatus";
+import { StatusEnum } from "../generated/definitions/CardRevokedStatus";
 import { CgnStatusUpsertRequest } from "../generated/definitions/CgnStatusUpsertRequest";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
@@ -77,10 +77,10 @@ export function UpsertCgnStatusHandler(
         userCgnModel.findLastVersionByModelId([fiscalCode]).bimap(
           () =>
             ResponseErrorInternal("Cannot retrieve CGN infos for this user"),
-          maybeUserCgn => ({ maybeUserCgn, cgnStatus: toCgnStatus(_) })
+          maybeUserCgn => ({ maybeUserCgn, cardStatus: toCgnStatus(_) })
         )
       )
-      .chain(({ cgnStatus, maybeUserCgn }) =>
+      .chain(({ cardStatus, maybeUserCgn }) =>
         fromEither(
           fromOption(
             ResponseErrorNotFound("Not Found", "User's CGN status not found")
@@ -88,12 +88,12 @@ export function UpsertCgnStatusHandler(
         ).map(_ =>
           _.status.status !== PendingStatusEnum.PENDING
             ? {
-                ...cgnStatus,
+                ...cardStatus,
                 activation_date: _.status.activation_date,
                 expiration_date: _.status.expiration_date
               }
             : {
-                ...cgnStatus,
+                ...cardStatus,
                 activation_date: new Date(),
                 expiration_date: new Date()
               }
@@ -103,8 +103,8 @@ export function UpsertCgnStatusHandler(
         ErrorTypes,
         | IResponseSuccessAccepted
         | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
-      >(fromLeft, cgnStatus =>
-        checkUpdateCgnIsRunning(client, fiscalCode, cgnStatus).foldTaskEither<
+      >(fromLeft, cardStatus =>
+        checkUpdateCgnIsRunning(client, fiscalCode, cardStatus).foldTaskEither<
           ErrorTypes,
           | IResponseSuccessAccepted
           | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
@@ -121,7 +121,7 @@ export function UpsertCgnStatusHandler(
                   orchestratorId,
                   OrchestratorInput.encode({
                     fiscalCode,
-                    newStatus: cgnStatus
+                    newStatus: cardStatus
                   })
                 ),
               toError

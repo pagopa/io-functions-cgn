@@ -6,13 +6,13 @@ import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
-  CgnPendingStatus,
+  CardPendingStatus,
   StatusEnum
-} from "../../generated/definitions/CgnPendingStatus";
+} from "../../generated/definitions/CardPendingStatus";
 import {
-  CgnRevokedStatus,
+  CardRevokedStatus,
   StatusEnum as RevokedStatusEnum
-} from "../../generated/definitions/CgnRevokedStatus";
+} from "../../generated/definitions/CardRevokedStatus";
 import { UserCgn } from "../../models/user_cgn";
 import { ActivityInput, getUpdateCgnStatusActivityHandler } from "../handler";
 
@@ -22,7 +22,7 @@ const aRevocationRequest = {
   revocation_reason: "aMotivation" as NonEmptyString
 };
 
-const aUserCgnRevokedStatus: CgnRevokedStatus = {
+const aUserCardRevokedStatus: CardRevokedStatus = {
   ...cgnActivatedDates,
   revocation_date: now,
   revocation_reason: aRevocationRequest.revocation_reason,
@@ -32,10 +32,10 @@ const aUserCgnRevokedStatus: CgnRevokedStatus = {
 const aRevokedUserCgn: UserCgn = {
   fiscalCode: aFiscalCode,
   id: "ID" as NonEmptyString,
-  status: aUserCgnRevokedStatus
+  status: aUserCardRevokedStatus
 };
 
-const aUserCgnPendingStatus: CgnPendingStatus = {
+const aUserCardPendingStatus: CardPendingStatus = {
   status: StatusEnum.PENDING
 };
 
@@ -48,7 +48,7 @@ const userCgnModelMock = {
 };
 
 const anActivityInput: ActivityInput = {
-  cgnStatus: aUserCgnRevokedStatus,
+  cardStatus: aUserCardRevokedStatus,
   fiscalCode: aFiscalCode
 };
 describe("UpdateCgnStatusActivity", () => {
@@ -114,7 +114,7 @@ describe("UpdateCgnStatusActivity", () => {
 
   it("should return success if userCgn' s update success", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
+      taskEither.of(some({ ...aRevokedUserCgn, status: aUserCardPendingStatus }))
     );
     updateMock.mockImplementationOnce(() => taskEither.of(aRevokedUserCgn));
     const updateCgnStatusActivityHandler = getUpdateCgnStatusActivityHandler(

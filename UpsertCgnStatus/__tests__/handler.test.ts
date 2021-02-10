@@ -11,13 +11,13 @@ import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { mockStartNew } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
-  CgnPendingStatus,
+  CardPendingStatus,
   StatusEnum
-} from "../../generated/definitions/CgnPendingStatus";
+} from "../../generated/definitions/CardPendingStatus";
 import {
-  CgnRevokedStatus,
+  CardRevokedStatus,
   StatusEnum as RevokedStatusEnum
-} from "../../generated/definitions/CgnRevokedStatus";
+} from "../../generated/definitions/CardRevokedStatus";
 import {
   ActionEnum,
   CgnStatusUpsertRequest
@@ -33,21 +33,21 @@ const aCgnUpsertStatusRequest: CgnStatusUpsertRequest = {
   revocation_reason: "aMotivation" as NonEmptyString
 };
 
-const aUserCgnRevokedStatus: CgnRevokedStatus = {
+const aUserCardRevokedStatus: CardRevokedStatus = {
   ...cgnActivatedDates,
   revocation_date: now,
   revocation_reason: aCgnUpsertStatusRequest.revocation_reason,
   status: RevokedStatusEnum.REVOKED
 };
 
-const aUserCgnPendingStatus: CgnPendingStatus = {
+const aUserCardPendingStatus: CardPendingStatus = {
   status: StatusEnum.PENDING
 };
 
 const aRevokedUserCgn: UserCgn = {
   fiscalCode: aFiscalCode,
   id: "A_USER_CGN_ID" as NonEmptyString,
-  status: aUserCgnRevokedStatus
+  status: aUserCardRevokedStatus
 };
 
 const findLastVersionByModelIdMock = jest.fn();
@@ -96,7 +96,7 @@ describe("UpsertCgnStatus", () => {
 
   it("should return an Internal Error if it is not possible to check status of an other orchestrator with the same id", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
+      taskEither.of(some({ ...aRevokedUserCgn, status: aUserCardPendingStatus }))
     );
     checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
       fromLeft(ResponseErrorInternal("Error"))
@@ -114,7 +114,7 @@ describe("UpsertCgnStatus", () => {
 
   it("should return an Accepted response if there is another orchestrator running with the same id", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
+      taskEither.of(some({ ...aRevokedUserCgn, status: aUserCardPendingStatus }))
     );
     checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
       fromLeft(ResponseSuccessAccepted())
@@ -132,7 +132,7 @@ describe("UpsertCgnStatus", () => {
 
   it("should start a new orchestrator if there aren' t conflict on the same id", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
+      taskEither.of(some({ ...aRevokedUserCgn, status: aUserCardPendingStatus }))
     );
     checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
       taskEither.of(false)

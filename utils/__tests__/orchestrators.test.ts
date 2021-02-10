@@ -5,7 +5,7 @@ import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { getClient, mockGetStatus } from "../../__mocks__/durable-functions";
-import { StatusEnum } from "../../generated/definitions/CgnPendingStatus";
+import { StatusEnum } from "../../generated/definitions/CardPendingStatus";
 import * as orchUtils from "../orchestrators";
 
 const aFiscalCode = "DROLSS85S20H501F" as FiscalCode;

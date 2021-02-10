@@ -8,17 +8,17 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { cgnActivatedDates, now } from "../../__mocks__/mock";
 import {
-  CgnActivatedStatus,
+  CardActivatedStatus,
   StatusEnum as ActivatedStatusEnum
-} from "../../generated/definitions/CgnActivatedStatus";
+} from "../../generated/definitions/CardActivatedStatus";
 import {
-  CgnPendingStatus,
+  CardPendingStatus,
   StatusEnum as PendingStatusEnum
-} from "../../generated/definitions/CgnPendingStatus";
+} from "../../generated/definitions/CardPendingStatus";
 import {
-  CgnRevokedStatus,
+  CardRevokedStatus,
   StatusEnum as RevokedStatusEnum
-} from "../../generated/definitions/CgnRevokedStatus";
+} from "../../generated/definitions/CardRevokedStatus";
 import { UserCgn } from "../../models/user_cgn";
 import { GetCgnStatusHandler } from "../handler";
 
@@ -30,18 +30,18 @@ const userCgnModelMock = {
   findLastVersionByModelId: findLastVersionByModelIdMock
 };
 
-const aPendingCgnStatus: CgnPendingStatus = {
+const aPendingCgnStatus: CardPendingStatus = {
   status: PendingStatusEnum.PENDING
 };
 
-const aRevokedCgnStatus: CgnRevokedStatus = {
+const aRevokedCgnStatus: CardRevokedStatus = {
   ...cgnActivatedDates,
   revocation_date: now,
   revocation_reason: "A motivation" as NonEmptyString,
   status: RevokedStatusEnum.REVOKED
 };
 
-const anActivatedCgnStatus: CgnActivatedStatus = {
+const anActivatedCgnStatus: CardActivatedStatus = {
   activation_date: now,
   expiration_date: date_fns.addDays(now, 10),
   status: ActivatedStatusEnum.ACTIVATED

@@ -23,17 +23,17 @@ paths:
       description: |
         Get the CGN status details by the provided fiscal code. 
         In case of success the response could be one of:
-          - CgnPendingStatus
-          - CgnActivatedStatus
-          - CgnRevokedStatus
-          - CgnExpiredStatus
+          - CardPendingStatus
+          - CardActivatedStatus
+          - CardRevokedStatus
+          - CardExpiredStatus
       parameters:
         - $ref: "#/parameters/FiscalCode"
       responses:
         "200":
           description: CGN status details.
           schema:
-            $ref: "#/definitions/CgnStatus"
+            $ref: "#/definitions/CardStatus"
         "401":
           description: Wrong or missing function key.
         "404":
@@ -172,7 +172,18 @@ definitions:
   ProblemJson:
     $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/ProblemJson"
 
-  CgnPendingStatus:
+  CommonCardStatus:
+    type: object
+    properties:
+      activation_date:
+        $ref: "#/definitions/Timestamp"
+      expiration_date:
+        $ref: "#/definitions/Timestamp"
+    required:
+      - activation_date
+      - expiration_date
+    
+  CardPendingStatus:
     type: object
     properties:
       status:
@@ -181,65 +192,53 @@ definitions:
           - PENDING
     required:
       - status
-  CgnActivatedStatus:
-    type: object
-    properties:
-      status:
-        type: string
-        x-extensible-enum:
-          - ACTIVATED
-      activation_date:
-        $ref: "#/definitions/Timestamp"
-      expiration_date:
-        $ref: "#/definitions/Timestamp"
-    required:
-      - status
-      - activation_date
-      - expiration_date
-  CgnRevokedStatus:
-    type: object
-    properties:
-      status:
-        type: string
-        x-extensible-enum:
-          - REVOKED
-      activation_date:
-        $ref: "#/definitions/Timestamp"
-      expiration_date:
-        $ref: "#/definitions/Timestamp"
-      revocation_date:
-        $ref: "#/definitions/Timestamp"
-      revocation_reason:
-        type: string
-        minLength: 1
-    required:
-      - status
-      - revocation_date
-      - revocation_reason
-      - activation_date
-      - expiration_date
-  CgnExpiredStatus:
-    type: object
-    properties:
-      status:
-        type: string
-        x-extensible-enum:
-          - EXPIRED
-      activation_date:
-        $ref: "#/definitions/Timestamp"
-      expiration_date:
-        $ref: "#/definitions/Timestamp"
-    required:
-      - status
-      - activation_date
-      - expiration_date
-  CgnStatus:
+  CardActivatedStatus:
+    allOf:
+      - $ref: "#/definitions/CommonCardStatus"
+      - type: object
+        properties:
+          status:
+            type: string
+            x-extensible-enum:
+              - ACTIVATED
+        required:
+          - status
+  CardRevokedStatus:
+    allOf:
+      - $ref: "#/definitions/CommonCardStatus"
+      - type: object
+        properties:
+          status:
+            type: string
+            x-extensible-enum:
+              - REVOKED
+          revocation_date:
+            $ref: "#/definitions/Timestamp"
+          revocation_reason:
+            type: string
+            minLength: 1
+        required:
+          - status
+          - revocation_date
+          - revocation_reason
+  CardExpiredStatus:
+    allOf:
+      - $ref: "#/definitions/CommonCardStatus"
+      - type: object
+        properties:
+          status:
+            type: string
+            x-extensible-enum:
+              - EXPIRED
+        required:
+          - status
+  CardStatus:
     x-one-of: true
     allOf:
-      - $ref: "#/definitions/CgnPendingStatus"
-      - $ref: "#/definitions/CgnActivatedStatus"
-      - $ref: "#/definitions/CgnRevokedStatus"
-      - $ref: "#/definitions/CgnExpiredStatus"
+      - $ref: "#/definitions/CardPendingStatus"
+      - $ref: "#/definitions/CardActivatedStatus"
+      - $ref: "#/definitions/CardRevokedStatus"
+      - $ref: "#/definitions/CardExpiredStatus"
     x-example: 
       status: ACTIVATED
       activation_date: "2021-10-13T00:00:00.000Z"
