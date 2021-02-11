@@ -31,8 +31,7 @@ const aUserCgnRevokedStatus: CgnRevokedStatus = {
   status: RevokedCgnStatusEnum.REVOKED
 };
 const aUserCgnActivatedStatus: CgnActivatedStatus = {
-  activation_date: now,
-  expiration_date: date_fns.addYears(now, 5),
+  ...cgnActivatedDates,
   status: StatusEnum.ACTIVATED
 };
 const aUserCgnExpiredStatus: CgnExpiredStatus = {

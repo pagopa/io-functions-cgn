@@ -9,7 +9,7 @@ import { errorsToError } from "../utils/conversions";
 import { insertCgnExpiration } from "./table";
 
 export const ActivityInput = t.interface({
-  activation_date: Timestamp,
+  activationDate: Timestamp,
   expirationDate: Timestamp,
   fiscalCode: FiscalCode
 });
@@ -72,7 +72,7 @@ export const getStoreCgnExpirationActivityHandler = (
     .chain(activityInput =>
       insertCgnExpirationTask(
         activityInput.fiscalCode,
-        activityInput.activation_date,
+        activityInput.activationDate,
         activityInput.expirationDate
       ).bimap(err => fail(err, "Cannot insert CGN expiration tuple"), success)
     )
