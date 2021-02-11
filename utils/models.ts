@@ -8,6 +8,7 @@ import {
   ResponseErrorNotFound
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { ContinueEycaActivationInput } from "../ContinueEycaActivation";
 import { UserCgnModel } from "../models/user_cgn";
 
 export const retrieveUserCgn = (
@@ -36,7 +37,7 @@ export const getEnqueueEycaActivation = (
 ) => {
   const createMessage = taskify(queueService.createMessage.bind(queueService));
   return (
-    input: string
+    input: ContinueEycaActivationInput
   ): TaskEither<Error, QueueService.QueueMessageResult> => {
     // see https://github.com/Azure/Azure-Functions/issues/1091
     const message = Buffer.from(JSON.stringify(input)).toString("base64");

@@ -68,8 +68,8 @@ describe("EnqueueEycaActivationActivity", () => {
       anActivityInput
     );
     expect(response.kind).toBe("SUCCESS");
-    expect(enqueueEycaActivationMock).toBeCalledWith(
-      anActivityInput.fiscalCode
-    );
+    expect(enqueueEycaActivationMock).toBeCalledWith({
+      fiscalCode: anActivityInput.fiscalCode
+    });
   });
 });

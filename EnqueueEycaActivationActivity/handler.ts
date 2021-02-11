@@ -77,7 +77,7 @@ export const getEnqueueEycaActivationActivityHandler = (
 
         .mapLeft(err => fail(toError(err), "Cannot insert EYCA Pending status"))
         .chain(() =>
-          enqueueEycaActivation(fiscalCode).mapLeft(err =>
+          enqueueEycaActivation({ fiscalCode }).mapLeft(err =>
             fail(err, "Cannot enqueue EYCA activation")
           )
         )

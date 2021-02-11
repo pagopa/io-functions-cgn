@@ -7,7 +7,12 @@ import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 
+import {
+  ActivityInput,
+  ActivityResult
+} from "../SuccessEycaActivationActivity/handler";
 import { trackException } from "../utils/appinsights";
+import { internalRetryOptions } from "../utils/retry_policies";
 
 export const OrchestratorInput = t.interface({
   fiscalCode: FiscalCode
@@ -54,7 +59,28 @@ export const handler = function*(
   };
 
   try {
-    context.df.setCustomStatus("RUNNING");
+    context.log.info(`${logPrefix}|INFO|fiscalCode=${fiscalCode}`);
+    const updateEycaStatusActivityInput = ActivityInput.encode({
+      fiscalCode
+    });
+    const updateStatusResult = yield context.df.callActivityWithRetry(
+      "SuccessEycaActivationActivity",
+      internalRetryOptions,
+      updateEycaStatusActivityInput
+    );
+
+    const updateCgnResult = ActivityResult.decode(
+      updateStatusResult
+    ).getOrElseL(e =>
+      trackExAndThrow(e, "eyca.activate.exception.decode.activityOutput")
+    );
+
+    if (updateCgnResult.kind !== "SUCCESS") {
+      trackExAndThrow(
+        new Error("Cannot activate EYCA Card"),
+        "eyca.activate.exception.failure.activityOutput"
+      );
+    }
   } catch (err) {
     context.log.error(`${logPrefix}|ERROR|${String(err)}`);
     trackExceptionIfNotReplaying({
