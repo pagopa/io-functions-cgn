@@ -46,7 +46,7 @@ import {
   checkCgnRequirements,
   extractCgnExpirationDate
 } from "../utils/cgn_checks";
-import { genRandomCgnCode } from "../utils/cgnCode";
+import { genRandomCardCode } from "../utils/cgnCode";
 import { makeUpdateCgnOrchestratorId } from "../utils/orchestrators";
 import { checkUpdateCgnIsRunning } from "../utils/orchestrators";
 
@@ -106,7 +106,7 @@ const getCgnExpirationDataTask = (
   );
 
 const getCgnCodeTask = () =>
-  tryCatch(() => genRandomCgnCode(), toError).mapLeft(() =>
+  tryCatch(() => genRandomCardCode(), toError).mapLeft(() =>
     ResponseErrorInternal("Cannot generate a new CGN code")
   );
 

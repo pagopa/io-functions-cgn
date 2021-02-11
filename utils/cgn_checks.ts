@@ -1,5 +1,5 @@
 import { addYears, isAfter } from "date-fns";
-import { fromOption } from "fp-ts/lib/Either";
+import { Either, fromOption } from "fp-ts/lib/Either";
 import { Option, tryCatch } from "fp-ts/lib/Option";
 import { fromLeft, TaskEither } from "fp-ts/lib/TaskEither";
 import { taskEither } from "fp-ts/lib/TaskEither";
@@ -142,7 +142,9 @@ export const checkCgnRequirements = (
       )
     );
 
-export const isEycaEligible = (fiscalCode: FiscalCode) =>
+export const isEycaEligible = (
+  fiscalCode: FiscalCode
+): Either<Error, boolean> =>
   fromOption(new Error("Cannot recognize EYCA eligibility"))(
     toBirthDate(fiscalCode)
   ).map(
@@ -150,3 +152,10 @@ export const isEycaEligible = (fiscalCode: FiscalCode) =>
       isOlderThan(EYCA_LOWER_BOUND_AGE)(birthDate, new Date()) &&
       isYoungerThan(EYCA_UPPER_BOUND_AGE)(birthDate, new Date())
   );
+
+export const extractEycaExpirationDate = (
+  fiscalCode: FiscalCode
+): Either<Error, Date> =>
+  fromOption(new Error("Cannot extract birth date from FiscalCode"))(
+    toBirthDate(fiscalCode)
+  ).map(birthDate => addYears(birthDate, EYCA_UPPER_BOUND_AGE));
