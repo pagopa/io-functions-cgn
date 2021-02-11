@@ -30,8 +30,8 @@ const transientOrchestratorError = (err: unknown) =>
   });
 
 /**
- * Reads from a queue the tuple (bonusId, fiscalCode)
- * then try to start the orchestrator to activate the bonus.
+ * Reads from a queue the fiscalCode
+ * then try to start the orchestrator to activate the EYCA card.
  */
 export const index: AzureFunction = (
   context: Context,
