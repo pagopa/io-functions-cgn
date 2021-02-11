@@ -4,6 +4,7 @@ import { identity } from "fp-ts/lib/function";
 import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { StatusEnum } from "../generated/definitions/CardActivatedStatus";
 import { UserEycaCardModel } from "../models/user_eyca_card";
 import { extractEycaExpirationDate } from "../utils/cgn_checks";
 import { genRandomCardCode } from "../utils/cgnCode";
@@ -89,7 +90,8 @@ export const getSuccessEycaActivationActivityHandler = (
                 cardStatus: {
                   activation_date: new Date(),
                   card_number: cardNumber,
-                  expiration_date: expirationDate
+                  expiration_date: expirationDate,
+                  status: StatusEnum.ACTIVATED
                 }
               }))
             )
