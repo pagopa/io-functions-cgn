@@ -68,13 +68,13 @@ export const handler = function*(
       updateEycaStatusActivityInput
     );
 
-    const updateCgnResult = ActivityResult.decode(
+    const updateEycaResult = ActivityResult.decode(
       updateStatusResult
     ).getOrElseL(e =>
       trackExAndThrow(e, "eyca.activate.exception.decode.activityOutput")
     );
 
-    if (updateCgnResult.kind !== "SUCCESS") {
+    if (updateEycaResult.kind !== "SUCCESS") {
       trackExAndThrow(
         new Error("Cannot activate EYCA Card"),
         "eyca.activate.exception.failure.activityOutput"
