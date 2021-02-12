@@ -25,15 +25,12 @@ export type ExpiredCgnRowKey = t.TypeOf<typeof ExpiredCgnRowKey>;
  */
 const withExpiredCgnRowFromEntry = (f: (s: ExpiredCgnRowKey) => void) => (
   e: TableEntry
-): void => {
-  const rowKey = e.RowKey._;
-  // JSON.parse cannot throw cause we are sure rowKey is a valid Json
-  return f({
+): void =>
+  f({
     activationDate: e.ActivationDate._,
     expirationDate: e.ExpirationDate._,
-    fiscalCode: rowKey
+    fiscalCode: e.RowKey._
   });
-};
 
 /**
  * Fetches all user hashed returned by the provided paged query
