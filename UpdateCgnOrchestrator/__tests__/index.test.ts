@@ -3,6 +3,7 @@
 import * as date_fns from "date-fns";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context as contextMock } from "../../__mocks__/durable-functions";
+import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
   CgnActivatedStatus,
   StatusEnum
@@ -24,16 +25,17 @@ const now = new Date();
 const aReason = "aMotivation" as NonEmptyString;
 
 const aUserCgnRevokedStatus: CgnRevokedStatus = {
+  ...cgnActivatedDates,
   revocation_reason: aReason,
   revocation_date: now,
   status: RevokedCgnStatusEnum.REVOKED
 };
 const aUserCgnActivatedStatus: CgnActivatedStatus = {
-  activation_date: now,
-  expiration_date: date_fns.addYears(now, 5),
+  ...cgnActivatedDates,
   status: StatusEnum.ACTIVATED
 };
 const aUserCgnExpiredStatus: CgnExpiredStatus = {
+  ...cgnActivatedDates,
   status: ExpiredStatusEnum.EXPIRED
 };
 

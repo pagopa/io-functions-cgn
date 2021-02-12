@@ -3,6 +3,7 @@ import { DurableOrchestrationClient } from "durable-functions/lib/src/durableorc
 import { array } from "fp-ts/lib/Array";
 
 import { toError } from "fp-ts/lib/Either";
+import { fromNullable, fromPredicate } from "fp-ts/lib/Option";
 import {
   fromLeft,
   taskEither,
@@ -132,9 +133,29 @@ export const terminateUpdateCgnOrchestratorTask = (
   fiscalCode: FiscalCode,
   status: string,
   reason: NonEmptyString
-) =>
-  tryCatch(
-    () =>
-      client.terminate(makeUpdateCgnOrchestratorId(fiscalCode, status), reason),
-    toError
+) => {
+  const orchestratorId = makeUpdateCgnOrchestratorId(fiscalCode, status);
+  const voidTask = taskEither.of<Error, void>(void 0);
+  return tryCatch(() => client.getStatus(orchestratorId), toError).chain(
+    maybeStatus =>
+      fromNullable(maybeStatus)
+        .chain(
+          fromPredicate(
+            _ =>
+              _.runtimeStatus === df.OrchestrationRuntimeStatus.Running ||
+              _.runtimeStatus === df.OrchestrationRuntimeStatus.Pending
+          )
+        )
+        .foldL(
+          () => voidTask,
+          () =>
+            tryCatch(
+              () => client.terminate(orchestratorId, reason),
+              toError
+            ).foldTaskEither(
+              () => voidTask,
+              () => voidTask
+            )
+        )
   );
+};

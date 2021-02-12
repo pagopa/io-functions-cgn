@@ -3,14 +3,25 @@ import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context, mockStartNew } from "../../__mocks__/durable-functions";
+import { cgnActivatedDates } from "../../__mocks__/mock";
 import * as orchUtils from "../../utils/orchestrators";
 import { getUpdateExpiredCgnHandler } from "../handler";
 import * as tableUtils from "../table";
 
+const activationAndExpirationDates = {
+  activationDate: cgnActivatedDates.activation_date,
+  expirationDate: cgnActivatedDates.expiration_date
+};
 // tslint:disable-next-line: readonly-array
-const aSetOfFiscalCodes: FiscalCode[] = [
-  "RODFDS82S10H501T" as FiscalCode,
-  "RODEDS80S10H501T" as FiscalCode
+const aSetOfExpiredRows: tableUtils.ExpiredCgnRowKey[] = [
+  {
+    fiscalCode: "RODFDS82S10H501T" as FiscalCode,
+    ...activationAndExpirationDates
+  },
+  {
+    fiscalCode: "RODEDS80S10H501T" as FiscalCode,
+    ...activationAndExpirationDates
+  }
 ];
 const tableServiceMock = jest.fn();
 const expiredCgnTableName = "aTable" as NonEmptyString;
@@ -32,19 +43,19 @@ describe("UpdateExpiredCgn", () => {
   });
   it("should process all fiscalCodes present on table", async () => {
     getExpiredCgnUsersMock.mockImplementationOnce(() =>
-      taskEither.of(aSetOfFiscalCodes)
+      taskEither.of(aSetOfExpiredRows)
     );
     const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
       tableServiceMock as any,
       expiredCgnTableName
     );
     await updateExpiredCgnHandler(context);
-    expect(mockStartNew).toBeCalledTimes(aSetOfFiscalCodes.length);
+    expect(mockStartNew).toBeCalledTimes(aSetOfExpiredRows.length);
   });
 
   it("should terminate other orchestrators running for activation and revocation", async () => {
     getExpiredCgnUsersMock.mockImplementationOnce(() =>
-      taskEither.of(aSetOfFiscalCodes)
+      taskEither.of(aSetOfExpiredRows)
     );
     const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
       tableServiceMock as any,
@@ -52,7 +63,7 @@ describe("UpdateExpiredCgn", () => {
     );
     await updateExpiredCgnHandler(context);
     expect(terminateOrchestratorMock).toBeCalledTimes(
-      aSetOfFiscalCodes.length * 2
+      aSetOfExpiredRows.length * 2
     );
   });
 
@@ -79,7 +90,7 @@ describe("UpdateExpiredCgn", () => {
   });
   it("should not instantiate some orchestrator if there are errors terminating other instances for a certain fiscalCode", async () => {
     getExpiredCgnUsersMock.mockImplementationOnce(() =>
-      taskEither.of(aSetOfFiscalCodes)
+      taskEither.of(aSetOfExpiredRows)
     );
     terminateOrchestratorMock.mockImplementationOnce(() =>
       fromLeft(new Error("Error"))
@@ -89,6 +100,6 @@ describe("UpdateExpiredCgn", () => {
       expiredCgnTableName
     );
     await updateExpiredCgnHandler(context);
-    expect(mockStartNew).toBeCalledTimes(aSetOfFiscalCodes.length - 1);
+    expect(mockStartNew).toBeCalledTimes(aSetOfExpiredRows.length - 1);
   });
 });

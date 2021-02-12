@@ -13,6 +13,7 @@ import {
   mockStartNew,
   mockStatusRunning
 } from "../../__mocks__/durable-functions";
+import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
   CgnActivatedStatus,
   StatusEnum as ActivatedStatusEnum
@@ -34,6 +35,7 @@ const aFiscalCode = "RODFDS89S10H501T" as FiscalCode;
 const anOldFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 
 const aUserCgnRevokedStatus: CgnRevokedStatus = {
+  ...cgnActivatedDates,
   revocation_date: now,
   revocation_reason: "revocation_reason" as NonEmptyString,
   status: RevokedStatusEnum.REVOKED

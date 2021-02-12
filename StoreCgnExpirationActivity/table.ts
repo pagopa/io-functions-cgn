@@ -11,12 +11,15 @@ export const insertCgnExpiration = (
   cgnExpirationTableName: NonEmptyString
 ) => (
   fiscalCode: FiscalCode,
+  activationDate: Date,
   expirationDate: Date
 ): TaskEither<Error, TableService.EntityMetadata> =>
   taskify<Error, TableService.EntityMetadata>(cb =>
     tableService.insertOrReplaceEntity(
       cgnExpirationTableName,
       {
+        ActivationDate: eg.DateTime(activationDate),
+        ExpirationDate: eg.DateTime(expirationDate),
         PartitionKey: eg.String(date_fns.format(expirationDate, "yyyy-MM-dd")),
         RowKey: eg.String(fiscalCode)
       },

@@ -20,6 +20,7 @@ jest
   .mockImplementation(insertCgnExpirationMock);
 
 const anActivityInput: ActivityInput = {
+  activationDate: now,
   expirationDate: date_fns.addYears(now, 5),
   fiscalCode: aFiscalCode
 };

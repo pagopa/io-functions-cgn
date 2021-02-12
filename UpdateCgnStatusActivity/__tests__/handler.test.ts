@@ -4,6 +4,7 @@ import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { toCosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
+import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
   CgnPendingStatus,
   StatusEnum
@@ -22,8 +23,9 @@ const aRevocationRequest = {
 };
 
 const aUserCgnRevokedStatus: CgnRevokedStatus = {
-  revocation_reason: aRevocationRequest.revocation_reason,
+  ...cgnActivatedDates,
   revocation_date: now,
+  revocation_reason: aRevocationRequest.revocation_reason,
   status: RevokedStatusEnum.REVOKED
 };
 

@@ -203,6 +203,10 @@ definitions:
         type: string
         x-extensible-enum:
           - REVOKED
+      activation_date:
+        $ref: "#/definitions/Timestamp"
+      expiration_date:
+        $ref: "#/definitions/Timestamp"
       revocation_date:
         $ref: "#/definitions/Timestamp"
       revocation_reason:
@@ -212,6 +216,8 @@ definitions:
       - status
       - revocation_date
       - revocation_reason
+      - activation_date
+      - expiration_date
   CgnExpiredStatus:
     type: object
     properties:
@@ -219,8 +225,14 @@ definitions:
         type: string
         x-extensible-enum:
           - EXPIRED
+      activation_date:
+        $ref: "#/definitions/Timestamp"
+      expiration_date:
+        $ref: "#/definitions/Timestamp"
     required:
       - status
+      - activation_date
+      - expiration_date
   CgnStatus:
     x-one-of: true
     allOf:
@@ -232,16 +244,8 @@ definitions:
       status: ACTIVATED
       activation_date: "2021-10-13T00:00:00.000Z"
       expiration_date: "2030-10-13T00:00:00.000Z"
-  CgnStatusActivationRequest:
-    type: object
-    properties:
-      action:
-        type: string
-        x-extensible-enum:
-          - ACTIVATE
-    required:
-      - action
-  CgnStatusRevocationRequest:
+    
+  CgnStatusUpsertRequest:
     type: object
     properties:
       action:
@@ -254,11 +258,6 @@ definitions:
     required:
       - action
       - revocation_reason
-  CgnStatusUpsertRequest:
-    x-one-of: true
-    allOf:
-      - $ref: "#/definitions/CgnStatusRevocationRequest"
-      - $ref: "#/definitions/CgnStatusActivationRequest"
   InstanceId:
     type: object
     properties:
