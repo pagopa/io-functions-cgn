@@ -2,13 +2,21 @@ import { ServiceResponse, TableQuery, TableService } from "azure-storage";
 
 import { Either, isLeft, left, right } from "fp-ts/lib/Either";
 import { fromNullable } from "fp-ts/lib/Option";
+import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { Timestamp } from "../generated/definitions/Timestamp";
 
 /**
- * A minimal storage table Entry
+ * A minimal Youth Card storage table Entry
  */
 export type TableEntry = Readonly<{
   RowKey: Readonly<{
-    _: string;
+    _: FiscalCode;
+  }>;
+  ActivationDate: Readonly<{
+    _: Timestamp;
+  }>;
+  ExpirationDate: Readonly<{
+    _: Timestamp;
   }>;
 }>;
 
@@ -74,4 +82,6 @@ export async function* iterateOnPages(
  * provided partition key
  */
 export const queryFilterForKey = (partitionKey: string): TableQuery =>
-  new TableQuery().select("RowKey").where("PartitionKey == ?", partitionKey);
+  new TableQuery()
+    .select("RowKey", "ActivationDate", "ExpirationDate")
+    .where("PartitionKey == ?", partitionKey);

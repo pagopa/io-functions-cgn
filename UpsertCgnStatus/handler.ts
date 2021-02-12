@@ -93,9 +93,7 @@ export function UpsertCgnStatusHandler(
                 expiration_date: _.status.expiration_date
               }
             : {
-                ...cardStatus,
-                activation_date: new Date(),
-                expiration_date: new Date()
+                status: _.status.status
               }
         )
       )
