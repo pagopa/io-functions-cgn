@@ -27,6 +27,7 @@ const withExpiredCgnRowFromEntry = (f: (s: ExpiredCgnRowKeyType) => void) => (
   e: TableEntry
 ): void => {
   const rowKey = e.RowKey._;
+  // JSON.parse cannot throw cause we are sure rowKey is a valid Json
   return f(JSON.parse(rowKey) as ExpiredCgnRowKeyType);
 };
 
