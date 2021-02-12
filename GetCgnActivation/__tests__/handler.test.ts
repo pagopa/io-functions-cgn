@@ -67,7 +67,51 @@ jest
   .mockImplementation(getOrchestratorStatusMock);
 
 describe("GetCgnActivationHandler", () => {
+  it("should return success with ERROR status if orchestrator status is Failed", async () => {
+    getOrchestratorStatusMock.mockImplementationOnce(() =>
+      taskEither.of({
+        instanceId: anInstanceId,
+        runtimeStatus: OrchestrationRuntimeStatus.Failed
+      })
+    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() =>
+      taskEither.of(some({ ...aUserCgn }))
+    );
+    const handler = GetCgnActivationHandler(userCgnModelMock as any);
+    const response = await handler({} as any, aFiscalCode);
+    expect(response.kind).toBe("IResponseSuccessJson");
+    if (response.kind === "IResponseSuccessJson") {
+      expect(response.value).toEqual({
+        ...aCompletedResponse,
+        status: StatusEnum.ERROR
+      });
+    }
+  });
+
+  it("should return success with RUNNING status if orchestrator status is Running", async () => {
+    getOrchestratorStatusMock.mockImplementationOnce(() =>
+      taskEither.of({
+        instanceId: anInstanceId,
+        runtimeStatus: OrchestrationRuntimeStatus.Running
+      })
+    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() =>
+      taskEither.of(some({ ...aUserCgn }))
+    );
+    const handler = GetCgnActivationHandler(userCgnModelMock as any);
+    const response = await handler({} as any, aFiscalCode);
+    expect(response.kind).toBe("IResponseSuccessJson");
+    if (response.kind === "IResponseSuccessJson") {
+      expect(response.value).toEqual({
+        ...aCompletedResponse,
+        status: StatusEnum.RUNNING
+      });
+    }
+  });
   it("should return success if an orchestrator's custom status is UPDATED", async () => {
+    findLastVersionByModelIdMock.mockImplementationOnce(() =>
+      taskEither.of(some({ ...aUserCgn, status: anActivatedCgnStatus }))
+    );
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseSuccessJson");
@@ -77,6 +121,10 @@ describe("GetCgnActivationHandler", () => {
   });
 
   it("should return success if an orchestrator's custom status is COMPLETED", async () => {
+    findLastVersionByModelIdMock.mockImplementationOnce(() =>
+      taskEither.of(some({ ...aUserCgn, status: anActivatedCgnStatus }))
+    );
+
     getOrchestratorStatusMock.mockImplementationOnce(() =>
       taskEither.of({ instanceId: anInstanceId, customStatus: "COMPLETED" })
     );
@@ -175,15 +223,15 @@ describe("GetCgnActivationHandler", () => {
     }
   });
 
-  it("should return success with ERROR status if orchestrator status is Failed", async () => {
+  it("should return success with COMPLETED status if the orchestrator is terminated and userCgn is ACTIVATED", async () => {
     getOrchestratorStatusMock.mockImplementationOnce(() =>
       taskEither.of({
         instanceId: anInstanceId,
-        runtimeStatus: OrchestrationRuntimeStatus.Failed
+        runtimeStatus: OrchestrationRuntimeStatus.Terminated
       })
     );
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aUserCgn }))
+      taskEither.of(some({ ...aUserCgn, status: anActivatedCgnStatus }))
     );
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
@@ -191,20 +239,21 @@ describe("GetCgnActivationHandler", () => {
     if (response.kind === "IResponseSuccessJson") {
       expect(response.value).toEqual({
         ...aCompletedResponse,
-        status: StatusEnum.ERROR
+        status: StatusEnum.COMPLETED
       });
     }
   });
 
-  it("should return success with RUNNING status if orchestrator status is Running", async () => {
+  it("should return success with COMPLETED status if custom status is UPDATED and userCgn is ACTIVATED", async () => {
     getOrchestratorStatusMock.mockImplementationOnce(() =>
       taskEither.of({
+        customStatus: "UPDATED",
         instanceId: anInstanceId,
         runtimeStatus: OrchestrationRuntimeStatus.Running
       })
     );
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aUserCgn }))
+      taskEither.of(some({ ...aUserCgn, status: anActivatedCgnStatus }))
     );
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
@@ -212,7 +261,7 @@ describe("GetCgnActivationHandler", () => {
     if (response.kind === "IResponseSuccessJson") {
       expect(response.value).toEqual({
         ...aCompletedResponse,
-        status: StatusEnum.RUNNING
+        status: StatusEnum.COMPLETED
       });
     }
   });
