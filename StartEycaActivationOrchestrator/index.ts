@@ -59,7 +59,6 @@ export const handler = function*(
   };
 
   try {
-    context.log.info(`${logPrefix}|INFO|fiscalCode=${fiscalCode}`);
     const updateEycaStatusActivityInput = ActivityInput.encode({
       fiscalCode
     });
@@ -81,6 +80,8 @@ export const handler = function*(
         "eyca.activate.exception.failure.activityOutput"
       );
     }
+
+    context.df.setCustomStatus("UPDATED");
   } catch (err) {
     context.log.error(`${logPrefix}|ERROR|${String(err)}`);
     trackExceptionIfNotReplaying({
