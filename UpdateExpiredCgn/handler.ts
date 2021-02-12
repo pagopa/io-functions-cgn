@@ -9,6 +9,7 @@ import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { StatusEnum as CgnActivatedStatusEnum } from "../generated/definitions/CgnActivatedStatus";
 import { StatusEnum as CgnExpiredStatusEnum } from "../generated/definitions/CgnExpiredStatus";
 import { StatusEnum as CgnRevokedStatusEnum } from "../generated/definitions/CgnRevokedStatus";
+import { CgnStatus } from "../generated/definitions/CgnStatus";
 import { initTelemetryClient, trackException } from "../utils/appinsights";
 import {
   makeUpdateCgnOrchestratorId,
@@ -84,11 +85,11 @@ export const getUpdateExpiredCgnHandler = (
                 ),
                 {
                   fiscalCode,
-                  newStatus: {
+                  newStatus: CgnStatus.encode({
                     activation_date: activationDate,
                     expiration_date: expirationDate,
                     status: CgnExpiredStatusEnum.EXPIRED
-                  }
+                  })
                 }
               ),
             toError

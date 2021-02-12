@@ -4,7 +4,8 @@
         "schedule": "0 0 0 * * *",
         "name": "updateExpiredCgnTimer",
         "type": "timerTrigger",
-        "direction": "in"
+        "direction": "in",
+        "runOnStartup": true
     },
     {
       "name": "starter",

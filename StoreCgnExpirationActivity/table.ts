@@ -18,10 +18,10 @@ export const insertCgnExpiration = (
     tableService.insertOrReplaceEntity(
       cgnExpirationTableName,
       {
+        ActivationDate: eg.DateTime(activationDate),
+        ExpirationDate: eg.DateTime(expirationDate),
         PartitionKey: eg.String(date_fns.format(expirationDate, "yyyy-MM-dd")),
-        RowKey: eg.String(
-          JSON.stringify({ fiscalCode, activationDate, expirationDate })
-        )
+        RowKey: eg.String(fiscalCode)
       },
       cb
     )

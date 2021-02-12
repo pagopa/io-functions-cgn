@@ -12,23 +12,27 @@ import {
   TableEntry
 } from "../utils/table_storage";
 
-const ExpiredCgnRowKeyType = t.interface({
+const ExpiredCgnRowKey = t.interface({
   activationDate: Timestamp,
   expirationDate: Timestamp,
   fiscalCode: FiscalCode
 });
 
-export type ExpiredCgnRowKeyType = t.TypeOf<typeof ExpiredCgnRowKeyType>;
+export type ExpiredCgnRowKey = t.TypeOf<typeof ExpiredCgnRowKey>;
 
 /**
  * Do something with the user hash extracted from the table entry
  */
-const withExpiredCgnRowFromEntry = (f: (s: ExpiredCgnRowKeyType) => void) => (
+const withExpiredCgnRowFromEntry = (f: (s: ExpiredCgnRowKey) => void) => (
   e: TableEntry
 ): void => {
   const rowKey = e.RowKey._;
   // JSON.parse cannot throw cause we are sure rowKey is a valid Json
-  return f(JSON.parse(rowKey) as ExpiredCgnRowKeyType);
+  return f({
+    activationDate: e.ActivationDate._,
+    expirationDate: e.ExpirationDate._,
+    fiscalCode: rowKey
+  });
 };
 
 /**
@@ -36,8 +40,8 @@ const withExpiredCgnRowFromEntry = (f: (s: ExpiredCgnRowKeyType) => void) => (
  */
 export async function queryUsers(
   pagedQuery: PagedQuery
-): Promise<ReadonlySet<ExpiredCgnRowKeyType>> {
-  const entries = new Set<ExpiredCgnRowKeyType>();
+): Promise<ReadonlySet<ExpiredCgnRowKey>> {
+  const entries = new Set<ExpiredCgnRowKey>();
   const addToSet = withExpiredCgnRowFromEntry(s => entries.add(s));
   for await (const page of iterateOnPages(pagedQuery)) {
     page.forEach(addToSet);
