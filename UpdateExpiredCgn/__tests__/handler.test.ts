@@ -13,7 +13,7 @@ const activationAndExpirationDates = {
   expirationDate: cgnActivatedDates.expiration_date
 };
 // tslint:disable-next-line: readonly-array
-const aSetOfExpiredRows: tableUtils.ExpiredCgnRowKeyType[] = [
+const aSetOfExpiredRows: tableUtils.ExpiredCgnRowKey[] = [
   {
     fiscalCode: "RODFDS82S10H501T" as FiscalCode,
     ...activationAndExpirationDates
