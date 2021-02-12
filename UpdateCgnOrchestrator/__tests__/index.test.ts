@@ -31,8 +31,7 @@ const aUserCardRevokedStatus: CardRevokedStatus = {
   status: RevokedCgnStatusEnum.REVOKED
 };
 const aUserCardActivatedStatus: CardActivatedStatus = {
-  activation_date: now,
-  expiration_date: date_fns.addYears(now, 5),
+  ...cgnActivatedDates,
   status: StatusEnum.ACTIVATED
 };
 const aUserCardExpiredStatus: CardExpiredStatus = {
