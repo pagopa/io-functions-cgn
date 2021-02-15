@@ -6,18 +6,18 @@ import { context } from "../../__mocks__/durable-functions";
 import { now } from "../../__mocks__/mock";
 import {
   ActivityInput,
-  getStoreCgnExpirationActivityHandler
+  getStoreEycaExpirationActivityHandler
 } from "../handler";
 import * as tableUtils from "../../utils/table_storage";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const tableServiceMock = jest.fn();
-const expiredCgnTableName = "aTable" as NonEmptyString;
+const expiredEycaTableName = "aTable" as NonEmptyString;
 
-const insertCgnExpirationMock = jest.fn();
+const insertEycaExpirationMock = jest.fn();
 jest
   .spyOn(tableUtils, "insertCardExpiration")
-  .mockImplementation(insertCgnExpirationMock);
+  .mockImplementation(insertEycaExpirationMock);
 
 const anActivityInput: ActivityInput = {
   activationDate: now,
@@ -29,32 +29,32 @@ describe("StoreCgnExpirationActivity", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
-  it("should return failure if an error occurs during CgnExpiration insert", async () => {
-    const storeCgnExpirationActivityHandler = getStoreCgnExpirationActivityHandler(
+  it("should return failure if an error occurs during EycaExpiration insert", async () => {
+    const storeEycaExpirationActivityHandler = getStoreEycaExpirationActivityHandler(
       tableServiceMock as any,
-      expiredCgnTableName
+      expiredEycaTableName
     );
 
-    insertCgnExpirationMock.mockImplementationOnce(_ =>
+    insertEycaExpirationMock.mockImplementationOnce(_ =>
       jest.fn(() => fromLeft(new Error("Entity Error")))
     );
-    const response = await storeCgnExpirationActivityHandler(
+    const response = await storeEycaExpirationActivityHandler(
       context,
       anActivityInput
     );
     expect(response.kind).toBe("FAILURE");
   });
 
-  it("should return success if a CgnExpiration's insert succeded", async () => {
-    const storeCgnExpirationActivityHandler = getStoreCgnExpirationActivityHandler(
+  it("should return success if a EycaExpiration's insert succeded", async () => {
+    const storeEycaExpirationActivityHandler = getStoreEycaExpirationActivityHandler(
       tableServiceMock as any,
-      expiredCgnTableName
+      expiredEycaTableName
     );
 
-    insertCgnExpirationMock.mockImplementationOnce(_ =>
+    insertEycaExpirationMock.mockImplementationOnce(_ =>
       jest.fn(() => taskEither.of({}))
     );
-    const response = await storeCgnExpirationActivityHandler(
+    const response = await storeEycaExpirationActivityHandler(
       context,
       anActivityInput
     );

@@ -12,16 +12,33 @@ import * as t from "io-ts";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { EycaAPIClient } from "../clients/eyca";
 import { StatusEnum } from "../generated/definitions/CardActivated";
+import { EycaCardActivated } from "../generated/definitions/EycaCardActivated";
 import { CcdbNumber } from "../generated/eyca-api/CcdbNumber";
 import { ErrorResponse } from "../generated/eyca-api/ErrorResponse";
 import { ShortDate } from "../generated/eyca-api/ShortDate";
 import { UserEycaCardModel } from "../models/user_eyca_card";
-import { ActivityResult, failure, success } from "../utils/activity";
+import { ActivityResult, failure } from "../utils/activity";
 import { extractEycaExpirationDate } from "../utils/cgn_checks";
 import { errorsToError } from "../utils/conversions";
 
 export const ActivityInput = t.interface({
   fiscalCode: FiscalCode
+});
+
+// Activity result
+export const ActivityResultSuccessWithValue = t.interface({
+  kind: t.literal("SUCCESS"),
+  value: EycaCardActivated
+});
+export type ActivityResultSuccessWithValue = t.TypeOf<
+  typeof ActivityResultSuccessWithValue
+>;
+
+export const successWithValue = (
+  value: EycaCardActivated
+): ActivityResultSuccessWithValue => ({
+  kind: "SUCCESS",
+  value
 });
 
 export type ActivityInput = t.TypeOf<typeof ActivityInput>;
@@ -141,7 +158,8 @@ export const getSuccessEycaActivationActivityHandler = (
             .update(_)
             .mapLeft(err => fail(toError(err), "Cannot update EYCA card"))
         )
-        .map(() => success())
+        // tslint:disable-next-line: no-any no-useless-cast
+        .map(eycaCard => successWithValue(eycaCard.card as EycaCardActivated))
     )
     .fold<ActivityResult>(identity, identity)
     .run();

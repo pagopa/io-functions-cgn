@@ -7,8 +7,12 @@ import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 
-import { ActivityInput } from "../SuccessEycaActivationActivity/handler";
-import { ActivityResult } from "../utils/activity";
+import { ActivityInput as StoreEycaExpirationActivityInput } from "../StoreEycaExpirationActivity/handler";
+import {
+  ActivityInput as SuccessEycaActivationActivityInput,
+  ActivityResultSuccessWithValue
+} from "../SuccessEycaActivationActivity/handler";
+
 import { trackException } from "../utils/appinsights";
 import { internalRetryOptions } from "../utils/retry_policies";
 
@@ -56,27 +60,33 @@ export const handler = function*(
   };
 
   try {
-    const updateEycaStatusActivityInput = ActivityInput.encode({
-      fiscalCode
-    });
+    const updateEycaStatusActivityInput = SuccessEycaActivationActivityInput.encode(
+      {
+        fiscalCode
+      }
+    );
     const updateStatusResult = yield context.df.callActivityWithRetry(
       "SuccessEycaActivationActivity",
       internalRetryOptions,
       updateEycaStatusActivityInput
     );
 
-    const updateEycaResult = ActivityResult.decode(
+    const storedEycaCard = ActivityResultSuccessWithValue.decode(
       updateStatusResult
-    ).getOrElseL(e =>
-      trackExAndThrow(e, "eyca.activate.exception.decode.activityOutput")
+    ).fold(
+      _ => trackExAndThrow(_, "eyca.activate.exception.failure.activityOutput"),
+      result => result.value
     );
 
-    if (updateEycaResult.kind !== "SUCCESS") {
-      trackExAndThrow(
-        new Error("Cannot activate EYCA Card"),
-        "eyca.activate.exception.failure.activityOutput"
-      );
-    }
+    yield context.df.callActivityWithRetry(
+      "StoreEycaExpirationActivity",
+      internalRetryOptions,
+      StoreEycaExpirationActivityInput.encode({
+        activationDate: storedEycaCard.activation_date,
+        expirationDate: storedEycaCard.expiration_date,
+        fiscalCode
+      })
+    );
   } catch (err) {
     context.log.error(`${logPrefix}|ERROR|${String(err)}`);
     trackExceptionIfNotReplaying({

@@ -42,7 +42,7 @@ import {
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
 import { UserEycaCardModel } from "../models/user_eyca_card";
-import { OrchestratorInput } from "../UpdateCgnOrchestrator";
+import { OrchestratorInput } from "../StartEycaActivationOrchestrator";
 import { isEycaEligible } from "../utils/cgn_checks";
 import { makeEycaOrchestratorId } from "../utils/orchestrators";
 import { checkUpdateCardIsRunning } from "../utils/orchestrators";
@@ -213,8 +213,7 @@ export function StartEycaActivationHandler(
                       "StartEycaActivationOrchestrator",
                       orchestratorId,
                       OrchestratorInput.encode({
-                        fiscalCode,
-                        newStatusCard: card
+                        fiscalCode
                       })
                     ),
                   toError

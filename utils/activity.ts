@@ -5,7 +5,6 @@ import * as t from "io-ts";
 export const ActivityResultSuccess = t.interface({
   kind: t.literal("SUCCESS")
 });
-
 export type ActivityResultSuccess = t.TypeOf<typeof ActivityResultSuccess>;
 
 export const ActivityResultFailure = t.interface({
