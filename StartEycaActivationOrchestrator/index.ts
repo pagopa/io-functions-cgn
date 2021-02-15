@@ -48,11 +48,10 @@ export const handler = function*(
     context.df.isReplaying ? constVoid : trackException(evt);
 
   const input = context.df.getInput();
-  const decodedInput = OrchestratorInput.decode(input).getOrElseL(e =>
+
+  const { fiscalCode } = OrchestratorInput.decode(input).getOrElseL(e =>
     trackExAndThrow(e, "cgn.eyca.update.exception.decode.input")
   );
-
-  const { fiscalCode } = decodedInput;
   const tagOverrides = {
     "ai.operation.id": fiscalCode,
     "ai.operation.parentId": fiscalCode

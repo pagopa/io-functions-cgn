@@ -63,7 +63,9 @@ export const index: AzureFunction = (
         properties: {
           // In case the the input (message from queue) cannot be decoded
           // we mark this as a FATAL error since the lock on user's family won't be relased
+          detail: err.kind,
           fatal: PermanentFailure.is(err).toString(),
+          isSuccess: false,
           name: "cgn.eyca.activation.orchestrator.start"
         }
       });
