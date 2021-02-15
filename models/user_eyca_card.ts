@@ -6,14 +6,14 @@ import {
 import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
 import * as t from "io-ts";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { EycaCardStatus } from "../generated/definitions/EycaCardStatus";
+import { EycaCard } from "../generated/definitions/EycaCard";
 
 export const USER_EYCA_CARD_COLLECTION_NAME = "user-eyca-cards";
 export const USER_EYCA_CARD_MODEL_PK_FIELD = "fiscalCode" as const;
 
 const UserEycaCard = t.interface({
-  // the status of the EYCA card related to the user
-  cardStatus: EycaCardStatus,
+  // the EYCA card related to the user
+  card: EycaCard,
   // The id of the user
   fiscalCode: FiscalCode
 });
@@ -40,7 +40,7 @@ export class UserEycaCardModel extends CosmosdbModelVersioned<
   typeof USER_EYCA_CARD_MODEL_PK_FIELD
 > {
   /**
-   * Creates a new UserCgn model
+   * Creates a new UserEycaCard model
    *
    * @param container the DocumentDB container
    *

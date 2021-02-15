@@ -8,17 +8,17 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { cgnActivatedDates, now } from "../../__mocks__/mock";
 import {
-  CardActivatedStatus,
+  CardActivated,
   StatusEnum as ActivatedStatusEnum
-} from "../../generated/definitions/CardActivatedStatus";
+} from "../../generated/definitions/CardActivated";
 import {
-  CardPendingStatus,
+  CardPending,
   StatusEnum as PendingStatusEnum
-} from "../../generated/definitions/CardPendingStatus";
+} from "../../generated/definitions/CardPending";
 import {
-  CardRevokedStatus,
+  CardRevoked,
   StatusEnum as RevokedStatusEnum
-} from "../../generated/definitions/CardRevokedStatus";
+} from "../../generated/definitions/CardRevoked";
 import { UserCgn } from "../../models/user_cgn";
 import { GetCgnStatusHandler } from "../handler";
 
@@ -30,27 +30,27 @@ const userCgnModelMock = {
   findLastVersionByModelId: findLastVersionByModelIdMock
 };
 
-const aPendingCgnStatus: CardPendingStatus = {
+const aPendingCgn: CardPending = {
   status: PendingStatusEnum.PENDING
 };
 
-const aRevokedCgnStatus: CardRevokedStatus = {
+const aRevokedCgn: CardRevoked = {
   ...cgnActivatedDates,
   revocation_date: now,
   revocation_reason: "A motivation" as NonEmptyString,
   status: RevokedStatusEnum.REVOKED
 };
 
-const anActivatedCgnStatus: CardActivatedStatus = {
+const anActivatedCgn: CardActivated = {
   activation_date: now,
   expiration_date: date_fns.addDays(now, 10),
   status: ActivatedStatusEnum.ACTIVATED
 };
 
 const aUserCgn: UserCgn = {
+  card: aPendingCgn,
   fiscalCode: aFiscalCode,
-  id: aUserCgnId,
-  status: aPendingCgnStatus
+  id: aUserCgnId
 };
 
 const successImpl = async (userCgn: UserCgn) => {
@@ -62,7 +62,7 @@ const successImpl = async (userCgn: UserCgn) => {
   expect(response.kind).toBe("IResponseSuccessJson");
   if (response.kind === "IResponseSuccessJson") {
     expect(response.value).toEqual({
-      ...userCgn.status
+      ...userCgn.card
     });
   }
 };
@@ -89,10 +89,10 @@ describe("GetCgnStatusHandler", () => {
     await successImpl(aUserCgn);
   });
   it("should return success if a revoked userCgn is found", async () => {
-    await successImpl({ ...aUserCgn, status: aRevokedCgnStatus });
+    await successImpl({ ...aUserCgn, card: aRevokedCgn });
   });
 
   it("should return success if an activated userCgn is found", async () => {
-    await successImpl({ ...aUserCgn, status: anActivatedCgnStatus });
+    await successImpl({ ...aUserCgn, card: anActivatedCgn });
   });
 });

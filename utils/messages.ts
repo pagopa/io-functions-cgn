@@ -2,13 +2,13 @@
 
 import { format } from "date-fns";
 import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
-import { CardActivatedStatus } from "../generated/definitions/CardActivatedStatus";
-import { CardRevokedStatus } from "../generated/definitions/CardRevokedStatus";
-import { CardStatus } from "../generated/definitions/CardStatus";
+import { Card } from "../generated/definitions/Card";
+import { CardActivated } from "../generated/definitions/CardActivated";
+import { CardRevoked } from "../generated/definitions/CardRevoked";
 import { assertNever } from "./types";
 
 export const MESSAGES = {
-  CardRevokedStatus: (status: CardRevokedStatus) =>
+  CardRevoked: (status: CardRevoked) =>
     ({
       subject: "La tua Carta Giovani Nazionale è stata revocata",
       markdown: `
@@ -19,14 +19,14 @@ A seguito di una segnalazione la tua Carta Giovani Nazionale è stata **revocata
 ${status.revocation_reason}
 `
     } as MessageContent),
-  CardActivatedStatus: (_: CardActivatedStatus) =>
+  CardActivated: (_: CardActivated) =>
     ({
       subject: "La tua Carta Nazionale Giovani è attiva",
       markdown: `A seguito della tua richiesta di attivazione, la tua Carta Giovani Nazionale è
 **attiva** e pronta all' utilizzo.
 `
     } as MessageContent),
-  CardExpiredStatus: () =>
+  CardExpired: () =>
     ({
       subject: "La tua Carta Nazionale Giovani è scaduta",
       markdown: `
@@ -38,16 +38,16 @@ in quanto non rientri nei requisiti per il suo utilizzo.
 
 export const getMessage = (
   messageType: keyof typeof MESSAGES,
-  cardStatus: CardStatus
+  card: Card
 ): MessageContent => {
   switch (messageType) {
-    case "CardRevokedStatus":
+    case "CardRevoked":
       // tslint:disable-next-line: no-useless-cast
-      return MESSAGES[messageType](cardStatus as CardRevokedStatus);
-    case "CardActivatedStatus":
+      return MESSAGES[messageType](card as CardRevoked);
+    case "CardActivated":
       // tslint:disable-next-line: no-useless-cast
-      return MESSAGES[messageType](cardStatus as CardActivatedStatus);
-    case "CardExpiredStatus":
+      return MESSAGES[messageType](card as CardActivated);
+    case "CardExpired":
       return MESSAGES[messageType]();
     default:
       return assertNever(messageType);

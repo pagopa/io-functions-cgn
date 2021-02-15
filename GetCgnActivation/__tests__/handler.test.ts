@@ -9,13 +9,13 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { now } from "../../__mocks__/mock";
 import {
-  CardActivatedStatus,
+  CardActivated,
   StatusEnum as ActivatedStatusEnum
-} from "../../generated/definitions/CardActivatedStatus";
+} from "../../generated/definitions/CardActivated";
 import {
-  CardPendingStatus,
+  CardPending,
   StatusEnum as PendingStatusEnum
-} from "../../generated/definitions/CardPendingStatus";
+} from "../../generated/definitions/CardPending";
 import {
   CgnActivationDetail,
   StatusEnum
@@ -27,10 +27,6 @@ import { GetCgnActivationHandler } from "../handler";
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const aUserCgnId = "AN_ID" as NonEmptyString;
 
-const findLastVersionByModelIdMock = jest.fn();
-const userCgnModelMock = {
-  findLastVersionByModelId: findLastVersionByModelIdMock
-};
 const anInstanceId = {
   id: orchUtils.makeUpdateCgnOrchestratorId(
     aFiscalCode,
@@ -41,20 +37,29 @@ const aCompletedResponse: CgnActivationDetail = {
   instance_id: anInstanceId,
   status: StatusEnum.COMPLETED
 };
-const aPendingCgnStatus: CardPendingStatus = {
+const aPendingCgn: CardPending = {
   status: PendingStatusEnum.PENDING
 };
 
-const anActivatedCgnStatus: CardActivatedStatus = {
+const anActivatedCgn: CardActivated = {
   activation_date: now,
   expiration_date: date_fns.addDays(now, 10),
   status: ActivatedStatusEnum.ACTIVATED
 };
 
 const aUserCgn: UserCgn = {
+  card: aPendingCgn,
   fiscalCode: aFiscalCode,
-  id: aUserCgnId,
-  status: aPendingCgnStatus
+  id: aUserCgnId
+};
+
+const findLastVersionByModelIdMock = jest
+  .fn()
+  .mockImplementation(() =>
+    taskEither.of(some({ ...aUserCgn, card: anActivatedCgn }))
+  );
+const userCgnModelMock = {
+  findLastVersionByModelId: findLastVersionByModelIdMock
 };
 
 const getOrchestratorStatusMock = jest
@@ -109,9 +114,6 @@ describe("GetCgnActivationHandler", () => {
     }
   });
   it("should return success if an orchestrator's custom status is UPDATED", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aUserCgn, status: anActivatedCgnStatus }))
-    );
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseSuccessJson");
@@ -121,10 +123,6 @@ describe("GetCgnActivationHandler", () => {
   });
 
   it("should return success if an orchestrator's custom status is COMPLETED", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aUserCgn, status: anActivatedCgnStatus }))
-    );
-
     getOrchestratorStatusMock.mockImplementationOnce(() =>
       taskEither.of({ instanceId: anInstanceId, customStatus: "COMPLETED" })
     );
@@ -179,9 +177,6 @@ describe("GetCgnActivationHandler", () => {
     getOrchestratorStatusMock.mockImplementationOnce(() =>
       taskEither.of(undefined)
     );
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aUserCgn, status: anActivatedCgnStatus }))
-    );
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseSuccessJson");
@@ -194,9 +189,7 @@ describe("GetCgnActivationHandler", () => {
     getOrchestratorStatusMock.mockImplementationOnce(() =>
       fromLeft(new Error("Cannot recognize orchestrator status"))
     );
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aUserCgn, status: anActivatedCgnStatus }))
-    );
+
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseSuccessJson");
@@ -230,9 +223,7 @@ describe("GetCgnActivationHandler", () => {
         runtimeStatus: OrchestrationRuntimeStatus.Terminated
       })
     );
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aUserCgn, status: anActivatedCgnStatus }))
-    );
+
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseSuccessJson");
@@ -251,9 +242,6 @@ describe("GetCgnActivationHandler", () => {
         instanceId: anInstanceId,
         runtimeStatus: OrchestrationRuntimeStatus.Running
       })
-    );
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aUserCgn, status: anActivatedCgnStatus }))
     );
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);

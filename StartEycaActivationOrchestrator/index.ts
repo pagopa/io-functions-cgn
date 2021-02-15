@@ -7,10 +7,8 @@ import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 
-import {
-  ActivityInput,
-  ActivityResult
-} from "../SuccessEycaActivationActivity/handler";
+import { ActivityInput } from "../SuccessEycaActivationActivity/handler";
+import { ActivityResult } from "../utils/activity";
 import { trackException } from "../utils/appinsights";
 import { internalRetryOptions } from "../utils/retry_policies";
 
@@ -79,8 +77,6 @@ export const handler = function*(
         "eyca.activate.exception.failure.activityOutput"
       );
     }
-
-    context.df.setCustomStatus("UPDATED");
   } catch (err) {
     context.log.error(`${logPrefix}|ERROR|${String(err)}`);
     trackExceptionIfNotReplaying({

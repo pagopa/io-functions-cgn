@@ -6,6 +6,11 @@ import { MessageContent } from "io-functions-commons/dist/generated/definitions/
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 
+import {
+  ActivityResult,
+  ActivityResultFailure,
+  success
+} from "../utils/activity";
 import { toHash } from "../utils/hash";
 import {
   GetProfileT,
@@ -20,25 +25,6 @@ export const ActivityInput = t.interface({
 });
 export type ActivityInput = t.TypeOf<typeof ActivityInput>;
 
-// Activity result
-const ActivityResultSuccess = t.interface({
-  kind: t.literal("SUCCESS")
-});
-type ActivityResultSuccess = t.TypeOf<typeof ActivityResultSuccess>;
-
-const ActivityResultFailure = t.interface({
-  kind: t.literal("FAILURE"),
-  reason: t.string
-});
-
-type ActivityResultFailure = t.TypeOf<typeof ActivityResultFailure>;
-
-export const ActivityResult = t.taggedUnion("kind", [
-  ActivityResultSuccess,
-  ActivityResultFailure
-]);
-export type ActivityResult = t.TypeOf<typeof ActivityResult>;
-
 export const getSendMessageActivityHandler = (
   getProfile: GetProfileT,
   sendMessage: SendMessageT,
@@ -51,11 +37,6 @@ export const getSendMessageActivityHandler = (
       reason
     });
   };
-
-  const success = () =>
-    ActivityResultSuccess.encode({
-      kind: "SUCCESS"
-    });
 
   return ActivityInput.decode(input).fold<Promise<ActivityResult>>(
     async errs =>

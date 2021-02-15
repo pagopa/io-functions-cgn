@@ -4,8 +4,9 @@ import { identity } from "fp-ts/lib/function";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { StatusEnum } from "../generated/definitions/CardPendingStatus";
+import { StatusEnum } from "../generated/definitions/CardPending";
 import { UserEycaCardModel } from "../models/user_eyca_card";
+import { ActivityResult, failure, success } from "../utils/activity";
 import { errorsToError } from "../utils/conversions";
 import { EnqueueEycaActivationT } from "../utils/models";
 
@@ -14,47 +15,6 @@ export const ActivityInput = t.interface({
 });
 
 export type ActivityInput = t.TypeOf<typeof ActivityInput>;
-
-// Activity result
-const ActivityResultSuccess = t.interface({
-  kind: t.literal("SUCCESS")
-});
-
-type ActivityResultSuccess = t.TypeOf<typeof ActivityResultSuccess>;
-
-const ActivityResultFailure = t.interface({
-  kind: t.literal("FAILURE"),
-  reason: t.string
-});
-
-type ActivityResultFailure = t.TypeOf<typeof ActivityResultFailure>;
-
-export const ActivityResult = t.taggedUnion("kind", [
-  ActivityResultSuccess,
-  ActivityResultFailure
-]);
-
-export type ActivityResult = t.TypeOf<typeof ActivityResult>;
-
-const failure = (context: Context, logPrefix: string) => (
-  err: Error,
-  description: string = ""
-) => {
-  const logMessage =
-    description === ""
-      ? `${logPrefix}|FAILURE=${err.message}`
-      : `${logPrefix}|${description}|FAILURE=${err.message}`;
-  context.log.info(logMessage);
-  return ActivityResultFailure.encode({
-    kind: "FAILURE",
-    reason: err.message
-  });
-};
-
-const success = () =>
-  ActivityResultSuccess.encode({
-    kind: "SUCCESS"
-  });
 
 export const getEnqueueEycaActivationActivityHandler = (
   userEycaCardModel: UserEycaCardModel,
@@ -70,7 +30,7 @@ export const getEnqueueEycaActivationActivityHandler = (
       // activation process starts
       userEycaCardModel
         .upsert({
-          cardStatus: { status: StatusEnum.PENDING },
+          card: { status: StatusEnum.PENDING },
           fiscalCode,
           kind: "INewUserEycaCard"
         })

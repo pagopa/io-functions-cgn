@@ -10,28 +10,20 @@ import { constVoid } from "fp-ts/lib/function";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { CardExpiredStatus } from "../generated/definitions/CardExpiredStatus";
+import { CardExpired } from "../generated/definitions/CardExpired";
 import {
-  CardRevokedStatus,
+  CardRevoked,
   StatusEnum as RevokedStatusEnum
-} from "../generated/definitions/CardRevokedStatus";
+} from "../generated/definitions/CardRevoked";
 
-import {
-  ActivityInput as EnqueueEycaActivationActivityInput,
-  ActivityResult as EnqueueEycaActivationActivityResult
-} from "../EnqueueEycaActivationActivity/handler";
-import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CardActivatedStatus";
-import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CardExpiredStatus";
-import { CardStatus } from "../generated/definitions/CardStatus";
+import { ActivityInput as EnqueueEycaActivationActivityInput } from "../EnqueueEycaActivationActivity/handler";
+import { Card } from "../generated/definitions/Card";
+import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CardActivated";
+import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CardExpired";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
-import {
-  ActivityInput as StoreCgnExpirationActivityInput,
-  ActivityResult as StoreCgnExpirationActivityResult
-} from "../StoreCgnExpirationActivity/handler";
-import {
-  ActivityInput,
-  ActivityResult
-} from "../UpdateCgnStatusActivity/handler";
+import { ActivityInput as StoreCgnExpirationActivityInput } from "../StoreCgnExpirationActivity/handler";
+import { ActivityInput } from "../UpdateCgnStatusActivity/handler";
+import { ActivityResult } from "../utils/activity";
 import { trackEvent, trackException } from "../utils/appinsights";
 import { isEycaEligible } from "../utils/cgn_checks";
 import { getMessage } from "../utils/messages";
@@ -39,7 +31,7 @@ import { internalRetryOptions } from "../utils/retry_policies";
 
 export const OrchestratorInput = t.interface({
   fiscalCode: FiscalCode,
-  newStatus: CardStatus
+  newStatusCard: Card
 });
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
@@ -63,14 +55,14 @@ const trackExceptionAndThrow = (
   throw new Error(String(err));
 };
 
-const getMessageType = (cardStatus: CardStatus) => {
-  if (CardRevokedStatus.is(cardStatus)) {
-    return "CardRevokedStatus";
+const getMessageType = (card: Card) => {
+  if (CardRevoked.is(card)) {
+    return "CardRevoked";
   }
-  if (CardExpiredStatus.is(cardStatus)) {
-    return "CardExpiredStatus";
+  if (CardExpired.is(card)) {
+    return "CardExpired";
   } else {
-    return "CardActivatedStatus";
+    return "CardActivated";
   }
 };
 
@@ -91,24 +83,24 @@ export const handler = function*(
     trackExAndThrow(e, "cgn.update.exception.decode.input")
   );
 
-  const { fiscalCode, newStatus } = decodedInput;
+  const { fiscalCode, newStatusCard } = decodedInput;
   const tagOverrides = {
     "ai.operation.id": fiscalCode,
     "ai.operation.parentId": fiscalCode
   };
 
   try {
-    if (newStatus.status === ActivatedStatusEnum.ACTIVATED) {
+    if (newStatusCard.status === ActivatedStatusEnum.ACTIVATED) {
       const storeCgnExpirationResult = yield context.df.callActivityWithRetry(
         "StoreCgnExpirationActivity",
         internalRetryOptions,
         StoreCgnExpirationActivityInput.encode({
-          activationDate: newStatus.activation_date,
-          expirationDate: newStatus.expiration_date,
+          activationDate: newStatusCard.activation_date,
+          expirationDate: newStatusCard.expiration_date,
           fiscalCode
         })
       );
-      const decodedStoreCgnExpirationResult = StoreCgnExpirationActivityResult.decode(
+      const decodedStoreCgnExpirationResult = ActivityResult.decode(
         storeCgnExpirationResult
       ).getOrElseL(e =>
         trackExAndThrow(
@@ -142,7 +134,7 @@ export const handler = function*(
           enqueueEycaActivationActivityInput
         );
 
-        const enqueueEycaActivationOutput = EnqueueEycaActivationActivityResult.decode(
+        const enqueueEycaActivationOutput = ActivityResult.decode(
           enqueueEycaActivationResult
         ).getOrElseL(e =>
           trackExAndThrow(
@@ -164,7 +156,7 @@ export const handler = function*(
       }
     }
     const updateCgnStatusActivityInput = ActivityInput.encode({
-      cardStatus: newStatus,
+      card: newStatusCard,
       fiscalCode
     });
     const updateStatusResult = yield context.df.callActivityWithRetry(
@@ -193,7 +185,7 @@ export const handler = function*(
       RevokedStatusEnum.REVOKED.toString(),
       ActivatedStatusEnum.ACTIVATED.toString(),
       ExpiredStatusEnum.EXPIRED.toString()
-    ].includes(newStatus.status);
+    ].includes(newStatusCard.status);
 
     if (hasSendMessageActivity) {
       // sleep before sending push notification
@@ -210,7 +202,7 @@ export const handler = function*(
         tagOverrides
       });
 
-      const content = getMessage(getMessageType(newStatus), newStatus);
+      const content = getMessage(getMessageType(newStatusCard), newStatusCard);
       yield context.df.callActivityWithRetry(
         "SendMessageActivity",
         internalRetryOptions,

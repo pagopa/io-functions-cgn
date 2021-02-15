@@ -15,17 +15,17 @@ import {
 } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
-  CardActivatedStatus,
+  CardActivated,
   StatusEnum as ActivatedStatusEnum
-} from "../../generated/definitions/CardActivatedStatus";
+} from "../../generated/definitions/CardActivated";
 import {
-  CardPendingStatus,
+  CardPending,
   StatusEnum
-} from "../../generated/definitions/CardPendingStatus";
+} from "../../generated/definitions/CardPending";
 import {
-  CardRevokedStatus,
+  CardRevoked,
   StatusEnum as RevokedStatusEnum
-} from "../../generated/definitions/CardRevokedStatus";
+} from "../../generated/definitions/CardRevoked";
 import { UserCgn } from "../../models/user_cgn";
 import * as orchUtils from "../../utils/orchestrators";
 import { StartCgnActivationHandler } from "../handler";
@@ -34,36 +34,40 @@ const now = new Date();
 const aFiscalCode = "RODFDS89S10H501T" as FiscalCode;
 const anOldFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 
-const aUserCardRevokedStatus: CardRevokedStatus = {
+const aUserCardRevoked: CardRevoked = {
   ...cgnActivatedDates,
   revocation_date: now,
   revocation_reason: "revocation_reason" as NonEmptyString,
   status: RevokedStatusEnum.REVOKED
 };
 
-const aUserCardActivatedStatus: CardActivatedStatus = {
+const aUserCardActivated: CardActivated = {
   activation_date: new Date(),
   expiration_date: addYears(new Date(), 2),
   status: ActivatedStatusEnum.ACTIVATED
 };
 
-const aUserCardPendingStatus: CardPendingStatus = {
+const aUserCardPending: CardPending = {
   status: StatusEnum.PENDING
 };
 
 const aRevokedUserCgn: UserCgn = {
+  card: aUserCardRevoked,
   fiscalCode: aFiscalCode,
-  id: "A_USER_CGN_ID" as NonEmptyString,
-  status: aUserCardRevokedStatus
+  id: "A_USER_CGN_ID" as NonEmptyString
 };
 
 const anActivatedUserCgn: UserCgn = {
+  card: aUserCardActivated,
   fiscalCode: aFiscalCode,
-  id: "A_USER_CGN_ID" as NonEmptyString,
-  status: aUserCardActivatedStatus
+  id: "A_USER_CGN_ID" as NonEmptyString
 };
 
-const findLastVersionByModelIdMock = jest.fn();
+const findLastVersionByModelIdMock = jest
+  .fn()
+  .mockImplementation(() =>
+    taskEither.of(some({ ...aRevokedUserCgn, card: aUserCardPending }))
+  );
 const upsertModelMock = jest.fn();
 const userCgnModelMock = {
   findLastVersionByModelId: findLastVersionByModelIdMock,
@@ -91,11 +95,6 @@ describe("StartCgnActivation", () => {
   });
 
   it("should return an Internal Error if it is not possible to check status of an other orchestrator with the same id", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(
-        some({ ...aRevokedUserCgn, status: aUserCardPendingStatus })
-      )
-    );
     checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
       fromLeft(ResponseErrorInternal("Error"))
     );
@@ -107,11 +106,6 @@ describe("StartCgnActivation", () => {
   });
 
   it("should return an Accepted response if there is another orchestrator running with the same id", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(
-        some({ ...aRevokedUserCgn, status: aUserCardPendingStatus })
-      )
-    );
     checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
       fromLeft(ResponseSuccessAccepted())
     );
@@ -123,11 +117,6 @@ describe("StartCgnActivation", () => {
   });
 
   it("should start a new orchestrator if there aren' t conflict on the same id", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(
-        some({ ...aRevokedUserCgn, status: aUserCardPendingStatus })
-      )
-    );
     checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
       taskEither.of(false)
     );
@@ -151,11 +140,6 @@ describe("StartCgnActivation", () => {
   });
 
   it("should start an Internal Error if there are errors while inserting a new Cgn in pending status", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(
-        some({ ...aRevokedUserCgn, status: aUserCardPendingStatus })
-      )
-    );
     checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
       taskEither.of(false)
     );

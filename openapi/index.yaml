@@ -23,17 +23,17 @@ paths:
       description: |
         Get the CGN status details by the provided fiscal code. 
         In case of success the response could be one of:
-          - CardPendingStatus
-          - CardActivatedStatus
-          - CardRevokedStatus
-          - CardExpiredStatus
+          - CardPending
+          - CardActivated
+          - CardRevoked
+          - CardExpired
       parameters:
         - $ref: "#/parameters/FiscalCode"
       responses:
         "200":
-          description: CGN status details.
+          description: CGN details.
           schema:
-            $ref: "#/definitions/CardStatus"
+            $ref: "#/definitions/Card"
         "401":
           description: Wrong or missing function key.
         "404":
@@ -208,7 +208,7 @@ definitions:
   ProblemJson:
     $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/ProblemJson"
 
-  CommonCardStatus:
+  CommonCard:
     type: object
     properties:
       activation_date:
@@ -219,7 +219,7 @@ definitions:
       - activation_date
       - expiration_date
     
-  CardPendingStatus:
+  CardPending:
     type: object
     properties:
       status:
@@ -228,9 +228,9 @@ definitions:
           - PENDING
     required:
       - status
-  CardActivatedStatus:
+  CardActivated:
     allOf:
-      - $ref: "#/definitions/CommonCardStatus"
+      - $ref: "#/definitions/CommonCard"
       - type: object
         properties:
           status:
@@ -239,9 +239,9 @@ definitions:
               - ACTIVATED
         required:
           - status
-  CardRevokedStatus:
+  CardRevoked:
     allOf:
-      - $ref: "#/definitions/CommonCardStatus"
+      - $ref: "#/definitions/CommonCard"
       - type: object
         properties:
           status:
@@ -257,9 +257,9 @@ definitions:
           - status
           - revocation_date
           - revocation_reason
-  CardExpiredStatus:
+  CardExpired:
     allOf:
-      - $ref: "#/definitions/CommonCardStatus"
+      - $ref: "#/definitions/CommonCard"
       - type: object
         properties:
           status:
@@ -268,21 +268,21 @@ definitions:
               - EXPIRED
         required:
           - status
-  CardStatus:
+  Card:
     x-one-of: true
     allOf:
-      - $ref: "#/definitions/CardPendingStatus"
-      - $ref: "#/definitions/CardActivatedStatus"
-      - $ref: "#/definitions/CardRevokedStatus"
-      - $ref: "#/definitions/CardExpiredStatus"
+      - $ref: "#/definitions/CardPending"
+      - $ref: "#/definitions/CardActivated"
+      - $ref: "#/definitions/CardRevoked"
+      - $ref: "#/definitions/CardExpired"
     x-example: 
       status: ACTIVATED
       activation_date: "2021-10-13T00:00:00.000Z"
       expiration_date: "2030-10-13T00:00:00.000Z"
 
-  EycaCardActivatedStatus:
+  EycaCardActivated:
     allOf:
-      - $ref: "#/definitions/CardActivatedStatus"
+      - $ref: "#/definitions/CardActivated"
       - type: object
         properties:
           card_number:
@@ -290,9 +290,9 @@ definitions:
             minLength: 1
         required:
           - card_number
-  EycaCardExpiredStatus:
+  EycaCardExpired:
     allOf:
-      - $ref: "#/definitions/CardExpiredStatus"
+      - $ref: "#/definitions/CardExpired"
       - type: object
         properties:
           card_number:
@@ -300,9 +300,9 @@ definitions:
             minLength: 1
         required:
           - card_number
-  EycaCardRevokedStatus:
+  EycaCardRevoked:
     allOf:
-      - $ref: "#/definitions/CardRevokedStatus"
+      - $ref: "#/definitions/CardRevoked"
       - type: object
         properties:
           card_number:
@@ -310,13 +310,13 @@ definitions:
             minLength: 1
         required:
           - card_number
-  EycaCardStatus:
+  EycaCard:
     x-one-of: true
     allOf:
-      - $ref: "#/definitions/CardPendingStatus"
-      - $ref: "#/definitions/EycaCardActivatedStatus"
-      - $ref: "#/definitions/EycaCardRevokedStatus"
-      - $ref: "#/definitions/EycaCardExpiredStatus"
+      - $ref: "#/definitions/CardPending"
+      - $ref: "#/definitions/EycaCardActivated"
+      - $ref: "#/definitions/EycaCardRevoked"
+      - $ref: "#/definitions/EycaCardExpired"
     x-example: 
       status: ACTIVATED
       activation_date: "2021-10-13T00:00:00.000Z"
