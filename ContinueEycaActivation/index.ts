@@ -5,10 +5,11 @@ import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { StatusEnum } from "../generated/definitions/CardPendingStatus";
 import { OrchestratorInput } from "../StartEycaActivationOrchestrator/index";
 import { trackException } from "../utils/appinsights";
 import { Failure, PermanentFailure, TransientFailure } from "../utils/errors";
-import { makeEycaActivationOrchestratorId } from "../utils/orchestrators";
+import { makeEycaOrchestratorId } from "../utils/orchestrators";
 
 export const ContinueEycaActivationInput = t.type({
   fiscalCode: FiscalCode
@@ -44,7 +45,7 @@ export const index: AzureFunction = (
         () =>
           df.getClient(context).startNew(
             "StartEycaActivationOrchestrator",
-            makeEycaActivationOrchestratorId(fiscalCode),
+            makeEycaOrchestratorId(fiscalCode, StatusEnum.PENDING),
             OrchestratorInput.encode({
               fiscalCode
             })

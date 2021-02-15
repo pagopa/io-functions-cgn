@@ -8,7 +8,9 @@ import { isLeft } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
 import { fromNullable } from "fp-ts/lib/Option";
 import {
+  fromEither,
   fromLeft,
+  fromPredicate,
   TaskEither,
   taskEither,
   tryCatch
@@ -32,25 +34,21 @@ import {
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import {
-  CardActivatedStatus,
-  StatusEnum as ActivatedStatusEnum
-} from "../generated/definitions/CardActivatedStatus";
+import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CardActivatedStatus";
 import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CardExpiredStatus";
-import { StatusEnum as PendingStatusEnum } from "../generated/definitions/CardPendingStatus";
+import {
+  CardPendingStatus,
+  StatusEnum as PendingStatusEnum
+} from "../generated/definitions/CardPendingStatus";
 import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CardRevokedStatus";
+import { CardStatus } from "../generated/definitions/CardStatus";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
+import { UserEycaCardModel } from "../models/user_eyca_card";
 import { OrchestratorInput } from "../UpdateCgnOrchestrator";
-import {
-  checkCgnRequirements,
-  extractCgnExpirationDate
-} from "../utils/cgn_checks";
-import { genRandomCardCode } from "../utils/cgnCode";
-import {
-  checkUpdateCardIsRunning,
-  makeUpdateCgnOrchestratorId
-} from "../utils/orchestrators";
+import { isEycaEligible } from "../utils/cgn_checks";
+import { makeEycaOrchestratorId } from "../utils/orchestrators";
+import { checkUpdateCardIsRunning } from "../utils/orchestrators";
 
 type ErrorTypes =
   | IResponseErrorInternal
@@ -82,81 +80,93 @@ const mapOrchestratorStatus = (
 };
 
 /**
- * Check if a citizen is eligible for CGN activation
- * A citizen is eligible for a CGN while he's from 18 to 35 years old
- * If eligible returns the calculated expiration date for the CGN
+ * Check if a citizen is eligible for EYCA activation
+ * A citizen is eligible for EYCA while he's from 18 to 30 years old
+ * and it has already activated a CGN
  * @param fiscalCode: the citizen's fiscalCode
  */
-const getCgnExpirationDataTask = (
-  fiscalCode: FiscalCode
+const getEycaEligibleTask = (
+  fiscalCode: FiscalCode,
+  userCgnModel: UserCgnModel
 ): TaskEither<
   IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
-  Date
+  true
 > =>
-  checkCgnRequirements(fiscalCode).foldTaskEither<
+  fromEither(isEycaEligible(fiscalCode)).foldTaskEither<
     IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
-    Date
+    true
   >(
     () =>
-      fromLeft(ResponseErrorInternal("Cannot perform CGN Eligibility Check")),
+      fromLeft(ResponseErrorInternal("Cannot perform EYCA Eligibility Check")),
     isEligible =>
       isEligible
-        ? extractCgnExpirationDate(fiscalCode).mapLeft(() =>
-            ResponseErrorInternal("Cannot perform CGN Eligibility Check")
-          )
+        ? // If is Eligible for Eyca check if a CGN already exists (an it is ACTIVATED)
+          userCgnModel
+            .findLastVersionByModelId([fiscalCode])
+            .mapLeft<
+              IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized
+            >(() => ResponseErrorInternal("Cannot query CGN data"))
+            .chain(maybeUserCgn =>
+              maybeUserCgn
+                .foldL(
+                  () => fromLeft(ResponseErrorForbiddenNotAuthorized),
+                  userCgn =>
+                    fromPredicate(
+                      (status: CardStatus) =>
+                        status.status === ActivatedStatusEnum.ACTIVATED,
+                      () => ResponseErrorForbiddenNotAuthorized
+                    )(userCgn.status)
+                )
+                .map(() => isEligible)
+            )
         : fromLeft(ResponseErrorForbiddenNotAuthorized)
   );
 
-const getCgnCodeTask = () =>
-  tryCatch(() => genRandomCardCode(), toError).mapLeft(() =>
-    ResponseErrorInternal("Cannot generate a new CGN code")
-  );
-
-export function StartCgnActivationHandler(
+export function StartEycaActivationHandler(
+  userEycaCardModel: UserEycaCardModel,
   userCgnModel: UserCgnModel,
-  logPrefix: string = "StartCgnActivationHandler"
+  logPrefix: string = "StartEycaActivationHandler"
 ): IStartCgnActivationHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
-    const orchestratorId = makeUpdateCgnOrchestratorId(
+    const orchestratorId = makeEycaOrchestratorId(
       fiscalCode,
-      ActivatedStatusEnum.ACTIVATED
+      PendingStatusEnum.PENDING
     ) as NonEmptyString;
 
-    const cgnExpirationDateOrError = await getCgnExpirationDataTask(
-      fiscalCode
+    const isEycaEligibleOrError = await getEycaEligibleTask(
+      fiscalCode,
+      userCgnModel
     ).run();
-    if (isLeft(cgnExpirationDateOrError)) {
-      return cgnExpirationDateOrError.value;
+    if (isLeft(isEycaEligibleOrError)) {
+      return isEycaEligibleOrError.value;
     }
 
-    const cardStatus: CardActivatedStatus = {
-      activation_date: new Date(),
-      expiration_date: cgnExpirationDateOrError.value,
-      status: ActivatedStatusEnum.ACTIVATED
+    const cardStatus: CardPendingStatus = {
+      status: PendingStatusEnum.PENDING
     };
 
-    return userCgnModel
+    return userEycaCardModel
       .findLastVersionByModelId([fiscalCode])
       .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
-        ResponseErrorInternal("Cannot query CGN data")
+        ResponseErrorInternal("Cannot query EYCA data")
       )
-      .chain(maybeUserCgn =>
-        maybeUserCgn.foldL(
+      .chain(maybeUserEycaCard =>
+        maybeUserEycaCard.foldL(
           () => taskEither.of(fiscalCode),
-          userCgn =>
-            // if a CGN is already in a final state we return Conflict
+          userEycaCard =>
+            // if an EYCA card is already in a final state we return Conflict
             [
               ActivatedStatusEnum.ACTIVATED.toString(),
               ExpiredStatusEnum.EXPIRED.toString(),
               RevokedStatusEnum.REVOKED.toString()
-            ].includes(userCgn.status.status)
+            ].includes(userEycaCard.cardStatus.status)
               ? fromLeft(
                   ResponseErrorConflict(
-                    `Cannot activate a CGN that is already ${userCgn.status.status}`
+                    `Cannot activate an EYCA card that is already ${userEycaCard.cardStatus.status}`
                   )
                 )
-              : // if CGN is in PENDING status, try to get orchestrator status
+              : // if EYCA card is in PENDING status, try to get orchestrator status
                 // in order to discriminate if there's an error or not
                 tryCatch(() => client.getStatus(orchestratorId), toError)
                   .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
@@ -180,8 +190,13 @@ export function StartCgnActivationHandler(
         )
       )
       .chain(() =>
-        // now we check if exists another update process for the same CGN
-        checkUpdateCardIsRunning(client, fiscalCode, cardStatus).foldTaskEither<
+        // now we check if exists another update process for the same EYCA
+        checkUpdateCardIsRunning(
+          client,
+          fiscalCode,
+          cardStatus,
+          makeEycaOrchestratorId
+        ).foldTaskEither<
           ErrorTypes,
           | IResponseSuccessAccepted
           | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
@@ -192,25 +207,21 @@ export function StartCgnActivationHandler(
               : fromLeft(response),
           () =>
             // We can generate an internal CGN identifier and insert a new CGN in a PENDING status
-            getCgnCodeTask()
-              .chain(cgnId =>
-                userCgnModel
-                  .upsert({
-                    fiscalCode,
-                    id: cgnId,
-                    kind: "INewUserCgn",
-                    status: { status: PendingStatusEnum.PENDING }
-                  })
-                  .mapLeft(e =>
-                    ResponseErrorInternal(`Cannot insert a new CGN|${e.kind}`)
-                  )
+            userEycaCardModel
+              .upsert({
+                cardStatus: { status: PendingStatusEnum.PENDING },
+                fiscalCode,
+                kind: "INewUserEycaCard"
+              })
+              .mapLeft(e =>
+                ResponseErrorInternal(`Cannot insert a new EYCA card|${e.kind}`)
               )
               .chain(() =>
                 tryCatch(
                   () =>
                     // Starting a new activation process with proper input
                     client.startNew(
-                      "UpdateCgnOrchestrator",
+                      "StartEycaActivationOrchestrator",
                       orchestratorId,
                       OrchestratorInput.encode({
                         fiscalCode,
@@ -220,10 +231,10 @@ export function StartCgnActivationHandler(
                   toError
                 ).mapLeft(err => {
                   context.log.error(
-                    `${logPrefix}|Cannot start UpdateCgnOrchestrator|ERROR=${err.message}`
+                    `${logPrefix}|Cannot start StartEycaActivationOrchestrator|ERROR=${err.message}`
                   );
                   return ResponseErrorInternal(
-                    "Cannot start UpdateCgnOrchestrator"
+                    "Cannot start StartEycaActivationOrchestrator"
                   );
                 })
               )
@@ -233,7 +244,7 @@ export function StartCgnActivationHandler(
                 };
                 return ResponseSuccessRedirectToResource(
                   instanceId,
-                  `/api/v1/cgn/${fiscalCode}/activation`,
+                  `/api/v1/cgn/${fiscalCode}/eyca/activation`,
                   instanceId
                 );
               })
@@ -244,10 +255,11 @@ export function StartCgnActivationHandler(
   };
 }
 
-export function StartCgnActivation(
+export function StartEycaActivation(
+  userEycaCardModel: UserEycaCardModel,
   userCgnModel: UserCgnModel
 ): express.RequestHandler {
-  const handler = StartCgnActivationHandler(userCgnModel);
+  const handler = StartEycaActivationHandler(userEycaCardModel, userCgnModel);
 
   const middlewaresWrap = withRequestMiddlewares(
     ContextMiddleware(),

@@ -32,7 +32,7 @@ import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
 import { OrchestratorInput } from "../UpdateCgnOrchestrator";
 import { makeUpdateCgnOrchestratorId } from "../utils/orchestrators";
-import { checkUpdateCgnIsRunning } from "../utils/orchestrators";
+import { checkUpdateCardIsRunning } from "../utils/orchestrators";
 
 type ErrorTypes =
   | IResponseErrorInternal
@@ -102,7 +102,7 @@ export function UpsertCgnStatusHandler(
         | IResponseSuccessAccepted
         | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
       >(fromLeft, cardStatus =>
-        checkUpdateCgnIsRunning(client, fiscalCode, cardStatus).foldTaskEither<
+        checkUpdateCardIsRunning(client, fiscalCode, cardStatus).foldTaskEither<
           ErrorTypes,
           | IResponseSuccessAccepted
           | IResponseSuccessRedirectToResource<InstanceId, InstanceId>

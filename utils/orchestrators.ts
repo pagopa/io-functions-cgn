@@ -38,11 +38,13 @@ export const makeUpdateCgnOrchestratorId = (
 ) => `${fiscalCode}-UPDCGN-${cardStatus}`;
 
 /**
- * The identifier for StartEligibilityCheckOrchestrator
+ * The identifier for an EYCA related orchestrator
  * @param fiscalCode the id of the requesting user
  */
-export const makeEycaActivationOrchestratorId = (fiscalCode: FiscalCode) =>
-  `${fiscalCode}-EYCA-ACT`;
+export const makeEycaOrchestratorId = (
+  fiscalCode: FiscalCode,
+  cardStatus: string
+) => `${fiscalCode}-EYCA-${cardStatus}`;
 
 export const getOrchestratorStatus = (
   client: DurableOrchestrationClient,
@@ -75,27 +77,31 @@ const cgnStatuses: ReadonlyArray<string> = [
   CardPendingStatusEnum.PENDING.toString()
 ];
 
-export type CheckUpdateCgnIsRunningErrorTypes =
+export type CheckUpdateCardIsRunningErrorTypes =
   | IResponseErrorInternal
   | IResponseSuccessAccepted
   | IResponseErrorConflict;
 /**
- * Check if the current user has a pending cgn status update process.
+ * Check if the current user has a pending card status update process.
  */
-export const checkUpdateCgnIsRunning = (
+export const checkUpdateCardIsRunning = (
   client: DurableOrchestrationClient,
   fiscalCode: FiscalCode,
-  cardStatus: CardStatus
-): TaskEither<CheckUpdateCgnIsRunningErrorTypes, false> =>
+  cardStatus: CardStatus,
+  getOrchestratorId: (
+    fiscalCode: FiscalCode,
+    cardStatus: string
+  ) => string = makeUpdateCgnOrchestratorId
+): TaskEither<CheckUpdateCardIsRunningErrorTypes, false> =>
   isOrchestratorRunning(
     client,
-    makeUpdateCgnOrchestratorId(fiscalCode, cardStatus.status)
+    getOrchestratorId(fiscalCode, cardStatus.status)
   )
-    .foldTaskEither<CheckUpdateCgnIsRunningErrorTypes, false>(
+    .foldTaskEither<CheckUpdateCardIsRunningErrorTypes, false>(
       err =>
         fromLeft(
           ResponseErrorInternal(
-            `Error checking UpdateCgnOrchestrator: ${err.message}`
+            `Error checking UpdateCardOrchestrator: ${err.message}`
           )
         ),
       ({ isRunning }) =>
@@ -114,8 +120,8 @@ export const checkUpdateCgnIsRunning = (
         otherStatuses.map(status =>
           isOrchestratorRunning(
             client,
-            makeUpdateCgnOrchestratorId(fiscalCode, status)
-          ).foldTaskEither<CheckUpdateCgnIsRunningErrorTypes, false>(
+            getOrchestratorId(fiscalCode, status)
+          ).foldTaskEither<CheckUpdateCardIsRunningErrorTypes, false>(
             err =>
               fromLeft(
                 ResponseErrorInternal(

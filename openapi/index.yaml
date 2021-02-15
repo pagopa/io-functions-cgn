@@ -84,6 +84,42 @@ paths:
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
+  
+  "/cgn/{fiscalcode}/eyca/activation":
+    post:
+      operationId: startEycaActivation
+      summary: |
+        Start a new Eyca activation process
+      description: |
+        Start an EYCA activation process related to a CGN
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
+      responses:
+        "201":
+            description: Request created.
+            schema:
+              $ref: "#/definitions/InstanceId"
+            headers:
+              Location:
+                type: string
+                description: |-
+                  Location (URL) of created request resource.
+                  A GET request to this URL returns the request status and details.
+        "202":
+          description: Processing request.
+          schema:
+            $ref: "#/definitions/InstanceId"
+        "401":
+          description: Wrong or missing function key.
+        "403":
+          description: Forbidden.
+        "409":
+          description: |
+            Cannot start a new activation because EYCA card is already activated
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
 
   "/cgn/{fiscalcode}/activation":
     post:
