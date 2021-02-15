@@ -114,7 +114,9 @@ describe("UpdateCgnStatusActivity", () => {
 
   it("should return success if userCgn' s update success", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aRevokedUserCgn, status: aUserCardPendingStatus }))
+      taskEither.of(
+        some({ ...aRevokedUserCgn, status: aUserCardPendingStatus })
+      )
     );
     updateMock.mockImplementationOnce(() => taskEither.of(aRevokedUserCgn));
     const updateCgnStatusActivityHandler = getUpdateCgnStatusActivityHandler(
