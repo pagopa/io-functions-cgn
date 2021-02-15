@@ -6,11 +6,11 @@ import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { mockGetStatus, mockStartNew } from "../../__mocks__/durable-functions";
 import {
-  CardActivatedStatus,
+  CardActivated,
   StatusEnum as ActivatedStatusEnum
-} from "../../generated/definitions/CardActivatedStatus";
-import { StatusEnum as PendingStatusEnum } from "../../generated/definitions/CardPendingStatus";
-import { EycaCardActivatedStatus } from "../../generated/definitions/EycaCardActivatedStatus";
+} from "../../generated/definitions/CardActivated";
+import { StatusEnum as PendingStatusEnum } from "../../generated/definitions/CardPending";
+import { EycaCardActivated } from "../../generated/definitions/EycaCardActivated";
 import { UserCgn } from "../../models/user_cgn";
 import { UserEycaCard } from "../../models/user_eyca_card";
 import * as checks from "../../utils/cgn_checks";
@@ -22,13 +22,13 @@ import { StartEycaActivationHandler } from "../handler";
 const aFiscalCode = "RODFDS89S10H501T" as FiscalCode;
 const anEycaCardNumber = "AAAAA" as NonEmptyString;
 
-const aUserCardActivatedStatus: CardActivatedStatus = {
+const aUserCardActivated: CardActivated = {
   activation_date: new Date(),
   expiration_date: addYears(new Date(), 2),
   status: ActivatedStatusEnum.ACTIVATED
 };
 
-const aUserEycaCardActivatedStatus: EycaCardActivatedStatus = {
+const aUserEycaCardActivated: EycaCardActivated = {
   activation_date: new Date(),
   card_number: anEycaCardNumber,
   expiration_date: addYears(new Date(), 2),
@@ -36,13 +36,13 @@ const aUserEycaCardActivatedStatus: EycaCardActivatedStatus = {
 };
 
 const anActivatedUserCgn: UserCgn = {
+  card: aUserCardActivated,
   fiscalCode: aFiscalCode,
-  id: "A_USER_CGN_ID" as NonEmptyString,
-  status: aUserCardActivatedStatus
+  id: "A_USER_CGN_ID" as NonEmptyString
 };
 
 const aUserEycaCard: UserEycaCard = {
-  cardStatus: aUserEycaCardActivatedStatus,
+  card: aUserEycaCardActivated,
   fiscalCode: aFiscalCode
 };
 
@@ -126,7 +126,7 @@ describe("StartEycaActivation", () => {
       taskEither.of(
         some({
           ...anActivatedUserCgn,
-          status: { status: PendingStatusEnum.PENDING }
+          card: { status: PendingStatusEnum.PENDING }
         })
       )
     );
@@ -167,7 +167,7 @@ describe("StartEycaActivation", () => {
       taskEither.of(
         some({
           ...aUserEycaCard,
-          cardStatus: { status: PendingStatusEnum.PENDING }
+          card: { status: PendingStatusEnum.PENDING }
         })
       )
     );
@@ -185,7 +185,7 @@ describe("StartEycaActivation", () => {
       taskEither.of(
         some({
           ...aUserEycaCard,
-          cardStatus: { status: PendingStatusEnum.PENDING }
+          card: { status: PendingStatusEnum.PENDING }
         })
       )
     );
@@ -204,7 +204,7 @@ describe("StartEycaActivation", () => {
       taskEither.of(
         some({
           ...aUserEycaCard,
-          cardStatus: { status: PendingStatusEnum.PENDING }
+          card: { status: PendingStatusEnum.PENDING }
         })
       )
     );

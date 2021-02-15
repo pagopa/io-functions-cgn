@@ -34,14 +34,14 @@ import {
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CardActivatedStatus";
-import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CardExpiredStatus";
+import { Card } from "../generated/definitions/Card";
+import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CardActivated";
+import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CardExpired";
 import {
-  CardPendingStatus,
+  CardPending,
   StatusEnum as PendingStatusEnum
-} from "../generated/definitions/CardPendingStatus";
-import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CardRevokedStatus";
-import { CardStatus } from "../generated/definitions/CardStatus";
+} from "../generated/definitions/CardPending";
+import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CardRevoked";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
 import { UserEycaCardModel } from "../models/user_eyca_card";
@@ -112,10 +112,10 @@ const getEycaEligibleTask = (
                   () => fromLeft(ResponseErrorForbiddenNotAuthorized),
                   userCgn =>
                     fromPredicate(
-                      (status: CardStatus) =>
-                        status.status === ActivatedStatusEnum.ACTIVATED,
+                      (card: Card) =>
+                        card.status === ActivatedStatusEnum.ACTIVATED,
                       () => ResponseErrorForbiddenNotAuthorized
-                    )(userCgn.status)
+                    )(userCgn.card)
                 )
                 .map(() => isEligible)
             )
@@ -142,7 +142,7 @@ export function StartEycaActivationHandler(
       return isEycaEligibleOrError.value;
     }
 
-    const cardStatus: CardPendingStatus = {
+    const card: CardPending = {
       status: PendingStatusEnum.PENDING
     };
 
@@ -160,10 +160,10 @@ export function StartEycaActivationHandler(
               ActivatedStatusEnum.ACTIVATED.toString(),
               ExpiredStatusEnum.EXPIRED.toString(),
               RevokedStatusEnum.REVOKED.toString()
-            ].includes(userEycaCard.cardStatus.status)
+            ].includes(userEycaCard.card.status)
               ? fromLeft(
                   ResponseErrorConflict(
-                    `Cannot activate an EYCA card that is already ${userEycaCard.cardStatus.status}`
+                    `Cannot activate an EYCA card that is already ${userEycaCard.card.status}`
                   )
                 )
               : // if EYCA card is in PENDING status, try to get orchestrator status
@@ -194,7 +194,7 @@ export function StartEycaActivationHandler(
         checkUpdateCardIsRunning(
           client,
           fiscalCode,
-          cardStatus,
+          card,
           makeEycaOrchestratorId
         ).foldTaskEither<
           ErrorTypes,
@@ -209,7 +209,7 @@ export function StartEycaActivationHandler(
             // We can generate an internal CGN identifier and insert a new CGN in a PENDING status
             userEycaCardModel
               .upsert({
-                cardStatus: { status: PendingStatusEnum.PENDING },
+                card: { status: PendingStatusEnum.PENDING },
                 fiscalCode,
                 kind: "INewUserEycaCard"
               })
@@ -225,7 +225,7 @@ export function StartEycaActivationHandler(
                       orchestratorId,
                       OrchestratorInput.encode({
                         fiscalCode,
-                        newStatus: cardStatus
+                        newStatusCard: card
                       })
                     ),
                   toError

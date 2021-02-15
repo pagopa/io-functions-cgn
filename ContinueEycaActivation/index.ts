@@ -5,7 +5,7 @@ import { fromEither, tryCatch } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { StatusEnum } from "../generated/definitions/CardPendingStatus";
+import { StatusEnum } from "../generated/definitions/CardPending";
 import { OrchestratorInput } from "../StartEycaActivationOrchestrator/index";
 import { trackException } from "../utils/appinsights";
 import { Failure, PermanentFailure, TransientFailure } from "../utils/errors";
