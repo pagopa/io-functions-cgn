@@ -28,9 +28,9 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import {
-  CardActivatedStatus,
+  CardActivated,
   StatusEnum as ActivatedStatusEnum
-} from "../generated/definitions/CardActivatedStatus";
+} from "../generated/definitions/CardActivated";
 import {
   CgnActivationDetail,
   StatusEnum
@@ -111,8 +111,8 @@ export function GetCgnActivationHandler(
     } as InstanceId;
     // first check if an activation process is running
     return retrieveUserCgn(userCgnModel, fiscalCode)
-      .map(_ => _.status)
-      .chain(cgnStatus =>
+      .map(_ => _.card)
+      .chain(cgn =>
         getOrchestratorStatus(client, orchestratorId)
           .mapLeft<IResponseErrorInternal | IResponseErrorNotFound>(() =>
             ResponseErrorInternal("Cannot retrieve activation status")
@@ -155,7 +155,7 @@ export function GetCgnActivationHandler(
                   IResponseErrorInternal | IResponseErrorNotFound,
                   StatusEnum
                 >(
-                  CardActivatedStatus.is(cgnStatus)
+                  CardActivated.is(cgn)
                     ? StatusEnum.COMPLETED
                     : StatusEnum.PENDING
                 )
@@ -165,7 +165,7 @@ export function GetCgnActivationHandler(
               // we can try to terminate running orchestrator in fire&forget to allow sync flow
               // i.e UPDATED status means that the orchestrator is running and userCgn status' update is performed.
               // Otherwise we return the original orchestrator status
-              customStatus === "UPDATED" && CardActivatedStatus.is(cgnStatus)
+              customStatus === "UPDATED" && CardActivated.is(cgn)
                 ? terminateOrchestratorTask(
                     client,
                     orchestratorId

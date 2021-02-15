@@ -6,9 +6,9 @@ import { array, chunksOf } from "fp-ts/lib/Array";
 import { isLeft, toError } from "fp-ts/lib/Either";
 import { taskEither, tryCatch } from "fp-ts/lib/TaskEither";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
-import { StatusEnum as CardActivatedStatusEnum } from "../generated/definitions/CardActivatedStatus";
-import { StatusEnum as CardExpiredStatusEnum } from "../generated/definitions/CardExpiredStatus";
-import { StatusEnum as CardRevokedStatusEnum } from "../generated/definitions/CardRevokedStatus";
+import { StatusEnum as CardActivatedStatusEnum } from "../generated/definitions/CardActivated";
+import { StatusEnum as CardExpiredStatusEnum } from "../generated/definitions/CardExpired";
+import { StatusEnum as CardRevokedStatusEnum } from "../generated/definitions/CardRevoked";
 import { initTelemetryClient, trackException } from "../utils/appinsights";
 import {
   makeUpdateCgnOrchestratorId,

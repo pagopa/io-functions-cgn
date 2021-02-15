@@ -21,11 +21,11 @@ import {
 
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { PromiseType } from "italia-ts-commons/lib/types";
-import { StatusEnum as CardActivatedStatusEnum } from "../generated/definitions/CardActivatedStatus";
-import { StatusEnum as CardExpiredStatusEnum } from "../generated/definitions/CardExpiredStatus";
-import { StatusEnum as CardPendingStatusEnum } from "../generated/definitions/CardPendingStatus";
-import { StatusEnum as CardRevokedStatusEnum } from "../generated/definitions/CardRevokedStatus";
-import { CardStatus } from "../generated/definitions/CardStatus";
+import { Card } from "../generated/definitions/Card";
+import { StatusEnum as CardActivatedStatusEnum } from "../generated/definitions/CardActivated";
+import { StatusEnum as CardExpiredStatusEnum } from "../generated/definitions/CardExpired";
+import { StatusEnum as CardPendingStatusEnum } from "../generated/definitions/CardPending";
+import { StatusEnum as CardRevokedStatusEnum } from "../generated/definitions/CardRevoked";
 
 /**
  * The identifier for UpdateCgnOrchestrator
@@ -85,11 +85,11 @@ export type CheckUpdateCgnIsRunningErrorTypes =
 export const checkUpdateCgnIsRunning = (
   client: DurableOrchestrationClient,
   fiscalCode: FiscalCode,
-  cardStatus: CardStatus
+  card: Card
 ): TaskEither<CheckUpdateCgnIsRunningErrorTypes, false> =>
   isOrchestratorRunning(
     client,
-    makeUpdateCgnOrchestratorId(fiscalCode, cardStatus.status)
+    makeUpdateCgnOrchestratorId(fiscalCode, card.status)
   )
     .foldTaskEither<CheckUpdateCgnIsRunningErrorTypes, false>(
       err =>
@@ -102,9 +102,7 @@ export const checkUpdateCgnIsRunning = (
         isRunning ? fromLeft(ResponseSuccessAccepted()) : taskEither.of(false)
     )
     .chain(_ =>
-      taskEither.of(
-        cgnStatuses.filter(el => el !== cardStatus.status.toString())
-      )
+      taskEither.of(cgnStatuses.filter(el => el !== card.status.toString()))
     )
     .chain(otherStatuses =>
       // check over other possible CGN' s statuses if there is other concurrent

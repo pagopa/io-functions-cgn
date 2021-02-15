@@ -1,10 +1,8 @@
 /* tslint:disable: no-any */
-import * as date_fns from "date-fns";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
-import { now } from "../../__mocks__/mock";
-import * as models from "../../utils/models";
+import { StatusEnum } from "../../generated/definitions/CardPending";
 import {
   ActivityInput,
   getEnqueueEycaActivationActivityHandler
@@ -70,6 +68,11 @@ describe("EnqueueEycaActivationActivity", () => {
     expect(response.kind).toBe("SUCCESS");
     expect(enqueueEycaActivationMock).toBeCalledWith({
       fiscalCode: anActivityInput.fiscalCode
+    });
+    expect(upsertMock).toBeCalledWith({
+      card: { status: StatusEnum.PENDING },
+      fiscalCode: anActivityInput.fiscalCode,
+      kind: "INewUserEycaCard"
     });
   });
 });

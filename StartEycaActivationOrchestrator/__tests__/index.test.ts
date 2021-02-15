@@ -6,7 +6,9 @@ import { handler } from "../index";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 
-const getInputMock = jest.fn();
+const getInputMock = jest.fn().mockImplementation(() => ({
+  fiscalCode: aFiscalCode
+}));
 
 const mockCallActivityWithRetry = jest.fn();
 
@@ -20,14 +22,11 @@ const contextMockWithDf = {
   }
 };
 
-describe("UpdateCgnOrchestrator", () => {
+describe("StartEycaActivationOrchestrator", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
   it("should call the right activity to activate an EYCA card", async () => {
-    getInputMock.mockImplementationOnce(() => ({
-      fiscalCode: aFiscalCode
-    }));
     mockCallActivityWithRetry
       // 1 SuccessEycaActivationActivity
       .mockReturnValueOnce({ kind: "SUCCESS" });
@@ -43,25 +42,20 @@ describe("UpdateCgnOrchestrator", () => {
     // Complete the orchestrator execution
     const res = orchestrator.next(res1.value);
 
+    orchestrator.next(res);
+
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
       1,
       "RUNNING"
     );
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
       2,
-      "UPDATED"
-    );
-    expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
-      3,
       "COMPLETED"
     );
     expect(res).toStrictEqual({ done: true, value: undefined });
   });
 
   it("should retry if it cannot decode activation output", async () => {
-    getInputMock.mockImplementationOnce(() => ({
-      fiscalCode: aFiscalCode
-    }));
     mockCallActivityWithRetry
       // 1 SuccessEycaActivationActivity
       .mockReturnValueOnce({ kind: "WRONG" });
@@ -82,9 +76,6 @@ describe("UpdateCgnOrchestrator", () => {
   });
 
   it("should retry if EYCA activation fails", async () => {
-    getInputMock.mockImplementationOnce(() => ({
-      fiscalCode: aFiscalCode
-    }));
     mockCallActivityWithRetry
       // 1 SuccessEycaActivationActivity
       .mockReturnValueOnce({ kind: "FAILURE" });
