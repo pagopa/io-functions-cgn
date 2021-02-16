@@ -3,23 +3,22 @@
 import { format } from "date-fns";
 import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
 import { Card } from "../generated/definitions/Card";
-import { CardActivated } from "../generated/definitions/CardActivated";
 import { CardRevoked } from "../generated/definitions/CardRevoked";
 import { assertNever } from "./types";
 
 export const MESSAGES = {
-  CardRevoked: (status: CardRevoked) =>
+  CardRevoked: (card: CardRevoked) =>
     ({
       subject: "La tua Carta Giovani Nazionale è stata revocata",
       markdown: `
 A seguito di una segnalazione la tua Carta Giovani Nazionale è stata **revocata** in data **${format(
-        status.revocation_date,
+        card.revocation_date,
         "dd-MM-yyyy"
       )}** con la seguente motivazione:
-${status.revocation_reason}
+${card.revocation_reason}
 `
     } as MessageContent),
-  CardActivated: (_: CardActivated) =>
+  CardActivated: () =>
     ({
       subject: "La tua Carta Nazionale Giovani è attiva",
       markdown: `A seguito della tua richiesta di attivazione, la tua Carta Giovani Nazionale è
@@ -45,8 +44,7 @@ export const getMessage = (
       // tslint:disable-next-line: no-useless-cast
       return MESSAGES[messageType](card as CardRevoked);
     case "CardActivated":
-      // tslint:disable-next-line: no-useless-cast
-      return MESSAGES[messageType](card as CardActivated);
+      return MESSAGES[messageType]();
     case "CardExpired":
       return MESSAGES[messageType]();
     default:

@@ -18,7 +18,10 @@ import {
 
 import { ActivityInput as EnqueueEycaActivationActivityInput } from "../EnqueueEycaActivationActivity/handler";
 import { Card } from "../generated/definitions/Card";
-import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CardActivated";
+import {
+  CardActivated,
+  StatusEnum as ActivatedStatusEnum
+} from "../generated/definitions/CardActivated";
 import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CardExpired";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { ActivityInput as StoreCgnExpirationActivityInput } from "../StoreCgnExpirationActivity/handler";
@@ -61,9 +64,11 @@ const getMessageType = (card: Card) => {
   }
   if (CardExpired.is(card)) {
     return "CardExpired";
-  } else {
+  }
+  if (CardActivated.is(card)) {
     return "CardActivated";
   }
+  throw new Error("Unexpected Card status");
 };
 
 export const handler = function*(
