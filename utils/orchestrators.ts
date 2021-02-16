@@ -93,10 +93,7 @@ export const checkUpdateCardIsRunning = (
     cardStatus: string
   ) => string = makeUpdateCgnOrchestratorId
 ): TaskEither<CheckUpdateCardIsRunningErrorTypes, false> =>
-  isOrchestratorRunning(
-    client,
-    makeUpdateCgnOrchestratorId(fiscalCode, card.status)
-  )
+  isOrchestratorRunning(client, getOrchestratorId(fiscalCode, card.status))
     .foldTaskEither<CheckUpdateCardIsRunningErrorTypes, false>(
       err =>
         fromLeft(
