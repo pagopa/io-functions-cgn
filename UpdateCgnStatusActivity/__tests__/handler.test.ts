@@ -6,36 +6,36 @@ import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
-  CgnPendingStatus,
+  CardPending,
   StatusEnum
-} from "../../generated/definitions/CgnPendingStatus";
+} from "../../generated/definitions/CardPending";
 import {
-  CgnRevokedStatus,
+  CardRevoked,
   StatusEnum as RevokedStatusEnum
-} from "../../generated/definitions/CgnRevokedStatus";
+} from "../../generated/definitions/CardRevoked";
 import { UserCgn } from "../../models/user_cgn";
 import { ActivityInput, getUpdateCgnStatusActivityHandler } from "../handler";
 
 const now = new Date();
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const aRevocationRequest = {
-  revocation_reason: "aMotivation" as NonEmptyString
+  reason: "aMotivation" as NonEmptyString
 };
 
-const aUserCgnRevokedStatus: CgnRevokedStatus = {
+const aUserCardRevoked: CardRevoked = {
   ...cgnActivatedDates,
   revocation_date: now,
-  revocation_reason: aRevocationRequest.revocation_reason,
+  revocation_reason: aRevocationRequest.reason,
   status: RevokedStatusEnum.REVOKED
 };
 
 const aRevokedUserCgn: UserCgn = {
+  card: aUserCardRevoked,
   fiscalCode: aFiscalCode,
-  id: "ID" as NonEmptyString,
-  status: aUserCgnRevokedStatus
+  id: "ID" as NonEmptyString
 };
 
-const aUserCgnPendingStatus: CgnPendingStatus = {
+const aUserCardPending: CardPending = {
   status: StatusEnum.PENDING
 };
 
@@ -48,7 +48,7 @@ const userCgnModelMock = {
 };
 
 const anActivityInput: ActivityInput = {
-  cgnStatus: aUserCgnRevokedStatus,
+  card: aUserCardRevoked,
   fiscalCode: aFiscalCode
 };
 describe("UpdateCgnStatusActivity", () => {
@@ -68,7 +68,7 @@ describe("UpdateCgnStatusActivity", () => {
     );
     expect(response.kind).toBe("FAILURE");
     if (response.kind === "FAILURE") {
-      expect(response.revocation_reason).toBe(
+      expect(response.reason).toBe(
         "Cannot retrieve userCgn for the provided fiscalCode"
       );
     }
@@ -87,7 +87,7 @@ describe("UpdateCgnStatusActivity", () => {
     );
     expect(response.kind).toBe("FAILURE");
     if (response.kind === "FAILURE") {
-      expect(response.revocation_reason).toBe(
+      expect(response.reason).toBe(
         "No userCgn found for the provided fiscalCode"
       );
     }
@@ -108,13 +108,13 @@ describe("UpdateCgnStatusActivity", () => {
     );
     expect(response.kind).toBe("FAILURE");
     if (response.kind === "FAILURE") {
-      expect(response.revocation_reason).toBe("Cannot update userCgn");
+      expect(response.reason).toBe("Cannot update userCgn");
     }
   });
 
   it("should return success if userCgn' s update success", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
+      taskEither.of(some({ ...aRevokedUserCgn, card: aUserCardPending }))
     );
     updateMock.mockImplementationOnce(() => taskEither.of(aRevokedUserCgn));
     const updateCgnStatusActivityHandler = getUpdateCgnStatusActivityHandler(

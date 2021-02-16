@@ -6,10 +6,10 @@ import { array, chunksOf } from "fp-ts/lib/Array";
 import { isLeft, toError } from "fp-ts/lib/Either";
 import { taskEither, tryCatch } from "fp-ts/lib/TaskEither";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
-import { StatusEnum as CgnActivatedStatusEnum } from "../generated/definitions/CgnActivatedStatus";
-import { StatusEnum as CgnExpiredStatusEnum } from "../generated/definitions/CgnExpiredStatus";
-import { StatusEnum as CgnRevokedStatusEnum } from "../generated/definitions/CgnRevokedStatus";
-import { CgnStatus } from "../generated/definitions/CgnStatus";
+import { StatusEnum as CardActivatedStatusEnum } from "../generated/definitions/CardActivated";
+import { StatusEnum as CardExpiredStatusEnum } from "../generated/definitions/CardExpired";
+import { StatusEnum as CardRevokedStatusEnum } from "../generated/definitions/CardRevoked";
+import { OrchestratorInput } from "../UpdateCgnOrchestrator";
 import { initTelemetryClient, trackException } from "../utils/appinsights";
 import {
   makeUpdateCgnOrchestratorId,
@@ -56,14 +56,14 @@ export const getUpdateExpiredCgnHandler = (
       terminateUpdateCgnOrchestratorTask(
         client,
         fiscalCode,
-        CgnActivatedStatusEnum.ACTIVATED,
+        CardActivatedStatusEnum.ACTIVATED,
         ORCHESTRATION_TERMINATION_REASON
       )
         .chain(() =>
           terminateUpdateCgnOrchestratorTask(
             client,
             fiscalCode,
-            CgnRevokedStatusEnum.REVOKED,
+            CardRevokedStatusEnum.REVOKED,
             ORCHESTRATION_TERMINATION_REASON
           )
         )
@@ -81,16 +81,16 @@ export const getUpdateExpiredCgnHandler = (
                 "UpdateCgnOrchestrator",
                 makeUpdateCgnOrchestratorId(
                   fiscalCode,
-                  CgnExpiredStatusEnum.EXPIRED
+                  CardExpiredStatusEnum.EXPIRED
                 ),
-                {
+                OrchestratorInput.encode({
                   fiscalCode,
-                  newStatus: CgnStatus.encode({
+                  newStatusCard: {
                     activation_date: activationDate,
                     expiration_date: expirationDate,
-                    status: CgnExpiredStatusEnum.EXPIRED
-                  })
-                }
+                    status: CardExpiredStatusEnum.EXPIRED
+                  }
+                })
               ),
             toError
           );

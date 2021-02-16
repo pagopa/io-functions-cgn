@@ -1,22 +1,21 @@
 // tslint:disable: object-literal-sort-keys
 
-import * as date_fns from "date-fns";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context as contextMock } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
-  CgnActivatedStatus,
+  CardActivated,
   StatusEnum
-} from "../../generated/definitions/CgnActivatedStatus";
+} from "../../generated/definitions/CardActivated";
 import {
-  CgnExpiredStatus,
+  CardExpired,
   StatusEnum as ExpiredStatusEnum
-} from "../../generated/definitions/CgnExpiredStatus";
+} from "../../generated/definitions/CardExpired";
 import {
-  CgnRevokedStatus,
+  CardRevoked,
   StatusEnum as RevokedCgnStatusEnum
-} from "../../generated/definitions/CgnRevokedStatus";
-import { ActivityResult as UpdateCgnStatusActivityResult } from "../../UpdateCgnStatusActivity/handler";
+} from "../../generated/definitions/CardRevoked";
+import { ActivityResult } from "../../utils/activity";
 import { MESSAGES } from "../../utils/messages";
 import { handler } from "../index";
 
@@ -24,17 +23,17 @@ const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const now = new Date();
 const aReason = "aMotivation" as NonEmptyString;
 
-const aUserCgnRevokedStatus: CgnRevokedStatus = {
+const aUserCardRevoked: CardRevoked = {
   ...cgnActivatedDates,
   revocation_reason: aReason,
   revocation_date: now,
   status: RevokedCgnStatusEnum.REVOKED
 };
-const aUserCgnActivatedStatus: CgnActivatedStatus = {
+const aUserCardActivated: CardActivated = {
   ...cgnActivatedDates,
   status: StatusEnum.ACTIVATED
 };
-const aUserCgnExpiredStatus: CgnExpiredStatus = {
+const aUserCardExpired: CardExpired = {
   ...cgnActivatedDates,
   status: ExpiredStatusEnum.EXPIRED
 };
@@ -55,7 +54,7 @@ const contextMockWithDf = {
   }
 };
 
-const anUpdateCgnStatusResult: UpdateCgnStatusActivityResult = {
+const anUpdateCgnStatusResult: ActivityResult = {
   kind: "SUCCESS"
 };
 
@@ -66,7 +65,7 @@ describe("UpdateCgnOrchestrator", () => {
   it("should send the right message on an activated CGN", async () => {
     getInputMock.mockImplementationOnce(() => ({
       fiscalCode: aFiscalCode,
-      newStatus: aUserCgnActivatedStatus
+      newStatusCard: aUserCardActivated
     }));
     mockCallActivityWithRetry
       // 1 StoreCgnExpiration
@@ -101,7 +100,7 @@ describe("UpdateCgnOrchestrator", () => {
 
     expect(
       contextMockWithDf.df.callActivityWithRetry.mock.calls[2][2].content
-    ).toEqual(MESSAGES.CgnActivatedStatus(aUserCgnActivatedStatus));
+    ).toEqual(MESSAGES.CardActivated());
     expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
       1,
@@ -120,7 +119,7 @@ describe("UpdateCgnOrchestrator", () => {
   it("should send the right message on a revoked Cgn", async () => {
     getInputMock.mockImplementationOnce(() => ({
       fiscalCode: aFiscalCode,
-      newStatus: aUserCgnRevokedStatus
+      newStatusCard: aUserCardRevoked
     }));
     mockCallActivityWithRetry
       // 1 UpdateCgnStauts
@@ -149,7 +148,7 @@ describe("UpdateCgnOrchestrator", () => {
 
     expect(
       contextMockWithDf.df.callActivityWithRetry.mock.calls[1][2].content
-    ).toEqual(MESSAGES.CgnRevokedStatus(aUserCgnRevokedStatus));
+    ).toEqual(MESSAGES.CardRevoked(aUserCardRevoked));
 
     expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
@@ -169,7 +168,7 @@ describe("UpdateCgnOrchestrator", () => {
   it("should send the right message on an expired Cgn", async () => {
     getInputMock.mockImplementationOnce(() => ({
       fiscalCode: aFiscalCode,
-      newStatus: aUserCgnExpiredStatus
+      newStatusCard: aUserCardExpired
     }));
     mockCallActivityWithRetry
       // 1 UpdateCgnStauts
@@ -198,7 +197,7 @@ describe("UpdateCgnOrchestrator", () => {
 
     expect(
       contextMockWithDf.df.callActivityWithRetry.mock.calls[1][2].content
-    ).toEqual(MESSAGES.CgnExpiredStatus());
+    ).toEqual(MESSAGES.CardExpired());
 
     expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(

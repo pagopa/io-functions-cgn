@@ -10,31 +10,24 @@ import { constVoid } from "fp-ts/lib/function";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { CgnExpiredStatus } from "../generated/definitions/CgnExpiredStatus";
-import {
-  CgnRevokedStatus,
-  StatusEnum as RevokedStatusEnum
-} from "../generated/definitions/CgnRevokedStatus";
+import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CardRevoked";
 
-import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CgnActivatedStatus";
-import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CgnExpiredStatus";
-import { CgnStatus } from "../generated/definitions/CgnStatus";
+import { ActivityInput as EnqueueEycaActivationActivityInput } from "../EnqueueEycaActivationActivity/handler";
+import { Card } from "../generated/definitions/Card";
+import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CardActivated";
+import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CardExpired";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
-import {
-  ActivityInput as StoreCgnExpirationActivityInput,
-  ActivityResult as StoreCgnExpirationActivityResult
-} from "../StoreCgnExpirationActivity/handler";
-import {
-  ActivityInput,
-  ActivityResult
-} from "../UpdateCgnStatusActivity/handler";
+import { ActivityInput as StoreCgnExpirationActivityInput } from "../StoreCgnExpirationActivity/handler";
+import { ActivityInput } from "../UpdateCgnStatusActivity/handler";
+import { ActivityResult } from "../utils/activity";
 import { trackEvent, trackException } from "../utils/appinsights";
+import { isEycaEligible } from "../utils/cgn_checks";
 import { getMessage } from "../utils/messages";
 import { internalRetryOptions } from "../utils/retry_policies";
 
 export const OrchestratorInput = t.interface({
   fiscalCode: FiscalCode,
-  newStatus: CgnStatus
+  newStatusCard: Card
 });
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
@@ -58,17 +51,6 @@ const trackExceptionAndThrow = (
   throw new Error(String(err));
 };
 
-const getMessageType = (cgnStatus: CgnStatus) => {
-  if (CgnRevokedStatus.is(cgnStatus)) {
-    return "CgnRevokedStatus";
-  }
-  if (CgnExpiredStatus.is(cgnStatus)) {
-    return "CgnExpiredStatus";
-  } else {
-    return "CgnActivatedStatus";
-  }
-};
-
 export const handler = function*(
   context: IOrchestrationFunctionContext,
   logPrefix: string = "UpdateCgnOrchestrator"
@@ -86,24 +68,24 @@ export const handler = function*(
     trackExAndThrow(e, "cgn.update.exception.decode.input")
   );
 
-  const { fiscalCode, newStatus } = decodedInput;
+  const { fiscalCode, newStatusCard } = decodedInput;
   const tagOverrides = {
     "ai.operation.id": fiscalCode,
     "ai.operation.parentId": fiscalCode
   };
 
   try {
-    if (newStatus.status === ActivatedStatusEnum.ACTIVATED) {
+    if (newStatusCard.status === ActivatedStatusEnum.ACTIVATED) {
       const storeCgnExpirationResult = yield context.df.callActivityWithRetry(
         "StoreCgnExpirationActivity",
         internalRetryOptions,
         StoreCgnExpirationActivityInput.encode({
-          activationDate: newStatus.activation_date,
-          expirationDate: newStatus.expiration_date,
+          activationDate: newStatusCard.activation_date,
+          expirationDate: newStatusCard.expiration_date,
           fiscalCode
         })
       );
-      const decodedStoreCgnExpirationResult = StoreCgnExpirationActivityResult.decode(
+      const decodedStoreCgnExpirationResult = ActivityResult.decode(
         storeCgnExpirationResult
       ).getOrElseL(e =>
         trackExAndThrow(
@@ -118,9 +100,48 @@ export const handler = function*(
           "cgn.update.exception.failure.storeCgnExpirationActivityOutput"
         );
       }
+
+      // now we try to enqueue an EYCA activation if user is eligible for eyca
+      const isEycaEligibleResult = isEycaEligible(fiscalCode).getOrElseL(e =>
+        trackExAndThrow(e, "cgn.update.exception.eyca.eligibilityCheck")
+      );
+
+      if (isEycaEligibleResult) {
+        // if citizen is eligible to get an EYCA card we try to enqueue an EYCA card activation
+        const enqueueEycaActivationActivityInput = EnqueueEycaActivationActivityInput.encode(
+          {
+            fiscalCode
+          }
+        );
+        const enqueueEycaActivationResult = yield context.df.callActivityWithRetry(
+          "EnqueueEycaActivationActivity",
+          internalRetryOptions,
+          enqueueEycaActivationActivityInput
+        );
+
+        const enqueueEycaActivationOutput = ActivityResult.decode(
+          enqueueEycaActivationResult
+        ).getOrElseL(e =>
+          trackExAndThrow(
+            e,
+            "cgn.update.exception.eyca.activation.activityOutput"
+          )
+        );
+
+        if (enqueueEycaActivationOutput.kind !== "SUCCESS") {
+          trackExceptionIfNotReplaying({
+            exception: new Error("Cannot enqueue an EYCA Card activation"),
+            properties: {
+              id: fiscalCode,
+              name: "cgn.update.eyca.activation.error"
+            },
+            tagOverrides
+          });
+        }
+      }
     }
     const updateCgnStatusActivityInput = ActivityInput.encode({
-      cgnStatus: newStatus,
+      card: newStatusCard,
       fiscalCode
     });
     const updateStatusResult = yield context.df.callActivityWithRetry(
@@ -149,7 +170,7 @@ export const handler = function*(
       RevokedStatusEnum.REVOKED.toString(),
       ActivatedStatusEnum.ACTIVATED.toString(),
       ExpiredStatusEnum.EXPIRED.toString()
-    ].includes(newStatus.status);
+    ].includes(newStatusCard.status);
 
     if (hasSendMessageActivity) {
       // sleep before sending push notification
@@ -166,7 +187,7 @@ export const handler = function*(
         tagOverrides
       });
 
-      const content = getMessage(getMessageType(newStatus), newStatus);
+      const content = getMessage(newStatusCard);
       yield context.df.callActivityWithRetry(
         "SendMessageActivity",
         internalRetryOptions,

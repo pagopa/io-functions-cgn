@@ -33,12 +33,12 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import {
-  CgnActivatedStatus,
+  CardActivated,
   StatusEnum as ActivatedStatusEnum
-} from "../generated/definitions/CgnActivatedStatus";
-import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CgnExpiredStatus";
-import { StatusEnum as PendingStatusEnum } from "../generated/definitions/CgnPendingStatus";
-import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CgnRevokedStatus";
+} from "../generated/definitions/CardActivated";
+import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CardExpired";
+import { StatusEnum as PendingStatusEnum } from "../generated/definitions/CardPending";
+import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CardRevoked";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
 import { OrchestratorInput } from "../UpdateCgnOrchestrator";
@@ -46,7 +46,7 @@ import {
   checkCgnRequirements,
   extractCgnExpirationDate
 } from "../utils/cgn_checks";
-import { genRandomCgnCode } from "../utils/cgnCode";
+import { genRandomCardCode } from "../utils/cgnCode";
 import { makeUpdateCgnOrchestratorId } from "../utils/orchestrators";
 import { checkUpdateCgnIsRunning } from "../utils/orchestrators";
 
@@ -106,7 +106,7 @@ const getCgnExpirationDataTask = (
   );
 
 const getCgnCodeTask = () =>
-  tryCatch(() => genRandomCgnCode(), toError).mapLeft(() =>
+  tryCatch(() => genRandomCardCode(), toError).mapLeft(() =>
     ResponseErrorInternal("Cannot generate a new CGN code")
   );
 
@@ -128,7 +128,7 @@ export function StartCgnActivationHandler(
       return cgnExpirationDateOrError.value;
     }
 
-    const cgnStatus: CgnActivatedStatus = {
+    const card: CardActivated = {
       activation_date: new Date(),
       expiration_date: cgnExpirationDateOrError.value,
       status: ActivatedStatusEnum.ACTIVATED
@@ -148,10 +148,10 @@ export function StartCgnActivationHandler(
               ActivatedStatusEnum.ACTIVATED.toString(),
               ExpiredStatusEnum.EXPIRED.toString(),
               RevokedStatusEnum.REVOKED.toString()
-            ].includes(userCgn.status.status)
+            ].includes(userCgn.card.status)
               ? fromLeft(
                   ResponseErrorConflict(
-                    `Cannot activate a CGN that is already ${userCgn.status.status}`
+                    `Cannot activate a CGN that is already ${userCgn.card.status}`
                   )
                 )
               : // if CGN is in PENDING status, try to get orchestrator status
@@ -179,7 +179,7 @@ export function StartCgnActivationHandler(
       )
       .chain(() =>
         // now we check if exists another update process for the same CGN
-        checkUpdateCgnIsRunning(client, fiscalCode, cgnStatus).foldTaskEither<
+        checkUpdateCgnIsRunning(client, fiscalCode, card).foldTaskEither<
           ErrorTypes,
           | IResponseSuccessAccepted
           | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
@@ -194,10 +194,10 @@ export function StartCgnActivationHandler(
               .chain(cgnId =>
                 userCgnModel
                   .upsert({
+                    card: { status: PendingStatusEnum.PENDING },
                     fiscalCode,
                     id: cgnId,
-                    kind: "INewUserCgn",
-                    status: { status: PendingStatusEnum.PENDING }
+                    kind: "INewUserCgn"
                   })
                   .mapLeft(e =>
                     ResponseErrorInternal(`Cannot insert a new CGN|${e.kind}`)
@@ -212,7 +212,7 @@ export function StartCgnActivationHandler(
                       orchestratorId,
                       OrchestratorInput.encode({
                         fiscalCode,
-                        newStatus: cgnStatus
+                        newStatusCard: card
                       })
                     ),
                   toError

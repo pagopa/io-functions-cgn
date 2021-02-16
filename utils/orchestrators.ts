@@ -21,20 +21,28 @@ import {
 
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { PromiseType } from "italia-ts-commons/lib/types";
-import { StatusEnum as CgnActivatedStatusEnum } from "../generated/definitions/CgnActivatedStatus";
-import { StatusEnum as CgnExpiredStatusEnum } from "../generated/definitions/CgnExpiredStatus";
-import { StatusEnum as CgnPendingStatusEnum } from "../generated/definitions/CgnPendingStatus";
-import { StatusEnum as CgnRevokedStatusEnum } from "../generated/definitions/CgnRevokedStatus";
-import { CgnStatus } from "../generated/definitions/CgnStatus";
+import { Card } from "../generated/definitions/Card";
+import { StatusEnum as CardActivatedStatusEnum } from "../generated/definitions/CardActivated";
+import { StatusEnum as CardExpiredStatusEnum } from "../generated/definitions/CardExpired";
+import { StatusEnum as CardPendingStatusEnum } from "../generated/definitions/CardPending";
+import { StatusEnum as CardRevokedStatusEnum } from "../generated/definitions/CardRevoked";
+
+/**
+ * The identifier for UpdateCgnOrchestrator
+ * @param fiscalCode the id of the requesting user
+ * @param cardStatus the status of the update's operation
+ */
+export const makeUpdateCgnOrchestratorId = (
+  fiscalCode: FiscalCode,
+  cardStatus: string
+) => `${fiscalCode}-UPDCGN-${cardStatus}`;
 
 /**
  * The identifier for StartEligibilityCheckOrchestrator
  * @param fiscalCode the id of the requesting user
  */
-export const makeUpdateCgnOrchestratorId = (
-  fiscalCode: FiscalCode,
-  cgnStatus: string
-) => `${fiscalCode}-UPDCGN-${cgnStatus}`;
+export const makeEycaActivationOrchestratorId = (fiscalCode: FiscalCode) =>
+  `${fiscalCode}-EYCA-ACT`;
 
 export const getOrchestratorStatus = (
   client: DurableOrchestrationClient,
@@ -61,10 +69,10 @@ export const isOrchestratorRunning = (
   }));
 
 const cgnStatuses: ReadonlyArray<string> = [
-  CgnRevokedStatusEnum.REVOKED.toString(),
-  CgnActivatedStatusEnum.ACTIVATED.toString(),
-  CgnExpiredStatusEnum.EXPIRED.toString(),
-  CgnPendingStatusEnum.PENDING.toString()
+  CardRevokedStatusEnum.REVOKED.toString(),
+  CardActivatedStatusEnum.ACTIVATED.toString(),
+  CardExpiredStatusEnum.EXPIRED.toString(),
+  CardPendingStatusEnum.PENDING.toString()
 ];
 
 export type CheckUpdateCgnIsRunningErrorTypes =
@@ -77,11 +85,11 @@ export type CheckUpdateCgnIsRunningErrorTypes =
 export const checkUpdateCgnIsRunning = (
   client: DurableOrchestrationClient,
   fiscalCode: FiscalCode,
-  cgnStatus: CgnStatus
+  card: Card
 ): TaskEither<CheckUpdateCgnIsRunningErrorTypes, false> =>
   isOrchestratorRunning(
     client,
-    makeUpdateCgnOrchestratorId(fiscalCode, cgnStatus.status)
+    makeUpdateCgnOrchestratorId(fiscalCode, card.status)
   )
     .foldTaskEither<CheckUpdateCgnIsRunningErrorTypes, false>(
       err =>
@@ -94,9 +102,7 @@ export const checkUpdateCgnIsRunning = (
         isRunning ? fromLeft(ResponseSuccessAccepted()) : taskEither.of(false)
     )
     .chain(_ =>
-      taskEither.of(
-        cgnStatuses.filter(el => el !== cgnStatus.status.toString())
-      )
+      taskEither.of(cgnStatuses.filter(el => el !== card.status.toString()))
     )
     .chain(otherStatuses =>
       // check over other possible CGN' s statuses if there is other concurrent

@@ -6,18 +6,18 @@ import {
 import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
 import * as t from "io-ts";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { CgnStatus } from "../generated/definitions/CgnStatus";
+import { Card } from "../generated/definitions/Card";
 
 export const USER_CGN_COLLECTION_NAME = "user-cgns";
 export const USER_CGN_MODEL_PK_FIELD = "fiscalCode" as const;
 
 const UserCgn = t.interface({
+  // the CGN card related to the user
+  card: Card,
   // The id of the user
   fiscalCode: FiscalCode,
   // The CGN identifier
-  id: NonEmptyString,
-  // the status of the CGN related to the user
-  status: CgnStatus
+  id: NonEmptyString
 });
 export type UserCgn = t.TypeOf<typeof UserCgn>;
 

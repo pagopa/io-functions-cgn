@@ -1,4 +1,5 @@
 import { addYears, isAfter } from "date-fns";
+import { Either, fromOption } from "fp-ts/lib/Either";
 import { Option, tryCatch } from "fp-ts/lib/Option";
 import { fromLeft, TaskEither } from "fp-ts/lib/TaskEither";
 import { taskEither } from "fp-ts/lib/TaskEither";
@@ -6,6 +7,10 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 
 const CGN_UPPER_BOUND_AGE = 36;
 const CGN_LOWER_BOUND_AGE = 18;
+
+const EYCA_UPPER_BOUND_AGE = 31;
+const EYCA_LOWER_BOUND_AGE = 18;
+
 /**
  * Returns a comparator of two dates that returns true if
  * the difference in years is at least the provided value.
@@ -136,3 +141,21 @@ export const checkCgnRequirements = (
           isYoungerThan(CGN_UPPER_BOUND_AGE)(birthDate, new Date())
       )
     );
+
+export const isEycaEligible = (
+  fiscalCode: FiscalCode
+): Either<Error, boolean> =>
+  fromOption(new Error("Cannot recognize EYCA eligibility"))(
+    toBirthDate(fiscalCode)
+  ).map(
+    birthDate =>
+      isOlderThan(EYCA_LOWER_BOUND_AGE)(birthDate, new Date()) &&
+      isYoungerThan(EYCA_UPPER_BOUND_AGE)(birthDate, new Date())
+  );
+
+export const extractEycaExpirationDate = (
+  fiscalCode: FiscalCode
+): Either<Error, Date> =>
+  fromOption(new Error("Cannot extract birth date from FiscalCode"))(
+    toBirthDate(fiscalCode)
+  ).map(birthDate => addYears(birthDate, EYCA_UPPER_BOUND_AGE));

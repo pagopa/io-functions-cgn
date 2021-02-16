@@ -20,11 +20,11 @@ import {
   ResponseSuccessJson
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { CgnStatus } from "../generated/definitions/CgnStatus";
+import { Card } from "../generated/definitions/Card";
 import { UserCgn, UserCgnModel } from "../models/user_cgn";
 
 type ResponseTypes =
-  | IResponseSuccessJson<CgnStatus>
+  | IResponseSuccessJson<Card>
   | IResponseErrorNotFound
   | IResponseErrorInternal;
 
@@ -52,7 +52,7 @@ export function GetCgnStatusHandler(
           )
       )
       .fold<ResponseTypes>(identity, userCgn =>
-        ResponseSuccessJson(userCgn.status)
+        ResponseSuccessJson(userCgn.card)
       )
       .run();
   };

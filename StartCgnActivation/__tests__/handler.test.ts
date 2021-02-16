@@ -15,17 +15,17 @@ import {
 } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
-  CgnActivatedStatus,
+  CardActivated,
   StatusEnum as ActivatedStatusEnum
-} from "../../generated/definitions/CgnActivatedStatus";
+} from "../../generated/definitions/CardActivated";
 import {
-  CgnPendingStatus,
+  CardPending,
   StatusEnum
-} from "../../generated/definitions/CgnPendingStatus";
+} from "../../generated/definitions/CardPending";
 import {
-  CgnRevokedStatus,
+  CardRevoked,
   StatusEnum as RevokedStatusEnum
-} from "../../generated/definitions/CgnRevokedStatus";
+} from "../../generated/definitions/CardRevoked";
 import { UserCgn } from "../../models/user_cgn";
 import * as orchUtils from "../../utils/orchestrators";
 import { StartCgnActivationHandler } from "../handler";
@@ -34,36 +34,40 @@ const now = new Date();
 const aFiscalCode = "RODFDS89S10H501T" as FiscalCode;
 const anOldFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 
-const aUserCgnRevokedStatus: CgnRevokedStatus = {
+const aUserCardRevoked: CardRevoked = {
   ...cgnActivatedDates,
   revocation_date: now,
   revocation_reason: "revocation_reason" as NonEmptyString,
   status: RevokedStatusEnum.REVOKED
 };
 
-const aUserCgnActivatedStatus: CgnActivatedStatus = {
+const aUserCardActivated: CardActivated = {
   activation_date: new Date(),
   expiration_date: addYears(new Date(), 2),
   status: ActivatedStatusEnum.ACTIVATED
 };
 
-const aUserCgnPendingStatus: CgnPendingStatus = {
+const aUserCardPending: CardPending = {
   status: StatusEnum.PENDING
 };
 
 const aRevokedUserCgn: UserCgn = {
+  card: aUserCardRevoked,
   fiscalCode: aFiscalCode,
-  id: "A_USER_CGN_ID" as NonEmptyString,
-  status: aUserCgnRevokedStatus
+  id: "A_USER_CGN_ID" as NonEmptyString
 };
 
 const anActivatedUserCgn: UserCgn = {
+  card: aUserCardActivated,
   fiscalCode: aFiscalCode,
-  id: "A_USER_CGN_ID" as NonEmptyString,
-  status: aUserCgnActivatedStatus
+  id: "A_USER_CGN_ID" as NonEmptyString
 };
 
-const findLastVersionByModelIdMock = jest.fn();
+const findLastVersionByModelIdMock = jest
+  .fn()
+  .mockImplementation(() =>
+    taskEither.of(some({ ...aRevokedUserCgn, card: aUserCardPending }))
+  );
 const upsertModelMock = jest.fn();
 const userCgnModelMock = {
   findLastVersionByModelId: findLastVersionByModelIdMock,
@@ -91,9 +95,6 @@ describe("StartCgnActivation", () => {
   });
 
   it("should return an Internal Error if it is not possible to check status of an other orchestrator with the same id", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
-    );
     checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
       fromLeft(ResponseErrorInternal("Error"))
     );
@@ -105,9 +106,6 @@ describe("StartCgnActivation", () => {
   });
 
   it("should return an Accepted response if there is another orchestrator running with the same id", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
-    );
     checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
       fromLeft(ResponseSuccessAccepted())
     );
@@ -119,9 +117,6 @@ describe("StartCgnActivation", () => {
   });
 
   it("should start a new orchestrator if there aren' t conflict on the same id", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
-    );
     checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
       taskEither.of(false)
     );
@@ -145,9 +140,6 @@ describe("StartCgnActivation", () => {
   });
 
   it("should start an Internal Error if there are errors while inserting a new Cgn in pending status", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aRevokedUserCgn, status: aUserCgnPendingStatus }))
-    );
     checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
       taskEither.of(false)
     );
