@@ -100,7 +100,7 @@ describe("UpdateCgnOrchestrator", () => {
 
     expect(
       contextMockWithDf.df.callActivityWithRetry.mock.calls[2][2].content
-    ).toEqual(MESSAGES.CardActivated(aUserCardActivated));
+    ).toEqual(MESSAGES.CardActivated());
     expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
       1,
