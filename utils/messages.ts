@@ -3,6 +3,9 @@
 import { format } from "date-fns";
 import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
 import { Card } from "../generated/definitions/Card";
+import { CardActivated } from "../generated/definitions/CardActivated";
+import { CardExpired } from "../generated/definitions/CardExpired";
+import { CardPending } from "../generated/definitions/CardPending";
 import { CardRevoked } from "../generated/definitions/CardRevoked";
 import { assertNever } from "./types";
 
@@ -35,19 +38,19 @@ in quanto non rientri nei requisiti per il suo utilizzo.
     } as MessageContent)
 };
 
-export const getMessage = (
-  messageType: keyof typeof MESSAGES,
-  card: Card
-): MessageContent => {
-  switch (messageType) {
-    case "CardRevoked":
-      // tslint:disable-next-line: no-useless-cast
-      return MESSAGES[messageType](card as CardRevoked);
-    case "CardActivated":
-      return MESSAGES[messageType]();
-    case "CardExpired":
-      return MESSAGES[messageType]();
-    default:
-      return assertNever(messageType);
+export const getMessage = (card: Card): MessageContent => {
+  if (CardRevoked.is(card)) {
+    return MESSAGES.CardRevoked(card);
   }
+  if (CardActivated.is(card)) {
+    return MESSAGES.CardActivated();
+  }
+  if (CardExpired.is(card)) {
+    return MESSAGES.CardExpired();
+  }
+  if (CardPending.is(card)) {
+    throw new Error("Unexpected Card status");
+  }
+
+  return assertNever(card);
 };
