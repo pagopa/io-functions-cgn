@@ -10,18 +10,11 @@ import { constVoid } from "fp-ts/lib/function";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { CardExpired } from "../generated/definitions/CardExpired";
-import {
-  CardRevoked,
-  StatusEnum as RevokedStatusEnum
-} from "../generated/definitions/CardRevoked";
+import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CardRevoked";
 
 import { ActivityInput as EnqueueEycaActivationActivityInput } from "../EnqueueEycaActivationActivity/handler";
 import { Card } from "../generated/definitions/Card";
-import {
-  CardActivated,
-  StatusEnum as ActivatedStatusEnum
-} from "../generated/definitions/CardActivated";
+import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CardActivated";
 import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CardExpired";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { ActivityInput as StoreCgnExpirationActivityInput } from "../StoreCgnExpirationActivity/handler";
@@ -56,19 +49,6 @@ const trackExceptionAndThrow = (
     }
   });
   throw new Error(String(err));
-};
-
-const getMessageType = (card: Card) => {
-  if (CardRevoked.is(card)) {
-    return "CardRevoked";
-  }
-  if (CardExpired.is(card)) {
-    return "CardExpired";
-  }
-  if (CardActivated.is(card)) {
-    return "CardActivated";
-  }
-  throw new Error("Unexpected Card status");
 };
 
 export const handler = function*(
@@ -207,7 +187,7 @@ export const handler = function*(
         tagOverrides
       });
 
-      const content = getMessage(getMessageType(newStatusCard), newStatusCard);
+      const content = getMessage(newStatusCard);
       yield context.df.callActivityWithRetry(
         "SendMessageActivity",
         internalRetryOptions,
