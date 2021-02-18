@@ -139,11 +139,7 @@ export function StartEycaActivationHandler(
           () => taskEither.of(fiscalCode),
           userEycaCard =>
             // if an EYCA card is already in a final state we return Conflict
-            [
-              ActivatedStatusEnum.ACTIVATED.toString(),
-              ExpiredStatusEnum.EXPIRED.toString(),
-              RevokedStatusEnum.REVOKED.toString()
-            ].includes(userEycaCard.card.status)
+           !CardPending.is(userEycaCard.card)
               ? fromLeft(
                   ResponseErrorConflict(
                     `Cannot activate an EYCA card that is already ${userEycaCard.card.status}`
