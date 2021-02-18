@@ -92,34 +92,17 @@ const getEycaEligibleTask = (
   IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
   true
 > =>
-  fromEither(isEycaEligible(fiscalCode)).foldTaskEither<
-    IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
-    true
-  >(
-    () =>
-      fromLeft(ResponseErrorInternal("Cannot perform EYCA Eligibility Check")),
-    isEligible =>
-      isEligible
-        ? // If is Eligible for Eyca check if a CGN already exists (an it is ACTIVATED)
-          userCgnModel
-            .findLastVersionByModelId([fiscalCode])
-            .mapLeft<
-              IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized
-            >(() => ResponseErrorInternal("Cannot query CGN data"))
-            .chain(maybeUserCgn =>
-              maybeUserCgn
-                .foldL(
-                  () => fromLeft(ResponseErrorForbiddenNotAuthorized),
-                  userCgn =>
-                    fromPredicate(
-                      (card: Card) =>
-                        card.status === ActivatedStatusEnum.ACTIVATED,
-                      () => ResponseErrorForbiddenNotAuthorized
-                    )(userCgn.card)
-                )
-                .map(() => isEligible)
-            )
-        : fromLeft(ResponseErrorForbiddenNotAuthorized)
+  fromEither(isEycaEligible(fiscalCode))
+  .mapLeft<IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized>(() => ResponseErrorInternal("Cannot perform EYCA Eligibility Check"))
+  .chain(fromPredicate(_ => _ === true, () => ResponseErrorForbiddenNotAuthorized))
+  .chain(() => userCgnModel
+    .findLastVersionByModelId([fiscalCode])
+    .mapLeft<
+      IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized
+    >(() => ResponseErrorInternal("Cannot query CGN data"))
+    .chain(_ => fromEither(fromOption(ResponseErrorForbiddenNotAuthorized)(_)))
+    .chain(userCgn => fromPredicate(CardActivated.is, () => ResponseErrorForbiddenNotAuthorized)(userCgn.card))
+    .map(_ => true)
   );
 
 export function StartEycaActivationHandler(
