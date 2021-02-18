@@ -3,7 +3,7 @@ import * as express from "express";
 import { Context } from "@azure/functions";
 import * as df from "durable-functions";
 import { DurableOrchestrationStatus } from "durable-functions/lib/src/classes";
-import { toError } from "fp-ts/lib/Either";
+import { fromOption, toError } from "fp-ts/lib/Either";
 import { isLeft } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
 import { fromNullable } from "fp-ts/lib/Option";
@@ -34,14 +34,11 @@ import {
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { Card } from "../generated/definitions/Card";
-import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CardActivated";
-import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CardExpired";
+import { CardActivated } from "../generated/definitions/CardActivated";
 import {
   CardPending,
   StatusEnum as PendingStatusEnum
 } from "../generated/definitions/CardPending";
-import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CardRevoked";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
 import { UserEycaCardModel } from "../models/user_eyca_card";
@@ -93,17 +90,32 @@ const getEycaEligibleTask = (
   true
 > =>
   fromEither(isEycaEligible(fiscalCode))
-  .mapLeft<IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized>(() => ResponseErrorInternal("Cannot perform EYCA Eligibility Check"))
-  .chain(fromPredicate(_ => _ === true, () => ResponseErrorForbiddenNotAuthorized))
-  .chain(() => userCgnModel
-    .findLastVersionByModelId([fiscalCode])
-    .mapLeft<
-      IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized
-    >(() => ResponseErrorInternal("Cannot query CGN data"))
-    .chain(_ => fromEither(fromOption(ResponseErrorForbiddenNotAuthorized)(_)))
-    .chain(userCgn => fromPredicate(CardActivated.is, () => ResponseErrorForbiddenNotAuthorized)(userCgn.card))
-    .map(_ => true)
-  );
+    .mapLeft<IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized>(
+      () => ResponseErrorInternal("Cannot perform EYCA Eligibility Check")
+    )
+    .chain(
+      fromPredicate(
+        _ => _ === true,
+        () => ResponseErrorForbiddenNotAuthorized
+      )
+    )
+    .chain(() =>
+      userCgnModel
+        .findLastVersionByModelId([fiscalCode])
+        .mapLeft<IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized>(
+          () => ResponseErrorInternal("Cannot query CGN data")
+        )
+        .chain(_ =>
+          fromEither(fromOption(ResponseErrorForbiddenNotAuthorized)(_))
+        )
+        .chain(userCgn =>
+          fromPredicate(
+            CardActivated.is,
+            () => ResponseErrorForbiddenNotAuthorized
+          )(userCgn.card)
+        )
+        .map(_ => true)
+    );
 
 export function StartEycaActivationHandler(
   userEycaCardModel: UserEycaCardModel,
@@ -139,7 +151,7 @@ export function StartEycaActivationHandler(
           () => taskEither.of(fiscalCode),
           userEycaCard =>
             // if an EYCA card is already in a final state we return Conflict
-           !CardPending.is(userEycaCard.card)
+            !CardPending.is(userEycaCard.card)
               ? fromLeft(
                   ResponseErrorConflict(
                     `Cannot activate an EYCA card that is already ${userEycaCard.card.status}`
