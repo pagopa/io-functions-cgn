@@ -45,7 +45,7 @@ type IGetEycaActivationHandler = (
 
 const mapOrchestratorStatus = (
   orchestratorStatus: DurableOrchestrationStatus
-): Either<IResponseErrorNotFound, StatusEnum> => {
+): Either<Error, StatusEnum> => {
   if (
     orchestratorStatus.customStatus === "UPDATED" ||
     orchestratorStatus.customStatus === "COMPLETED"
@@ -63,9 +63,7 @@ const mapOrchestratorStatus = (
     case df.OrchestrationRuntimeStatus.Completed:
       return right(StatusEnum.COMPLETED);
     default:
-      return left(
-        ResponseErrorNotFound("Not found", "Cannot recognize status")
-      );
+      return left(new Error("Cannot recognize status"));
   }
 };
 
@@ -83,18 +81,9 @@ export function GetEycaActivationHandler(
       .map(_ => _.card)
       .chain(eycaCard =>
         getOrchestratorStatus(client, orchestratorId)
-          .mapLeft<IResponseErrorInternal | IResponseErrorNotFound>(() =>
-            ResponseErrorInternal("Cannot retrieve activation status")
-          )
           .chain<EycaActivationDetail>(maybeOrchestrationStatus =>
             fromNullable(maybeOrchestrationStatus).foldL(
-              () =>
-                fromLeft(
-                  ResponseErrorNotFound(
-                    "Cannot find any activation process",
-                    "Orchestrator instance not found"
-                  )
-                ),
+              () => fromLeft(new Error("Orchestrator instance not found")),
               orchestrationStatus =>
                 // now try to map orchestrator status
                 fromEither(mapOrchestratorStatus(orchestrationStatus)).map(
