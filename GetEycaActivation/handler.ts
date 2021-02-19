@@ -6,7 +6,7 @@ import { DurableOrchestrationStatus } from "durable-functions/lib/src/classes";
 import { Either, left, right } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
 import { fromNullable } from "fp-ts/lib/Option";
-import { fromEither, taskEither, TaskEither } from "fp-ts/lib/TaskEither";
+import { fromEither, taskEither } from "fp-ts/lib/TaskEither";
 import { fromLeft } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { RequiredParamMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_param";
@@ -18,8 +18,6 @@ import {
   IResponseErrorInternal,
   IResponseErrorNotFound,
   IResponseSuccessJson,
-  ResponseErrorInternal,
-  ResponseErrorNotFound,
   ResponseSuccessJson
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
