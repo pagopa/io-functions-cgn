@@ -1,5 +1,4 @@
 ﻿import { EycaAPIClient } from "../clients/eyca";
-import { createClient } from "../generated/eyca-api/client";
 import {
   USER_EYCA_CARD_COLLECTION_NAME,
   UserEycaCardModel
@@ -16,10 +15,12 @@ const userEycaCardsContainer = cosmosdbClient
 
 const userEycaCardModel = new UserEycaCardModel(userEycaCardsContainer);
 
-const eycaClient = EycaAPIClient();
+const eycaClient = EycaAPIClient(config.EYCA_API_BASE_URL);
 
 const successEycaActivationActivityHandler = getSuccessEycaActivationActivityHandler(
   eycaClient,
+  config.EYCA_API_USERNAME,
+  config.EYCA_API_PASSWORD,
   userEycaCardModel
 );
 

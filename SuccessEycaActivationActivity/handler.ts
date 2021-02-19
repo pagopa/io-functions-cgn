@@ -8,12 +8,8 @@ import {
   tryCatch
 } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
-import {
-  EycaAPIClient,
-  eycaApiPassword,
-  eycaApiUsername
-} from "../clients/eyca";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { EycaAPIClient } from "../clients/eyca";
 import { StatusEnum } from "../generated/definitions/CardActivated";
 import { CcdbNumber } from "../generated/eyca-api/CcdbNumber";
 import { ErrorResponse } from "../generated/eyca-api/ErrorResponse";
@@ -31,6 +27,8 @@ export type ActivityInput = t.TypeOf<typeof ActivityInput>;
 
 const updateCard = (
   eycaClient: ReturnType<EycaAPIClient>,
+  username: NonEmptyString,
+  password: NonEmptyString,
   ccdbNumber: CcdbNumber,
   cardDateExpiration: ShortDate
 ) =>
@@ -39,9 +37,9 @@ const updateCard = (
       eycaClient.updateCard({
         card_date_expiration: cardDateExpiration.toISOString(),
         ccdb_number: ccdbNumber,
-        password: eycaApiPassword,
+        password,
         type: "json",
-        username: eycaApiUsername
+        username
       }),
     toError
   )
@@ -57,14 +55,18 @@ const updateCard = (
         : taskEither.of(res.value.api_response.text)
     );
 
-const preIssueCardCode = (eycaClient: ReturnType<EycaAPIClient>) =>
+const preIssueCard = (
+  eycaClient: ReturnType<EycaAPIClient>,
+  username: NonEmptyString,
+  password: NonEmptyString
+) =>
   tryCatch(
     // tslint:disable-next-line: no-hardcoded-credentials
     () =>
       eycaClient.preIssueCard({
-        password: eycaApiPassword,
+        password,
         type: "json",
-        username: eycaApiUsername
+        username
       }),
     toError
   )
@@ -84,6 +86,8 @@ const preIssueCardCode = (eycaClient: ReturnType<EycaAPIClient>) =>
 
 export const getSuccessEycaActivationActivityHandler = (
   eycaClient: ReturnType<EycaAPIClient>,
+  eycaApiUsername: NonEmptyString,
+  eycaApiPassword: NonEmptyString,
   userEycaCardModel: UserEycaCardModel,
   logPrefix: string = "SuccessEycaActivationActivityHandler"
 ) => (context: Context, input: unknown): Promise<ActivityResult> => {
@@ -108,15 +112,17 @@ export const getSuccessEycaActivationActivityHandler = (
         .chain(eycaCard =>
           fromEither(extractEycaExpirationDate(fiscalCode))
             .chain(expirationDate =>
-              preIssueCardCode(eycaClient).map(cardNumber => ({
-                ...eycaCard,
-                cardStatus: {
-                  activation_date: new Date(),
-                  card_number: cardNumber,
-                  expiration_date: expirationDate,
-                  status: StatusEnum.ACTIVATED
-                }
-              }))
+              preIssueCard(eycaClient, eycaApiUsername, eycaApiPassword).map(
+                cardNumber => ({
+                  ...eycaCard,
+                  cardStatus: {
+                    activation_date: new Date(),
+                    card_number: cardNumber,
+                    expiration_date: expirationDate,
+                    status: StatusEnum.ACTIVATED
+                  }
+                })
+              )
             )
             .mapLeft(err => fail(err))
         )
@@ -128,6 +134,8 @@ export const getSuccessEycaActivationActivityHandler = (
         .chain(() =>
           updateCard(
             eycaClient,
+            eycaApiUsername,
+            eycaApiPassword,
             _.cardStatus.card_number,
             _.cardStatus.expiration_date
           ).bimap(fail, () => success())
