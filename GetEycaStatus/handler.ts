@@ -19,46 +19,52 @@ import {
   ResponseSuccessJson
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { Card } from "../generated/definitions/Card";
-import { UserCgnModel } from "../models/user_cgn";
+
+import { EycaCard } from "../generated/definitions/EycaCard";
+import { UserEycaCardModel } from "../models/user_eyca_card";
 
 type ResponseTypes =
-  | IResponseSuccessJson<Card>
+  | IResponseSuccessJson<EycaCard>
   | IResponseErrorNotFound
   | IResponseErrorInternal;
 
-type IGetCgnStatusHandler = (
+type IGetEycaStatusHandler = (
   context: Context,
   fiscalCode: FiscalCode
 ) => Promise<ResponseTypes>;
 
-export function GetCgnStatusHandler(
-  userCgnModel: UserCgnModel
-): IGetCgnStatusHandler {
+export function GetEycaStatusHandler(
+  userEycaCardModel: UserEycaCardModel
+): IGetEycaStatusHandler {
   return async (_, fiscalCode) => {
-    return userCgnModel
+    return userEycaCardModel
       .findLastVersionByModelId([fiscalCode])
       .mapLeft<IResponseErrorInternal | IResponseErrorNotFound>(() =>
-        ResponseErrorInternal("Error trying to retrieve user's CGN status")
-      )
-      .chain(maybeUserCgn =>
-        fromEither(
-          fromOption(
-            ResponseErrorNotFound("Not Found", "User's CGN status not found")
-          )(maybeUserCgn)
+        ResponseErrorInternal(
+          "Error trying to retrieve user's EYCA Card status"
         )
       )
-      .fold<ResponseTypes>(identity, userCgn =>
-        ResponseSuccessJson(userCgn.card)
+      .chain(maybeUserEycaCard =>
+        fromEither(
+          fromOption(
+            ResponseErrorNotFound(
+              "Not Found",
+              "User's EYCA Card status not found"
+            )
+          )(maybeUserEycaCard)
+        )
+      )
+      .fold<ResponseTypes>(identity, userEycaCard =>
+        ResponseSuccessJson(userEycaCard.card)
       )
       .run();
   };
 }
 
-export function GetCgnStatus(
-  userCgnModel: UserCgnModel
+export function GetEycaStatus(
+  userEycaCardModel: UserEycaCardModel
 ): express.RequestHandler {
-  const handler = GetCgnStatusHandler(userCgnModel);
+  const handler = GetEycaStatusHandler(userEycaCardModel);
 
   const middlewaresWrap = withRequestMiddlewares(
     ContextMiddleware(),
