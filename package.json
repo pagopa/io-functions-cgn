@@ -7,6 +7,7 @@
   "license": "MIT",
   "scripts": {
     "prebuild": "shx rm -rf dist && yarn generate",
+    "postbuild": "dependency-check package.json --no-dev --missing ./dist/**/*.js",
     "build": "tsc",
     "watch": "tsc -w",
     "extensions:install": "func extensions install",
@@ -35,6 +36,7 @@
     "auto-changelog": "2.2.1",
     "danger": "^10.3.0",
     "danger-plugin-digitalcitizenship": "*",
+    "dependency-check": "^4.1.0",
     "dotenv-cli": "^3.1.0",
     "italia-tslint-rules": "*",
     "jest": "^24.8.0",
@@ -50,6 +52,8 @@
   },
   "dependencies": {
     "@azure/cosmos": "^3.7.2",
+    "applicationinsights": "^1.8.10",
+    "azure-storage": "^2.10.3",
     "date-fns": "^2.16.1",
     "durable-functions": "^1.4.4",
     "express": "^4.15.3",
@@ -58,6 +62,7 @@
     "io-functions-express": "^1.1.0",
     "io-ts": "1.8.5",
     "italia-ts-commons": "^8.6.0",
+    "node-fetch": "^2.6.1",
     "winston": "^3.2.1"
   },
   "resolutions": {
