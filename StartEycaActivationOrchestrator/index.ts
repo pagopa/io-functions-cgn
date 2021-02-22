@@ -7,13 +7,10 @@ import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 
-import { addSeconds } from "date-fns";
 import { ActivityInput } from "../SuccessEycaActivationActivity/handler";
 import { ActivityResult } from "../utils/activity";
 import { trackException } from "../utils/appinsights";
 import { internalRetryOptions } from "../utils/retry_policies";
-
-const START_EYCA_ACTIVATION_DELAY_SECONDS = 10;
 
 export const OrchestratorInput = t.interface({
   fiscalCode: FiscalCode
@@ -59,14 +56,6 @@ export const handler = function*(
   };
 
   try {
-    // sleep before starting EYCA activation
-    // This can avoid a transient failure until a pending EYCA card record is written on Cosmos
-    yield context.df.createTimer(
-      addSeconds(
-        context.df.currentUtcDateTime,
-        START_EYCA_ACTIVATION_DELAY_SECONDS
-      )
-    );
     const updateEycaStatusActivityInput = ActivityInput.encode({
       fiscalCode
     });
