@@ -12,6 +12,7 @@ import {
   CardPending,
   StatusEnum as PendingStatusEnum
 } from "../../generated/definitions/CardPending";
+import { CcdbNumber } from "../../generated/definitions/CcdbNumber";
 import { StatusEnum } from "../../generated/definitions/CgnActivationDetail";
 import { EycaActivationDetail } from "../../generated/definitions/EycaActivationDetail";
 import { EycaCardActivated } from "../../generated/definitions/EycaCardActivated";
@@ -20,7 +21,7 @@ import * as orchUtils from "../../utils/orchestrators";
 import { GetEycaActivationHandler } from "../handler";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
-const aCardNumber = "AAAAA" as NonEmptyString;
+const aCardNumber = "A123-A123-A123-A123" as CcdbNumber;
 
 const anInstanceId = {
   id: orchUtils.makeUpdateCgnOrchestratorId(
