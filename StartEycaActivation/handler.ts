@@ -144,40 +144,38 @@ export function StartEycaActivationHandler(
     return userEycaCardModel
       .findLastVersionByModelId([fiscalCode])
       .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
-        ResponseErrorInternal("Cannot query EYCA data")
+        ResponseErrorInternal("Cannot quer  y EYCA data")
       )
       .chain(maybeUserEycaCard =>
-        maybeUserEycaCard.foldL(
-          () => taskEither.of(void 0),
-          userEycaCard =>
-            // if an EYCA card is already in a final state we return Conflict
-            !CardPending.is(userEycaCard.card)
-              ? fromLeft(
-                  ResponseErrorConflict(
-                    `Cannot activate an EYCA card that is already ${userEycaCard.card.status}`
+        maybeUserEycaCard.fold(taskEither.of(void 0), userEycaCard =>
+          // if an EYCA card is already in a final state we return Conflict
+          !CardPending.is(userEycaCard.card)
+            ? fromLeft(
+                ResponseErrorConflict(
+                  `Cannot activate an EYCA card that is already ${userEycaCard.card.status}`
+                )
+              )
+            : // if EYCA card is in PENDING status, try to get orchestrator status
+              // in order to discriminate if there's an error or not
+              tryCatch(() => client.getStatus(orchestratorId), toError)
+                .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
+                  ResponseErrorInternal("Cannot retrieve activation status")
+                )
+                .chain(maybeStatus =>
+                  // client getStatus could respond with undefined if
+                  // an orchestrator instance does not exists
+                  // see https://docs.microsoft.com/it-it/azure/azure-functions/durable/durable-functions-instance-management?tabs=javascript#query-instances
+                  fromNullable(maybeStatus).foldL(
+                    // if orchestrator does not exists we assume that it expires its storage in TaskHub
+                    // after 30 days so we can try to start a new activation process
+                    () => taskEither.of(void 0),
+                    _ =>
+                      // if orchestrator is running we return an Accepted Response
+                      // otherwise we assume the orchestrator is in error or
+                      // it has been canceled so we can try to start a new activation process
+                      mapOrchestratorStatus(_).map(() => void 0)
                   )
                 )
-              : // if EYCA card is in PENDING status, try to get orchestrator status
-                // in order to discriminate if there's an error or not
-                tryCatch(() => client.getStatus(orchestratorId), toError)
-                  .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
-                    ResponseErrorInternal("Cannot retrieve activation status")
-                  )
-                  .chain(maybeStatus =>
-                    // client getStatus could respond with undefined if
-                    // an orchestrator instance does not exists
-                    // see https://docs.microsoft.com/it-it/azure/azure-functions/durable/durable-functions-instance-management?tabs=javascript#query-instances
-                    fromNullable(maybeStatus).foldL(
-                      // if orchestrator does not exists we assume that it expires its storage in TaskHub
-                      // after 30 days so we can try to start a new activation process
-                      () => taskEither.of(void 0),
-                      _ =>
-                        // if orchestrator is running we return an Accepted Response
-                        // otherwise we assume the orchestrator is in error or
-                        // it has been canceled so we can try to start a new activation process
-                        mapOrchestratorStatus(_).map(() => void 0)
-                    )
-                  )
         )
       )
       .chain(() =>
