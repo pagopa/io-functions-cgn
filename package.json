@@ -22,7 +22,8 @@
     "generate:definitions": "shx rm -rf generated/definitions && gen-api-models --api-spec openapi/index.yaml --out-dir generated/definitions",
     "generate": "npm-run-all generate:*",
     "preversion": "auto-changelog  --config .auto-changelog.json --unreleased --commit-limit false --stdout --template preview.hbs",
-    "version": "auto-changelog -p --config .auto-changelog.json --unreleased && git add CHANGELOG.md"
+    "version": "auto-changelog -p --config .auto-changelog.json --unreleased && git add CHANGELOG.md",
+    "postbuild": "npx dependency-check package.json --no-dev --missing ./dist/**/*.js"
   },
   "devDependencies": {
     "@azure/functions": "^1.2.2",
@@ -49,6 +50,8 @@
   },
   "dependencies": {
     "@azure/cosmos": "^3.7.2",
+    "applicationinsights": "^1.8.10",
+    "azure-storage": "^2.10.3",
     "date-fns": "^2.16.1",
     "durable-functions": "^1.4.4",
     "express": "^4.15.3",
@@ -57,6 +60,7 @@
     "io-functions-express": "^1.1.0",
     "io-ts": "1.8.5",
     "italia-ts-commons": "^8.6.0",
+    "node-fetch": "^2.6.1",
     "winston": "^3.2.1"
   },
   "resolutions": {
