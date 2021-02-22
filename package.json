@@ -7,6 +7,7 @@
   "license": "MIT",
   "scripts": {
     "prebuild": "shx rm -rf dist && yarn generate",
+    "postbuild": "dependency-check package.json --no-dev --missing ./dist/**/*.js",
     "build": "tsc",
     "watch": "tsc -w",
     "extensions:install": "func extensions install",
@@ -22,8 +23,7 @@
     "generate:definitions": "shx rm -rf generated/definitions && gen-api-models --api-spec openapi/index.yaml --out-dir generated/definitions",
     "generate": "npm-run-all generate:*",
     "preversion": "auto-changelog  --config .auto-changelog.json --unreleased --commit-limit false --stdout --template preview.hbs",
-    "version": "auto-changelog -p --config .auto-changelog.json --unreleased && git add CHANGELOG.md",
-    "postbuild": "npx dependency-check package.json --no-dev --missing ./dist/**/*.js"
+    "version": "auto-changelog -p --config .auto-changelog.json --unreleased && git add CHANGELOG.md"
   },
   "devDependencies": {
     "@azure/functions": "^1.2.2",
@@ -34,6 +34,7 @@
     "auto-changelog": "2.2.1",
     "danger": "^10.3.0",
     "danger-plugin-digitalcitizenship": "*",
+    "dependency-check": "^4.1.0",
     "dotenv-cli": "^3.1.0",
     "italia-tslint-rules": "*",
     "italia-utils": "^6.3.0",
