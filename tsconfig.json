@@ -15,6 +15,7 @@
     "dist",
     "node_modules",
     "generated",
-    "**/__tests__/*"
+    "**/__tests__/*",
+    "Dangerfile.ts"
   ]
 }
