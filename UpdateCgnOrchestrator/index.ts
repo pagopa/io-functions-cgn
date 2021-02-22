@@ -100,7 +100,34 @@ export const handler = function*(
           "cgn.update.exception.failure.storeCgnExpirationActivityOutput"
         );
       }
+    }
+    const updateCgnStatusActivityInput = ActivityInput.encode({
+      card: newStatusCard,
+      fiscalCode
+    });
+    const updateStatusResult = yield context.df.callActivityWithRetry(
+      "UpdateCgnStatusActivity",
+      internalRetryOptions,
+      updateCgnStatusActivityInput
+    );
 
+    const updateCgnResult = ActivityResult.decode(
+      updateStatusResult
+    ).getOrElseL(e =>
+      trackExAndThrow(e, "cgn.update.exception.decode.activityOutput")
+    );
+
+    if (updateCgnResult.kind !== "SUCCESS") {
+      trackExAndThrow(
+        new Error("Cannot update CGN Status"),
+        "cgn.update.exception.failure.activityOutput"
+      );
+    }
+
+    // keep tracking of UserCgn update successfully
+    context.df.setCustomStatus("UPDATED");
+
+    if (newStatusCard.status === ActivatedStatusEnum.ACTIVATED) {
       // now we try to enqueue an EYCA activation if user is eligible for eyca
       const isEycaEligibleResult = isEycaEligible(fiscalCode).getOrElseL(e =>
         trackExAndThrow(e, "cgn.update.exception.eyca.eligibilityCheck")
@@ -140,31 +167,6 @@ export const handler = function*(
         }
       }
     }
-    const updateCgnStatusActivityInput = ActivityInput.encode({
-      card: newStatusCard,
-      fiscalCode
-    });
-    const updateStatusResult = yield context.df.callActivityWithRetry(
-      "UpdateCgnStatusActivity",
-      internalRetryOptions,
-      updateCgnStatusActivityInput
-    );
-
-    const updateCgnResult = ActivityResult.decode(
-      updateStatusResult
-    ).getOrElseL(e =>
-      trackExAndThrow(e, "cgn.update.exception.decode.activityOutput")
-    );
-
-    if (updateCgnResult.kind !== "SUCCESS") {
-      trackExAndThrow(
-        new Error("Cannot update CGN Status"),
-        "cgn.update.exception.failure.activityOutput"
-      );
-    }
-
-    // keep tracking of UserCgn update successfully
-    context.df.setCustomStatus("UPDATED");
 
     const hasSendMessageActivity = [
       RevokedStatusEnum.REVOKED.toString(),
