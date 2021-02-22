@@ -61,7 +61,6 @@ const preIssueCard = (
   password: NonEmptyString
 ) =>
   tryCatch(
-    // tslint:disable-next-line: no-hardcoded-credentials
     () =>
       eycaClient.preIssueCard({
         password,
@@ -78,7 +77,7 @@ const preIssueCard = (
               `Error on EYCA preIssueCard API|STATUS=${response.status}, DETAIL=${response.value.api_response.text}`
             )
           )
-        : taskEither.of(response.value.api_response.text)
+        : taskEither.of(response.value.api_response.data.card[0].ccdb_number)
     )
     .chain(responseText =>
       fromEither(CcdbNumber.decode(responseText).mapLeft(errorsToError))
@@ -115,7 +114,7 @@ export const getSuccessEycaActivationActivityHandler = (
               preIssueCard(eycaClient, eycaApiUsername, eycaApiPassword).map(
                 cardNumber => ({
                   ...eycaCard,
-                  cardStatus: {
+                  card: {
                     activation_date: new Date(),
                     card_number: cardNumber,
                     expiration_date: expirationDate,
@@ -136,8 +135,8 @@ export const getSuccessEycaActivationActivityHandler = (
             eycaClient,
             eycaApiUsername,
             eycaApiPassword,
-            _.cardStatus.card_number,
-            _.cardStatus.expiration_date
+            _.card.card_number,
+            _.card.expiration_date
           ).bimap(fail, () => success())
         )
     )

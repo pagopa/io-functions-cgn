@@ -32,7 +32,9 @@ const preIssueCardMock = jest.fn().mockImplementation(() =>
       status: 200,
       value: {
         api_response: {
-          text: aCcdbNumber
+          data: {
+            card: [{ ccdb_number: aCcdbNumber }]
+          }
         }
       }
     })

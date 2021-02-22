@@ -301,14 +301,19 @@ definitions:
       activation_date: "2021-10-13T00:00:00.000Z"
       expiration_date: "2030-10-13T00:00:00.000Z"
 
+  CcdbNumber:
+    type: string
+    description: The internal CCDB Card number
+    pattern: "^[A-Z][0-9]{3}-[A-Z][0-9]{3}-[A-Z][0-9]{3}-[A-Z][0-9]{3}$"
+    minLength: 1
+
   EycaCardActivated:
     allOf:
       - $ref: "#/definitions/CardActivated"
       - type: object
         properties:
           card_number:
-            type: string
-            minLength: 1
+            $ref: "#/definitions/CcdbNumber"
         required:
           - card_number
   EycaCardExpired:
@@ -317,8 +322,7 @@ definitions:
       - type: object
         properties:
           card_number:
-            type: string
-            minLength: 1
+            $ref: "#/definitions/CcdbNumber"
         required:
           - card_number
   EycaCardRevoked:
@@ -327,8 +331,7 @@ definitions:
       - type: object
         properties:
           card_number:
-            type: string
-            minLength: 1
+            $ref: "#/definitions/CcdbNumber"
         required:
           - card_number
   EycaCard:

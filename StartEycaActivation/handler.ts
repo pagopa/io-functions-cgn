@@ -144,7 +144,7 @@ export function StartEycaActivationHandler(
     return userEycaCardModel
       .findLastVersionByModelId([fiscalCode])
       .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
-        ResponseErrorInternal("Cannot quer  y EYCA data")
+        ResponseErrorInternal("Cannot query EYCA data")
       )
       .chain(maybeUserEycaCard =>
         maybeUserEycaCard.fold(taskEither.of(void 0), userEycaCard =>

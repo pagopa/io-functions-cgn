@@ -18,7 +18,8 @@ const contextMockWithDf = {
     callActivity: jest.fn(),
     callActivityWithRetry: mockCallActivityWithRetry,
     getInput: getInputMock,
-    setCustomStatus: jest.fn()
+    setCustomStatus: jest.fn(),
+    createTimer: jest.fn().mockReturnValue("CreateTimer")
   }
 };
 
@@ -33,14 +34,16 @@ describe("StartEycaActivationOrchestrator", () => {
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = handler(contextMockWithDf as any);
 
-    // 1 StoreCgnExpiration
     const res1 = orchestrator.next();
-    expect(res1.value).toEqual({
+    expect(res1.value).toEqual("CreateTimer");
+    // 2 SuccessEycaActivation
+    const res2 = orchestrator.next(res1.value);
+    expect(res2.value).toEqual({
       kind: "SUCCESS"
     });
 
     // Complete the orchestrator execution
-    const res = orchestrator.next(res1.value);
+    const res = orchestrator.next(res2.value);
 
     orchestrator.next(res);
 
@@ -62,12 +65,12 @@ describe("StartEycaActivationOrchestrator", () => {
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = handler(contextMockWithDf as any);
 
-    // 1 StoreCgnExpiration
     const res1 = orchestrator.next();
+    expect(res1.value).toEqual("CreateTimer");
 
     // Complete the orchestrator execution
     const res = orchestrator.next(res1.value);
-    expect(res).toMatchObject({ value: false });
+    expect(res).toMatchObject({ value: { kind: "WRONG" } });
 
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
       1,
@@ -82,9 +85,12 @@ describe("StartEycaActivationOrchestrator", () => {
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = handler(contextMockWithDf as any);
 
-    // 1 StoreCgnExpiration
     const res1 = orchestrator.next();
-    expect(res1.value).toEqual({
+    expect(res1.value).toEqual("CreateTimer");
+
+    // 1 SuccessEycaActivationActivity
+    const res2 = orchestrator.next();
+    expect(res2.value).toEqual({
       kind: "FAILURE"
     });
 
