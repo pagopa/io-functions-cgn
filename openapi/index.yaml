@@ -111,6 +111,63 @@ paths:
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
+  
+  "/cgn/{fiscalcode}/eyca/activation":
+    post:
+      operationId: startEycaActivation
+      summary: |
+        Start a new Eyca activation process
+      description: |
+        Start an EYCA activation process related to a CGN
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
+      responses:
+        "201":
+            description: Request created.
+            schema:
+              $ref: "#/definitions/InstanceId"
+            headers:
+              Location:
+                type: string
+                description: |-
+                  Location (URL) of created request resource.
+                  A GET request to this URL returns the request status and details.
+        "202":
+          description: Processing request.
+          schema:
+            $ref: "#/definitions/InstanceId"
+        "401":
+          description: Wrong or missing function key.
+        "403":
+          description: Forbidden.
+        "409":
+          description: |
+            Cannot start a new activation because EYCA card is already activated
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
+    get:
+      operationId: getEycaActivation
+      summary: |
+        Get EYCA activation process' status
+      description: |
+        Get informations about an EYCA activation process
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
+      responses:
+        "200":
+            description: Cgn activation details.
+            schema:
+              $ref: "#/definitions/EycaActivationDetail"
+        "401":
+          description: Wrong or missing function key.
+        "404":
+          description: No CGN activation process found.
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
 
   "/cgn/{fiscalcode}/activation":
     post:
@@ -354,6 +411,24 @@ definitions:
         $ref: "#/definitions/Timestamp"
     required:
       - instance_id
+      - status
+
+  EycaActivationDetail:
+    type: object
+    properties:
+      status:
+        type: string
+        x-extensible-enum:
+          - PENDING
+          - RUNNING
+          - COMPLETED
+          - ERROR
+          - UNKNOWN
+      created_at:
+        $ref: "#/definitions/Timestamp"
+      last_updated_at:
+        $ref: "#/definitions/Timestamp"
+    required:
       - status
     
 

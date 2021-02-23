@@ -47,8 +47,10 @@ import {
   extractCgnExpirationDate
 } from "../utils/cgn_checks";
 import { genRandomCardCode } from "../utils/cgnCode";
-import { makeUpdateCgnOrchestratorId } from "../utils/orchestrators";
-import { checkUpdateCgnIsRunning } from "../utils/orchestrators";
+import {
+  checkUpdateCardIsRunning,
+  makeUpdateCgnOrchestratorId
+} from "../utils/orchestrators";
 
 type ErrorTypes =
   | IResponseErrorInternal
@@ -179,7 +181,7 @@ export function StartCgnActivationHandler(
       )
       .chain(() =>
         // now we check if exists another update process for the same CGN
-        checkUpdateCgnIsRunning(client, fiscalCode, card).foldTaskEither<
+        checkUpdateCardIsRunning(client, fiscalCode, card).foldTaskEither<
           ErrorTypes,
           | IResponseSuccessAccepted
           | IResponseSuccessRedirectToResource<InstanceId, InstanceId>

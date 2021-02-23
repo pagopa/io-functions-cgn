@@ -55,10 +55,10 @@ const userCgnModelMock = {
   findLastVersionByModelId: findLastVersionByModelIdMock
 };
 
-const checkUpdateCgnIsRunningMock = jest.fn();
+const checkUpdateCardIsRunningMock = jest.fn();
 jest
-  .spyOn(orchUtils, "checkUpdateCgnIsRunning")
-  .mockImplementation(checkUpdateCgnIsRunningMock);
+  .spyOn(orchUtils, "checkUpdateCardIsRunning")
+  .mockImplementation(checkUpdateCardIsRunningMock);
 describe("UpsertCgnStatus", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -98,7 +98,7 @@ describe("UpsertCgnStatus", () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       taskEither.of(some({ ...aRevokedUserCgn, card: aUserCardPending }))
     );
-    checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
+    checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
       fromLeft(ResponseErrorInternal("Error"))
     );
     const upsertCgnStatusHandler = UpsertCgnStatusHandler(
@@ -116,7 +116,7 @@ describe("UpsertCgnStatus", () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       taskEither.of(some({ ...aRevokedUserCgn, card: aUserCardPending }))
     );
-    checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
+    checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
       fromLeft(ResponseSuccessAccepted())
     );
     const upsertCgnStatusHandler = UpsertCgnStatusHandler(
@@ -134,7 +134,7 @@ describe("UpsertCgnStatus", () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       taskEither.of(some({ ...aRevokedUserCgn, card: aUserCardPending }))
     );
-    checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
+    checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
       taskEither.of(false)
     );
     const upsertCgnStatusHandler = UpsertCgnStatusHandler(

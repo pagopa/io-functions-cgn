@@ -70,21 +70,21 @@ describe("isOrchestratorRunning", () => {
   });
 });
 
-describe("checkUpdateCgnIsRunning", () => {
+describe("checkUpdateCardIsRunning", () => {
   it("should return an accepted response if an orchestrator is running", async () => {
     mockGetOrchestratorStatus.mockImplementationOnce(() =>
       taskEither.of({
         runtimeStatus: df.OrchestrationRuntimeStatus.Running
       })
     );
-    const checkUpdateCgnIsRunningResult = await orchUtils
-      .checkUpdateCgnIsRunning(getClient as any, aFiscalCode, {
+    const checkUpdateCardIsRunningResult = await orchUtils
+      .checkUpdateCardIsRunning(getClient as any, aFiscalCode, {
         status: StatusEnum.PENDING
       })
       .run();
-    expect(isLeft(checkUpdateCgnIsRunningResult));
-    if (isLeft(checkUpdateCgnIsRunningResult)) {
-      expect(checkUpdateCgnIsRunningResult.value.kind).toEqual(
+    expect(isLeft(checkUpdateCardIsRunningResult));
+    if (isLeft(checkUpdateCardIsRunningResult)) {
+      expect(checkUpdateCardIsRunningResult.value.kind).toEqual(
         "IResponseSuccessAccepted"
       );
     }
@@ -94,14 +94,14 @@ describe("checkUpdateCgnIsRunning", () => {
     mockGetOrchestratorStatus.mockImplementationOnce(() =>
       fromLeft(new Error("Cannot recognize orchestrator status"))
     );
-    const checkUpdateCgnIsRunningResult = await orchUtils
-      .checkUpdateCgnIsRunning(getClient as any, aFiscalCode, {
+    const checkUpdateCardIsRunningResult = await orchUtils
+      .checkUpdateCardIsRunning(getClient as any, aFiscalCode, {
         status: StatusEnum.PENDING
       })
       .run();
-    expect(isLeft(checkUpdateCgnIsRunningResult));
-    if (isLeft(checkUpdateCgnIsRunningResult)) {
-      expect(checkUpdateCgnIsRunningResult.value.kind).toEqual(
+    expect(isLeft(checkUpdateCardIsRunningResult));
+    if (isLeft(checkUpdateCardIsRunningResult)) {
+      expect(checkUpdateCardIsRunningResult.value.kind).toEqual(
         "IResponseErrorInternal"
       );
     }

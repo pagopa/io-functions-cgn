@@ -74,10 +74,10 @@ const userCgnModelMock = {
   upsert: upsertModelMock
 };
 
-const checkUpdateCgnIsRunningMock = jest.fn();
+const checkUpdateCardIsRunningMock = jest.fn();
 jest
-  .spyOn(orchUtils, "checkUpdateCgnIsRunning")
-  .mockImplementation(checkUpdateCgnIsRunningMock);
+  .spyOn(orchUtils, "checkUpdateCardIsRunning")
+  .mockImplementation(checkUpdateCardIsRunningMock);
 describe("StartCgnActivation", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -95,7 +95,7 @@ describe("StartCgnActivation", () => {
   });
 
   it("should return an Internal Error if it is not possible to check status of an other orchestrator with the same id", async () => {
-    checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
+    checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
       fromLeft(ResponseErrorInternal("Error"))
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
@@ -106,7 +106,7 @@ describe("StartCgnActivation", () => {
   });
 
   it("should return an Accepted response if there is another orchestrator running with the same id", async () => {
-    checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
+    checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
       fromLeft(ResponseSuccessAccepted())
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
@@ -117,7 +117,7 @@ describe("StartCgnActivation", () => {
   });
 
   it("should start a new orchestrator if there aren' t conflict on the same id", async () => {
-    checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
+    checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
       taskEither.of(false)
     );
     upsertModelMock.mockImplementationOnce(() => taskEither.of({}));
@@ -140,7 +140,7 @@ describe("StartCgnActivation", () => {
   });
 
   it("should start an Internal Error if there are errors while inserting a new Cgn in pending status", async () => {
-    checkUpdateCgnIsRunningMock.mockImplementationOnce(() =>
+    checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
       taskEither.of(false)
     );
     upsertModelMock.mockImplementationOnce(() =>
