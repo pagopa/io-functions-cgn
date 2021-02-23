@@ -1,4 +1,5 @@
 import { Context } from "@azure/functions";
+import { format } from "date-fns";
 import { fromOption, toError } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
 import {
@@ -35,7 +36,7 @@ const updateCard = (
   tryCatch(
     () =>
       eycaClient.updateCard({
-        card_date_expiration: cardDateExpiration.toISOString(),
+        card_date_expiration: format(cardDateExpiration, "yyyy-MM-dd"),
         ccdb_number: ccdbNumber,
         password,
         type: "json",
@@ -123,22 +124,24 @@ export const getSuccessEycaActivationActivityHandler = (
                 })
               )
             )
-            .mapLeft(err => fail(err))
+            .mapLeft(fail)
         )
     )
     .chain(_ =>
-      userEycaCardModel
-        .update(_)
-        .mapLeft(err => fail(toError(err), "Cannot update EYCA card"))
+      updateCard(
+        eycaClient,
+        eycaApiUsername,
+        eycaApiPassword,
+        _.card.card_number,
+        _.card.expiration_date
+      )
+        .mapLeft(fail)
         .chain(() =>
-          updateCard(
-            eycaClient,
-            eycaApiUsername,
-            eycaApiPassword,
-            _.card.card_number,
-            _.card.expiration_date
-          ).bimap(fail, () => success())
+          userEycaCardModel
+            .update(_)
+            .mapLeft(err => fail(toError(err), "Cannot update EYCA card"))
         )
+        .map(() => success())
     )
     .fold<ActivityResult>(identity, identity)
     .run();
