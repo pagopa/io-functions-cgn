@@ -84,6 +84,33 @@ paths:
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
+
+  "/cgn/eyca/status/{fiscalcode}":
+    get:
+      summary: Get EYCA details Status
+      operationId: getEycaStatus
+      description: |
+        Get the EYCA status details by the provided fiscal code. 
+        In case of success the response could be one of:
+          - CardPending
+          - EycaCardActivated
+          - EycaCardRevoked
+          - EycaCardExpired
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
+      responses:
+        "200":
+          description: EYCA details.
+          schema:
+            $ref: "#/definitions/EycaCard"
+        "401":
+          description: Wrong or missing function key.
+        "404":
+          description: No EYCA found.
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
   
   "/cgn/{fiscalcode}/eyca/activation":
     post:
@@ -116,6 +143,10 @@ paths:
         "409":
           description: |
             Cannot start a new activation because EYCA card is already activated
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
     get:
       operationId: getEycaActivation
       summary: |
@@ -133,33 +164,6 @@ paths:
           description: Wrong or missing function key.
         "404":
           description: No CGN activation process found.
-        "500":
-          description: Service unavailable.
-          schema:
-            $ref: "#/definitions/ProblemJson"
-
-  "/cgn/eyca/status/{fiscalcode}":
-    get:
-      summary: Get EYCA details Status
-      operationId: getEycaStatus
-      description: |
-        Get the EYCA status details by the provided fiscal code. 
-        In case of success the response could be one of:
-          - CardPending
-          - EycaCardActivated
-          - EycaCardRevoked
-          - EycaCardExpired
-      parameters:
-        - $ref: "#/parameters/FiscalCode"
-      responses:
-        "200":
-          description: EYCA details.
-          schema:
-            $ref: "#/definitions/EycaCard"
-        "401":
-          description: Wrong or missing function key.
-        "404":
-          description: No EYCA found.
         "500":
           description: Service unavailable.
           schema:

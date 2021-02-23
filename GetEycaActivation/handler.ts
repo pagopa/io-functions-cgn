@@ -3,9 +3,10 @@ import * as express from "express";
 import { Context } from "@azure/functions";
 import * as df from "durable-functions";
 import { DurableOrchestrationStatus } from "durable-functions/lib/src/classes";
+import { Either, left, right } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
 import { fromNullable } from "fp-ts/lib/Option";
-import { taskEither, TaskEither } from "fp-ts/lib/TaskEither";
+import { fromEither, taskEither } from "fp-ts/lib/TaskEither";
 import { fromLeft } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { RequiredParamMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_param";
@@ -17,8 +18,6 @@ import {
   IResponseErrorInternal,
   IResponseErrorNotFound,
   IResponseSuccessJson,
-  ResponseErrorInternal,
-  ResponseErrorNotFound,
   ResponseSuccessJson
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
@@ -44,27 +43,25 @@ type IGetEycaActivationHandler = (
 
 const mapOrchestratorStatus = (
   orchestratorStatus: DurableOrchestrationStatus
-): TaskEither<IResponseErrorNotFound, StatusEnum> => {
+): Either<Error, StatusEnum> => {
   if (
     orchestratorStatus.customStatus === "UPDATED" ||
     orchestratorStatus.customStatus === "COMPLETED"
   ) {
-    return taskEither.of(StatusEnum.COMPLETED);
+    return right(StatusEnum.COMPLETED);
   }
   switch (orchestratorStatus.runtimeStatus) {
     case df.OrchestrationRuntimeStatus.Pending:
-      return taskEither.of(StatusEnum.PENDING);
+      return right(StatusEnum.PENDING);
     case df.OrchestrationRuntimeStatus.Running:
     case df.OrchestrationRuntimeStatus.ContinuedAsNew:
-      return taskEither.of(StatusEnum.RUNNING);
+      return right(StatusEnum.RUNNING);
     case df.OrchestrationRuntimeStatus.Failed:
-      return taskEither.of(StatusEnum.ERROR);
+      return right(StatusEnum.ERROR);
     case df.OrchestrationRuntimeStatus.Completed:
-      return taskEither.of(StatusEnum.COMPLETED);
+      return right(StatusEnum.COMPLETED);
     default:
-      return fromLeft(
-        ResponseErrorNotFound("Not found", "Cannot recognize status")
-      );
+      return left(new Error("Cannot recognize status"));
   }
 };
 
@@ -82,25 +79,18 @@ export function GetEycaActivationHandler(
       .map(_ => _.card)
       .chain(eycaCard =>
         getOrchestratorStatus(client, orchestratorId)
-          .mapLeft<IResponseErrorInternal | IResponseErrorNotFound>(() =>
-            ResponseErrorInternal("Cannot retrieve activation status")
-          )
           .chain<EycaActivationDetail>(maybeOrchestrationStatus =>
             fromNullable(maybeOrchestrationStatus).foldL(
-              () =>
-                fromLeft(
-                  ResponseErrorNotFound(
-                    "Cannot find any activation process",
-                    "Orchestrator instance not found"
-                  )
-                ),
+              () => fromLeft(new Error("Orchestrator instance not found")),
               orchestrationStatus =>
                 // now try to map orchestrator status
-                mapOrchestratorStatus(orchestrationStatus).map(_ => ({
-                  created_at: orchestrationStatus.createdTime,
-                  last_updated_at: orchestrationStatus.lastUpdatedTime,
-                  status: _
-                }))
+                fromEither(mapOrchestratorStatus(orchestrationStatus)).map(
+                  _ => ({
+                    created_at: orchestrationStatus.createdTime,
+                    last_updated_at: orchestrationStatus.lastUpdatedTime,
+                    status: _
+                  })
+                )
             )
           )
           .foldTaskEither<
@@ -109,7 +99,7 @@ export function GetEycaActivationHandler(
           >(
             () =>
               // It's not possible to map any activation status
-              // check for EYCA CArd status on cosmos
+              // check for EYCA Card status on cosmos
               taskEither
                 .of<
                   IResponseErrorInternal | IResponseErrorNotFound,

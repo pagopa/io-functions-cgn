@@ -67,6 +67,9 @@ jest
   .mockImplementation(getOrchestratorStatusMock);
 
 describe("GetEycaActivationHandler", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
   it("should return success with ERROR status if orchestrator status is Failed", async () => {
     getOrchestratorStatusMock.mockImplementationOnce(() =>
       taskEither.of({
