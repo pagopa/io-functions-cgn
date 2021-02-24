@@ -50,6 +50,10 @@ const mapOrchestratorStatus = (
   ) {
     return right(StatusEnum.COMPLETED);
   }
+
+  if (orchestratorStatus.customStatus === "ERROR") {
+    return right(StatusEnum.ERROR);
+  }
   switch (orchestratorStatus.runtimeStatus) {
     case df.OrchestrationRuntimeStatus.Pending:
       return right(StatusEnum.PENDING);

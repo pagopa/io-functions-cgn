@@ -1,14 +1,8 @@
 ﻿import { IOrchestrationFunctionContext } from "durable-functions/lib/src/classes";
 
-import {
-  EventTelemetry,
-  ExceptionTelemetry
-} from "applicationinsights/out/Declarations/Contracts";
 import { addSeconds } from "date-fns";
 import * as df from "durable-functions";
-import { constVoid } from "fp-ts/lib/function";
 import * as t from "io-ts";
-import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CardRevoked";
 
@@ -20,9 +14,14 @@ import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivit
 import { ActivityInput as StoreCgnExpirationActivityInput } from "../StoreCgnExpirationActivity/handler";
 import { ActivityInput } from "../UpdateCgnStatusActivity/handler";
 import { ActivityResult } from "../utils/activity";
-import { trackEvent, trackException } from "../utils/appinsights";
 import { isEycaEligible } from "../utils/cgn_checks";
 import { getMessage } from "../utils/messages";
+import {
+  trackEventIfNotReplaying,
+  trackExceptionAndThrow,
+  trackExceptionAndThrowWithErrorStatus,
+  trackExceptionIfNotReplaying
+} from "../utils/orchestrators";
 import { internalRetryOptions } from "../utils/retry_policies";
 
 export const OrchestratorInput = t.interface({
@@ -33,35 +32,18 @@ export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 const NOTIFICATION_DELAY_SECONDS = 10;
 
-const trackExceptionAndThrow = (
-  context: IOrchestrationFunctionContext,
-  logPrefix: string
-) => (err: Error | t.Errors, name: string) => {
-  context.log.verbose(
-    err instanceof Error
-      ? `${logPrefix}|ERROR=${err.message}`
-      : `${logPrefix}|ERROR=${readableReport(err)}`
-  );
-  trackException({
-    exception: new Error(`${logPrefix}|ERROR=${String(err)}`),
-    properties: {
-      name
-    }
-  });
-  throw new Error(String(err));
-};
-
 export const handler = function*(
   context: IOrchestrationFunctionContext,
   logPrefix: string = "UpdateCgnOrchestrator"
 ): Generator {
   const trackExAndThrow = trackExceptionAndThrow(context, logPrefix);
+  const trackExAndThrowWithError = trackExceptionAndThrowWithErrorStatus(
+    context,
+    logPrefix
+  );
+  const trackExIfNotReplaying = trackExceptionIfNotReplaying(context);
+  const trackEvtIfNotReplaying = trackEventIfNotReplaying(context);
   context.df.setCustomStatus("RUNNING");
-  const trackEventIfNotReplaying = (evt: EventTelemetry) =>
-    context.df.isReplaying ? constVoid : trackEvent(evt);
-
-  const trackExceptionIfNotReplaying = (evt: ExceptionTelemetry) =>
-    context.df.isReplaying ? constVoid : trackException(evt);
 
   const input = context.df.getInput();
   const decodedInput = OrchestratorInput.decode(input).getOrElseL(e =>
@@ -88,14 +70,14 @@ export const handler = function*(
       const decodedStoreCgnExpirationResult = ActivityResult.decode(
         storeCgnExpirationResult
       ).getOrElseL(e =>
-        trackExAndThrow(
+        trackExAndThrowWithError(
           e,
           "cgn.update.exception.decode.storeCgnExpirationActivityOutput"
         )
       );
 
       if (decodedStoreCgnExpirationResult.kind !== "SUCCESS") {
-        trackExAndThrow(
+        trackExAndThrowWithError(
           new Error("Cannot store CGN Expiration"),
           "cgn.update.exception.failure.storeCgnExpirationActivityOutput"
         );
@@ -114,18 +96,15 @@ export const handler = function*(
     const updateCgnResult = ActivityResult.decode(
       updateStatusResult
     ).getOrElseL(e =>
-      trackExAndThrow(e, "cgn.update.exception.decode.activityOutput")
+      trackExAndThrowWithError(e, "cgn.update.exception.decode.activityOutput")
     );
 
     if (updateCgnResult.kind !== "SUCCESS") {
-      trackExAndThrow(
+      trackExAndThrowWithError(
         new Error("Cannot update CGN Status"),
         "cgn.update.exception.failure.activityOutput"
       );
     }
-
-    // keep tracking of UserCgn update successfully
-    context.df.setCustomStatus("UPDATED");
 
     if (newStatusCard.status === ActivatedStatusEnum.ACTIVATED) {
       // now we try to enqueue an EYCA activation if user is eligible for eyca
@@ -156,7 +135,7 @@ export const handler = function*(
         );
 
         if (enqueueEycaActivationOutput.kind !== "SUCCESS") {
-          trackExceptionIfNotReplaying({
+          trackExIfNotReplaying({
             exception: new Error("Cannot enqueue an EYCA Card activation"),
             properties: {
               id: fiscalCode,
@@ -167,6 +146,9 @@ export const handler = function*(
         }
       }
     }
+
+    // keep tracking of UserCgn update successfully
+    context.df.setCustomStatus("UPDATED");
 
     const hasSendMessageActivity = [
       RevokedStatusEnum.REVOKED.toString(),
@@ -180,7 +162,7 @@ export const handler = function*(
         addSeconds(context.df.currentUtcDateTime, NOTIFICATION_DELAY_SECONDS)
       );
 
-      trackEventIfNotReplaying({
+      trackEvtIfNotReplaying({
         name: "cgn.update.timer",
         properties: {
           id: fiscalCode,
@@ -202,7 +184,7 @@ export const handler = function*(
     }
   } catch (err) {
     context.log.error(`${logPrefix}|ERROR|${String(err)}`);
-    trackExceptionIfNotReplaying({
+    trackExIfNotReplaying({
       exception: err,
       properties: {
         id: fiscalCode,

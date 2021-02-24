@@ -1,4 +1,5 @@
 import * as df from "durable-functions";
+import { IOrchestrationFunctionContext } from "durable-functions/lib/src/classes";
 import { DurableOrchestrationClient } from "durable-functions/lib/src/durableorchestrationclient";
 import { array } from "fp-ts/lib/Array";
 
@@ -10,6 +11,7 @@ import {
   TaskEither,
   tryCatch
 } from "fp-ts/lib/TaskEither";
+import { readableReport } from "italia-ts-commons/lib/reporters";
 import {
   IResponseErrorConflict,
   IResponseErrorInternal,
@@ -19,6 +21,12 @@ import {
   ResponseSuccessAccepted
 } from "italia-ts-commons/lib/responses";
 
+import {
+  EventTelemetry,
+  ExceptionTelemetry
+} from "applicationinsights/out/Declarations/Contracts";
+import { constVoid } from "fp-ts/lib/function";
+import * as t from "io-ts";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { PromiseType } from "italia-ts-commons/lib/types";
 import { Card } from "../generated/definitions/Card";
@@ -26,6 +34,7 @@ import { StatusEnum as CardActivatedStatusEnum } from "../generated/definitions/
 import { StatusEnum as CardExpiredStatusEnum } from "../generated/definitions/CardExpired";
 import { StatusEnum as CardPendingStatusEnum } from "../generated/definitions/CardPending";
 import { StatusEnum as CardRevokedStatusEnum } from "../generated/definitions/CardRevoked";
+import { trackEvent, trackException } from "./appinsights";
 
 /**
  * The identifier for UpdateCgnOrchestrator
@@ -168,3 +177,52 @@ export const terminateUpdateCgnOrchestratorTask = (
         )
   );
 };
+
+export const trackExceptionAndThrow = (
+  context: IOrchestrationFunctionContext,
+  logPrefix: string
+) => (err: Error | t.Errors, name: string) => {
+  context.log.verbose(
+    err instanceof Error
+      ? `${logPrefix}|ERROR=${err.message}`
+      : `${logPrefix}|ERROR=${readableReport(err)}`
+  );
+  trackException({
+    exception: new Error(`${logPrefix}|ERROR=${String(err)}`),
+    properties: {
+      name
+    }
+  });
+  throw new Error(String(err));
+};
+
+export const trackExceptionAndThrowWithErrorStatus = (
+  context: IOrchestrationFunctionContext,
+  logPrefix: string
+) => (err: Error | t.Errors, name: string) => {
+  context.log.verbose(
+    err instanceof Error
+      ? `${logPrefix}|ERROR=${err.message}`
+      : `${logPrefix}|ERROR=${readableReport(err)}`
+  );
+  trackException({
+    exception: new Error(`${logPrefix}|ERROR=${String(err)}`),
+    properties: {
+      name
+    }
+  });
+  if (!context.df.isReplaying) {
+    context.df.setCustomStatus("ERROR");
+  }
+  throw new Error(String(err));
+};
+
+export const trackEventIfNotReplaying = (
+  context: IOrchestrationFunctionContext
+) => (evt: EventTelemetry) =>
+  context.df.isReplaying ? constVoid : trackEvent(evt);
+
+export const trackExceptionIfNotReplaying = (
+  context: IOrchestrationFunctionContext
+) => (evt: ExceptionTelemetry) =>
+  context.df.isReplaying ? constVoid : trackException(evt);

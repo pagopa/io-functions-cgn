@@ -6,10 +6,10 @@ import {
   DurableOrchestrationClient,
   DurableOrchestrationStatus
 } from "durable-functions/lib/src/classes";
-import { toError } from "fp-ts/lib/Either";
+import { Either, left, right, toError } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
 import { fromNullable } from "fp-ts/lib/Option";
-import { taskEither, TaskEither, tryCatch } from "fp-ts/lib/TaskEither";
+import { fromEither, taskEither, tryCatch } from "fp-ts/lib/TaskEither";
 import { fromLeft } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { RequiredParamMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_param";
@@ -64,25 +64,30 @@ type ActivationStatusWithOrchestratorCustomStatus = t.TypeOf<
 
 const mapOrchestratorStatus = (
   orchestratorStatus: DurableOrchestrationStatus
-): TaskEither<IResponseErrorNotFound, StatusEnum> => {
+): Either<IResponseErrorNotFound, StatusEnum> => {
   if (
     orchestratorStatus.customStatus === "UPDATED" ||
     orchestratorStatus.customStatus === "COMPLETED"
   ) {
-    return taskEither.of(StatusEnum.COMPLETED);
+    return right(StatusEnum.COMPLETED);
   }
+
+  if (orchestratorStatus.customStatus === "ERROR") {
+    return right(StatusEnum.ERROR);
+  }
+
   switch (orchestratorStatus.runtimeStatus) {
     case df.OrchestrationRuntimeStatus.Pending:
-      return taskEither.of(StatusEnum.PENDING);
+      return right(StatusEnum.PENDING);
     case df.OrchestrationRuntimeStatus.Running:
     case df.OrchestrationRuntimeStatus.ContinuedAsNew:
-      return taskEither.of(StatusEnum.RUNNING);
+      return right(StatusEnum.RUNNING);
     case df.OrchestrationRuntimeStatus.Failed:
-      return taskEither.of(StatusEnum.ERROR);
+      return right(StatusEnum.ERROR);
     case df.OrchestrationRuntimeStatus.Completed:
-      return taskEither.of(StatusEnum.COMPLETED);
+      return right(StatusEnum.COMPLETED);
     default:
-      return fromLeft(
+      return left(
         ResponseErrorNotFound("Not found", "Cannot recognize status")
       );
   }
@@ -129,7 +134,7 @@ export function GetCgnActivationHandler(
                   ),
                 orchestrationStatus =>
                   // now try to map orchestrator status
-                  mapOrchestratorStatus(orchestrationStatus).map(
+                  fromEither(mapOrchestratorStatus(orchestrationStatus)).map(
                     _ =>
                       ({
                         activationDetail: {
