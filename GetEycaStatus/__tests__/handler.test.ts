@@ -1,6 +1,7 @@
 /* tslint:disable: no-any */
 
 import * as date_fns from "date-fns";
+import { right } from "fp-ts/lib/Either";
 import { some } from "fp-ts/lib/Option";
 import { none } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
@@ -15,7 +16,8 @@ import {
 import { StatusEnum as RevokedStatusEnum } from "../../generated/definitions/CardRevoked";
 import { EycaCardActivated } from "../../generated/definitions/EycaCardActivated";
 import { EycaCardRevoked } from "../../generated/definitions/EycaCardRevoked";
-import { UserEycaCard, UserEycaCardModel } from "../../models/user_eyca_card";
+import { UserEycaCard } from "../../models/user_eyca_card";
+import * as cgn_checks from "../../utils/cgn_checks";
 import { GetEycaStatusHandler } from "../handler";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
@@ -51,6 +53,8 @@ const anActivatedEycaCard: EycaCardActivated = {
   expiration_date: date_fns.addDays(now, 10),
   status: ActivatedStatusEnum.ACTIVATED
 };
+const isEycaEligibleMock = jest.fn().mockImplementation(() => right(false));
+jest.spyOn(cgn_checks, "isEycaEligible").mockImplementation(isEycaEligibleMock);
 
 const successImpl = async (userEycaCard: UserEycaCard) => {
   const handler = GetEycaStatusHandler(userEycaCardModelMock as any);
@@ -79,6 +83,16 @@ describe("GetEycaCardStatusHandler", () => {
     const handler = GetEycaStatusHandler(userEycaCardModelMock as any);
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorNotFound");
+  });
+
+  it("should return conflict if no userEycaCard is found but user is eligible to get it", async () => {
+    findLastVersionByModelIdMock.mockImplementationOnce(() =>
+      taskEither.of(none)
+    );
+    isEycaEligibleMock.mockImplementationOnce(() => right(true));
+    const handler = GetEycaStatusHandler(userEycaCardModelMock as any);
+    const response = await handler({} as any, aFiscalCode);
+    expect(response.kind).toBe("IResponseErrorConflict");
   });
 
   it("should return success if a pending userEycaCard is found", async () => {

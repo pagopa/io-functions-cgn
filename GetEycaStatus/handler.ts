@@ -11,9 +11,11 @@ import {
   wrapRequestHandler
 } from "io-functions-commons/dist/src/utils/request_middleware";
 import {
+  IResponseErrorConflict,
   IResponseErrorInternal,
   IResponseErrorNotFound,
   IResponseSuccessJson,
+  ResponseErrorConflict,
   ResponseErrorInternal,
   ResponseErrorNotFound,
   ResponseSuccessJson
@@ -22,11 +24,13 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 
 import { EycaCard } from "../generated/definitions/EycaCard";
 import { UserEycaCardModel } from "../models/user_eyca_card";
+import { isEycaEligible } from "../utils/cgn_checks";
 
-type ResponseTypes =
-  | IResponseSuccessJson<EycaCard>
+type ErrorTypes =
   | IResponseErrorNotFound
-  | IResponseErrorInternal;
+  | IResponseErrorInternal
+  | IResponseErrorConflict;
+type ResponseTypes = IResponseSuccessJson<EycaCard> | ErrorTypes;
 
 type IGetEycaStatusHandler = (
   context: Context,
@@ -39,7 +43,7 @@ export function GetEycaStatusHandler(
   return async (_, fiscalCode) => {
     return userEycaCardModel
       .findLastVersionByModelId([fiscalCode])
-      .mapLeft<IResponseErrorInternal | IResponseErrorNotFound>(() =>
+      .mapLeft<ErrorTypes>(() =>
         ResponseErrorInternal(
           "Error trying to retrieve user's EYCA Card status"
         )
@@ -52,6 +56,19 @@ export function GetEycaStatusHandler(
               "User's EYCA Card status not found"
             )
           )(maybeUserEycaCard)
+        ).mapLeft(notFoundError =>
+          isEycaEligible(fiscalCode).fold<ErrorTypes>(
+            () =>
+              ResponseErrorInternal(
+                "Cannot perform user's EYCA eligibility check"
+              ),
+            isEligible =>
+              isEligible
+                ? ResponseErrorConflict(
+                    "EYCA Card is missing while citizen is eligible to obtain it"
+                  )
+                : notFoundError
+          )
         )
       )
       .fold<ResponseTypes>(identity, userEycaCard =>

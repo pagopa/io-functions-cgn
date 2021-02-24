@@ -107,6 +107,8 @@ paths:
           description: Wrong or missing function key.
         "404":
           description: No EYCA found.
+        "409":
+          description: EYCA Card is missing while citizen is eligible to obtain it.
         "500":
           description: Service unavailable.
           schema:
