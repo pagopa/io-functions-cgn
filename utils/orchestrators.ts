@@ -182,31 +182,25 @@ export const trackExceptionAndThrow = (
   context: IOrchestrationFunctionContext,
   logPrefix: string
 ) => (err: Error | t.Errors, name: string) => {
-  context.log.verbose(
-    err instanceof Error
-      ? `${logPrefix}|ERROR=${err.message}`
-      : `${logPrefix}|ERROR=${readableReport(err)}`
-  );
+  const errMessage = err instanceof Error ? err.message : readableReport(err);
+  context.log.verbose(`${logPrefix}|ERROR=${errMessage}`);
   trackException({
-    exception: new Error(`${logPrefix}|ERROR=${String(err)}`),
+    exception: new Error(`${logPrefix}|ERROR=${errMessage}`),
     properties: {
       name
     }
   });
-  throw new Error(String(err));
+  throw new Error(errMessage);
 };
 
 export const trackExceptionAndThrowWithErrorStatus = (
   context: IOrchestrationFunctionContext,
   logPrefix: string
 ) => (err: Error | t.Errors, name: string) => {
-  context.log.verbose(
-    err instanceof Error
-      ? `${logPrefix}|ERROR=${err.message}`
-      : `${logPrefix}|ERROR=${readableReport(err)}`
-  );
+  const errMessage = err instanceof Error ? err.message : readableReport(err);
+  context.log.verbose(`${logPrefix}|ERROR=${errMessage}`);
   trackException({
-    exception: new Error(`${logPrefix}|ERROR=${String(err)}`),
+    exception: new Error(`${logPrefix}|ERROR=${errMessage}`),
     properties: {
       name
     }
@@ -214,14 +208,22 @@ export const trackExceptionAndThrowWithErrorStatus = (
   if (!context.df.isReplaying) {
     context.df.setCustomStatus("ERROR");
   }
-  throw new Error(String(err));
+  throw new Error(errMessage);
 };
 
+/**
+ * This function is used to track an AI's event
+ * only when the orchestrator attempts max number of retries
+ */
 export const trackEventIfNotReplaying = (
   context: IOrchestrationFunctionContext
 ) => (evt: EventTelemetry) =>
   context.df.isReplaying ? constVoid : trackEvent(evt);
 
+/**
+ * This function is used to track an AI's exception
+ * only when the orchestrator attempts max number of retries
+ */
 export const trackExceptionIfNotReplaying = (
   context: IOrchestrationFunctionContext
 ) => (evt: ExceptionTelemetry) =>
