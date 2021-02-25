@@ -3,7 +3,7 @@ import * as express from "express";
 import { Context } from "@azure/functions";
 import { fromOption } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
-import { fromEither } from "fp-ts/lib/TaskEither";
+import { fromEither, fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { RequiredParamMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_param";
 import {
@@ -12,24 +12,30 @@ import {
 } from "io-functions-commons/dist/src/utils/request_middleware";
 import {
   IResponseErrorConflict,
+  IResponseErrorForbiddenNotAuthorized,
   IResponseErrorInternal,
   IResponseErrorNotFound,
   IResponseSuccessJson,
   ResponseErrorConflict,
+  ResponseErrorForbiddenNotAuthorized,
   ResponseErrorInternal,
   ResponseErrorNotFound,
   ResponseSuccessJson
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 
+import { fromPredicate } from "fp-ts/lib/TaskEither";
+import { CardPending } from "../generated/definitions/CardPending";
 import { EycaCard } from "../generated/definitions/EycaCard";
-import { UserEycaCardModel } from "../models/user_eyca_card";
+import { UserCgnModel } from "../models/user_cgn";
+import { UserEycaCard, UserEycaCardModel } from "../models/user_eyca_card";
 import { isEycaEligible } from "../utils/cgn_checks";
 
 type ErrorTypes =
   | IResponseErrorNotFound
   | IResponseErrorInternal
-  | IResponseErrorConflict;
+  | IResponseErrorConflict
+  | IResponseErrorForbiddenNotAuthorized;
 type ResponseTypes = IResponseSuccessJson<EycaCard> | ErrorTypes;
 
 type IGetEycaStatusHandler = (
@@ -38,17 +44,30 @@ type IGetEycaStatusHandler = (
 ) => Promise<ResponseTypes>;
 
 export function GetEycaStatusHandler(
-  userEycaCardModel: UserEycaCardModel
+  userEycaCardModel: UserEycaCardModel,
+  userCgnModel: UserCgnModel
 ): IGetEycaStatusHandler {
-  return async (_, fiscalCode) => {
-    return userEycaCardModel
-      .findLastVersionByModelId([fiscalCode])
+  return async (_, fiscalCode) =>
+    fromEither(isEycaEligible(fiscalCode))
       .mapLeft<ErrorTypes>(() =>
-        ResponseErrorInternal(
-          "Error trying to retrieve user's EYCA Card status"
+        ResponseErrorInternal("Cannot perform user's EYCA eligibility check")
+      )
+      .chain(
+        fromPredicate(
+          isEligible => isEligible,
+          () => ResponseErrorForbiddenNotAuthorized
         )
       )
-      .chain(maybeUserEycaCard =>
+      .chain(() =>
+        userEycaCardModel
+          .findLastVersionByModelId([fiscalCode])
+          .mapLeft(() =>
+            ResponseErrorInternal(
+              "Error trying to retrieve user's EYCA Card status"
+            )
+          )
+      )
+      .chain<UserEycaCard>(maybeUserEycaCard =>
         fromEither(
           fromOption(
             ResponseErrorNotFound(
@@ -56,32 +75,42 @@ export function GetEycaStatusHandler(
               "User's EYCA Card status not found"
             )
           )(maybeUserEycaCard)
-        ).mapLeft(notFoundError =>
-          isEycaEligible(fiscalCode).fold<ErrorTypes>(
-            () =>
-              ResponseErrorInternal(
-                "Cannot perform user's EYCA eligibility check"
-              ),
-            isEligible =>
-              isEligible
-                ? ResponseErrorConflict(
-                    "EYCA Card is missing while citizen is eligible to obtain it"
-                  )
-                : notFoundError
-          )
+        ).foldTaskEither(
+          notFoundError =>
+            userCgnModel
+              .findLastVersionByModelId([fiscalCode])
+              .mapLeft<ErrorTypes>(() =>
+                ResponseErrorInternal(
+                  "Error trying to retrieve user's CGN Card status"
+                )
+              )
+              .chain(maybeUserCgn =>
+                fromEither(fromOption(notFoundError)(maybeUserCgn))
+              )
+              .chain(
+                fromPredicate(
+                  userCgn => CardPending.is(userCgn.card),
+                  () =>
+                    ResponseErrorConflict(
+                      "EYCA Card is missing while citizen is eligible to obtain it"
+                    )
+                )
+              )
+              .chain(() => fromLeft(notFoundError)),
+          card => taskEither.of(card)
         )
       )
       .fold<ResponseTypes>(identity, userEycaCard =>
         ResponseSuccessJson(userEycaCard.card)
       )
       .run();
-  };
 }
 
 export function GetEycaStatus(
-  userEycaCardModel: UserEycaCardModel
+  userEycaCardModel: UserEycaCardModel,
+  userCgnModel: UserCgnModel
 ): express.RequestHandler {
-  const handler = GetEycaStatusHandler(userEycaCardModel);
+  const handler = GetEycaStatusHandler(userEycaCardModel, userCgnModel);
 
   const middlewaresWrap = withRequestMiddlewares(
     ContextMiddleware(),
