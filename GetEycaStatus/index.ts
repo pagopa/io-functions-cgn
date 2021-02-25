@@ -7,6 +7,7 @@ import { AzureContextTransport } from "io-functions-commons/dist/src/utils/loggi
 import { setAppContext } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import createAzureFunctionHandler from "io-functions-express/dist/src/createAzureFunctionsHandler";
 
+import { USER_CGN_COLLECTION_NAME, UserCgnModel } from "../models/user_cgn";
 import {
   USER_EYCA_CARD_COLLECTION_NAME,
   UserEycaCardModel
@@ -27,6 +28,12 @@ const userEycaCardsContainer = cosmosdbClient
 
 const userEycaCardModel = new UserEycaCardModel(userEycaCardsContainer);
 
+const userCgnsContainer = cosmosdbClient
+  .database(config.COSMOSDB_CGN_DATABASE_NAME)
+  .container(USER_CGN_COLLECTION_NAME);
+
+const userCgnModel = new UserCgnModel(userCgnsContainer);
+
 // tslint:disable-next-line: no-let
 let logger: Context["log"] | undefined;
 const contextTransport = new AzureContextTransport(() => logger, {
@@ -41,7 +48,7 @@ secureExpressApp(app);
 // Add express route
 app.get(
   "/api/v1/cgn/eyca/status/:fiscalcode",
-  GetEycaStatus(userEycaCardModel)
+  GetEycaStatus(userEycaCardModel, userCgnModel)
 );
 
 const azureFunctionHandler = createAzureFunctionHandler(app);
