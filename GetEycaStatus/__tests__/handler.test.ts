@@ -1,7 +1,7 @@
 /* tslint:disable: no-any */
 
 import * as date_fns from "date-fns";
-import { right } from "fp-ts/lib/Either";
+import { left, right } from "fp-ts/lib/Either";
 import { some } from "fp-ts/lib/Option";
 import { none } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
@@ -53,7 +53,7 @@ const anActivatedEycaCard: EycaCardActivated = {
   expiration_date: date_fns.addDays(now, 10),
   status: ActivatedStatusEnum.ACTIVATED
 };
-const isEycaEligibleMock = jest.fn().mockImplementation(() => right(false));
+const isEycaEligibleMock = jest.fn().mockImplementation(() => right(true));
 jest.spyOn(cgn_checks, "isEycaEligible").mockImplementation(isEycaEligibleMock);
 
 const successImpl = async (userEycaCard: UserEycaCard) => {
@@ -76,10 +76,11 @@ describe("GetEycaCardStatusHandler", () => {
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
-  it("should return not found if no userEycaCard is found", async () => {
+  it("should return not found if no userEycaCard is found and user is not eligible to get it", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       taskEither.of(none)
     );
+    isEycaEligibleMock.mockImplementationOnce(() => right(false));
     const handler = GetEycaStatusHandler(userEycaCardModelMock as any);
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorNotFound");
@@ -89,10 +90,21 @@ describe("GetEycaCardStatusHandler", () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       taskEither.of(none)
     );
-    isEycaEligibleMock.mockImplementationOnce(() => right(true));
     const handler = GetEycaStatusHandler(userEycaCardModelMock as any);
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorConflict");
+  });
+
+  it("should return internal error if no userEycaCard is found and eligibility check on user fails", async () => {
+    findLastVersionByModelIdMock.mockImplementationOnce(() =>
+      taskEither.of(none)
+    );
+    isEycaEligibleMock.mockImplementationOnce(() =>
+      left(new Error("Cannot recognize EYCA eligibility"))
+    );
+    const handler = GetEycaStatusHandler(userEycaCardModelMock as any);
+    const response = await handler({} as any, aFiscalCode);
+    expect(response.kind).toBe("IResponseErrorInternal");
   });
 
   it("should return success if a pending userEycaCard is found", async () => {
