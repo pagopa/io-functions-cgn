@@ -22,6 +22,10 @@ export const IConfig = t.interface({
   AzureWebJobsStorage: NonEmptyString,
   CGN_STORAGE_CONNECTION_STRING: NonEmptyString,
 
+  EYCA_API_BASE_URL: NonEmptyString,
+  EYCA_API_PASSWORD: NonEmptyString,
+  EYCA_API_USERNAME: NonEmptyString,
+
   isProduction: t.boolean
 });
 

@@ -38,7 +38,7 @@ export const getUpdateCgnStatusActivityHandler = (
         )
         .map(userCgn => ({
           ...userCgn,
-          status: activityInput.card
+          card: activityInput.card
         }))
     )
     .chain(_ =>

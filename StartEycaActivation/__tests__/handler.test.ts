@@ -17,10 +17,11 @@ import * as checks from "../../utils/cgn_checks";
 import * as orchUtils from "../../utils/orchestrators";
 
 import { ResponseSuccessAccepted } from "italia-ts-commons/lib/responses";
+import { CcdbNumber } from "../../generated/definitions/CcdbNumber";
 import { StartEycaActivationHandler } from "../handler";
 
 const aFiscalCode = "RODFDS89S10H501T" as FiscalCode;
-const anEycaCardNumber = "AAAAA" as NonEmptyString;
+const anEycaCardNumber = "A123-A123-A123-A123" as CcdbNumber;
 
 const aUserCardActivated: CardActivated = {
   activation_date: new Date(),
