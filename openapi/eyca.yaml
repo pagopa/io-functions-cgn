@@ -1,0 +1,473 @@
+swagger: "2.0"
+info:
+  version: 0.0.1
+  title: EYCA CCDB API
+  description: >
+    Documentation of the EYCA CCDB API here.
+host: ccdb.eyca.org
+basePath: "/api"
+schemes:
+  - https
+
+paths:
+  "/auth":
+    get:
+      summary: Perform API Login
+      operationId: authLogin
+      description: |
+        Perform API login through EYCA membership credentials
+      parameters:
+        - in: query
+          name: username
+          type: string
+          required: true
+          minLength: 1
+        - in: query
+          name: password
+          type: string
+          required: true
+          minLength: 1
+        - $ref: "#/parameters/JsonType"
+      responses:
+        "200":
+          description: Response details.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "400":
+          description: Bad Request.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "401":
+          description: Unauthorized.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "403":
+          description: Forbidden.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "404":
+          description: No Account found.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "409":
+          description: Conflict.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "429":
+          description: Too many requests.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+  "/preissue_card":
+    get:
+      summary: Perform EYCA PreIssue Card number
+      operationId: preIssueCard
+      description: |
+        Perform EYCA PreIssue Card number
+      parameters:
+        - $ref: "#/parameters/JsonType"
+        - in: query
+          name: username
+          type: string
+          required: true
+          minLength: 1
+        - in: query
+          name: password
+          type: string
+          required: true
+          minLength: 1
+      responses:
+        "200":
+          description: Response details.
+          schema:
+            $ref: "#/definitions/CardOperationResponse"
+        "400":
+          description: Bad Request.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "401":
+          description: Unauthorized.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse" 
+        "403":
+          description: Forbidden.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "404":
+          description: No Account found.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "409":
+          description: Conflict.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "429":
+          description: Too many requests.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+  "/update_card":
+    get:
+      summary: Perform EYCA Card update
+      operationId: updateCard
+      description: |
+        Perform EYCA Card update and eventually activation
+      parameters:
+        - in: query
+          name: username
+          type: string
+          required: true
+          minLength: 1
+        - in: query
+          name: password
+          type: string
+          required: true
+          minLength: 1
+        - in: query
+          name: "card_date_expiration"
+          type: string
+          required: true
+        - $ref: "#/parameters/CcdbNumberParam"
+        - $ref: "#/parameters/JsonType"
+      responses:
+        "200":
+          description: Response details.
+          schema:
+            $ref: "#/definitions/CardOperationResponse"
+        "400":
+          description: Bad Request.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "401":
+          description: Unauthorized.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse" 
+        "403":
+          description: Forbidden.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "404":
+          description: No Account found.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "409":
+          description: Conflict.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "429":
+          description: Too many requests.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+  
+    
+consumes:
+  - application/json
+produces:
+  - application/json
+
+parameters:
+  JsonType:
+    in: query
+    name: type
+    type: string
+  CcdbNumberParam:
+    in: query
+    name: "ccdb_number"
+    type: string
+    required: true
+  CardDateExpiration:
+    in: query
+    name: "card_date_expiration"
+    type: string
+    required: true
+
+definitions:
+  Timestamp:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/Timestamp"
+  FiscalCode:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/FiscalCode"
+  ProblemJson:
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/ProblemJson"
+  
+  ShortDate:
+    type: string
+    format: DateFromString
+    description: A date field in short format.
+    x-import: italia-ts-commons/lib/dates
+    example: "2018-10-13"
+
+  CcdbNumber:
+    type: string
+    description: The internal CCDB Card number
+    pattern: "^[A-Z][0-9]{3}-[A-Z][0-9]{3}-[A-Z][0-9]{3}-[A-Z][0-9]{3}$"
+    minLength: 1
+
+  CommonResponse:
+    type: object
+    properties:
+      text:
+        type: string
+        minLength: 1
+      http_status:
+        type: number
+    required:
+      - text
+      - http_status
+  CommonSuccessResponse:
+    allOf:
+      - $ref: "#/definitions/CommonResponse"
+      - type: object
+        properties: 
+          error:
+            type: number
+            minimum: 0
+            maximum: 0
+        required:
+          - error
+
+  CommonErrorResponse:
+    allOf:
+      - $ref: "#/definitions/CommonResponse"
+      - type: object
+        properties: 
+          error:
+            type: number
+            minimum: 1
+            maximum: 1
+        required:
+          - error
+  
+  UnauthorizedErrorResponse:
+    allOf:
+      - $ref: "#/definitions/CommonErrorResponse"
+      - type: object
+        properties: 
+          code:
+            type: number
+            minimum: 1
+            maximum: 1
+        required:
+          - code
+  ForbiddenErrorResponse:
+    allOf:
+      - $ref: "#/definitions/CommonErrorResponse"
+      - type: object
+        properties: 
+          code:
+            type: number
+            minimum: 2
+            maximum: 2
+        required:
+          - code
+  NotFoundErrorResponse:
+    allOf:
+      - $ref: "#/definitions/CommonErrorResponse"
+      - type: object
+        properties: 
+          code:
+            type: number
+            minimum: 3
+            maximum: 3
+        required:
+          - code
+  InternalServerErrorResponse:
+    allOf:
+      - $ref: "#/definitions/CommonErrorResponse"
+      - type: object
+        properties: 
+          code:
+            type: number
+            minimum: 4
+            maximum: 4
+        required:
+          - code
+  BadRequestErrorResponse:
+    allOf:
+      - $ref: "#/definitions/CommonErrorResponse"
+      - type: object
+        properties: 
+          code:
+            type: number
+            minimum: 5
+            maximum: 5
+        required:
+          - code
+  InvalidCardErrorResponse:
+    allOf:
+      - $ref: "#/definitions/CommonErrorResponse"
+      - type: object
+        properties: 
+          code:
+            type: number
+            minimum: 10
+            maximum: 18
+        required:
+          - code
+  BadCredentialsErrorResponse:
+    allOf:
+      - $ref: "#/definitions/CommonErrorResponse"
+      - type: object
+        properties: 
+          code:
+            type: number
+            minimum: 30
+            maximum: 30
+        required:
+          - code
+  AccountOrIpLockdownErrorResponse:
+    allOf:
+      - $ref: "#/definitions/CommonErrorResponse"
+      - type: object
+        properties: 
+          code:
+            type: number
+            minimum: 31
+            maximum: 32
+        required:
+          - code
+  AccountDisabledErrorResponse:
+    allOf:
+      - $ref: "#/definitions/CommonErrorResponse"
+      - type: object
+        properties: 
+          code:
+            type: number
+            minimum: 33
+            maximum: 33
+        required:
+          - code
+  TooManyObjectsErrorResponse:
+    allOf:
+      - $ref: "#/definitions/CommonErrorResponse"
+      - type: object
+        properties: 
+          code:
+            type: number
+            minimum: 100
+            maximum: 100
+        required:
+          - code
+  BadSyntaxErrorResponse:
+    allOf:
+      - $ref: "#/definitions/CommonErrorResponse"
+      - type: object
+        properties: 
+          code:
+            type: number
+            minimum: 103
+            maximum: 103
+        required:
+          - code
+  ObjectNotFoundErrorResponse:
+    allOf:
+      - $ref: "#/definitions/CommonErrorResponse"
+      - type: object
+        properties: 
+          code:
+            type: number
+            minimum: 104
+            maximum: 104
+        required:
+          - code
+  ObjectAlreadyExistsErrorResponse:
+    allOf:
+      - $ref: "#/definitions/CommonErrorResponse"
+      - type: object
+        properties: 
+          code:
+            type: number
+            minimum: 105
+            maximum: 105
+        required:
+          - code
+  ErrorResponse:
+    x-one-of: true
+    allOf:
+      - $ref: "#/definitions/UnauthorizedErrorResponse"
+      - $ref: "#/definitions/ForbiddenErrorResponse"
+      - $ref: "#/definitions/NotFoundErrorResponse"
+      - $ref: "#/definitions/InternalServerErrorResponse"
+      - $ref: "#/definitions/BadRequestErrorResponse"
+      - $ref: "#/definitions/BadCredentialsErrorResponse"
+      - $ref: "#/definitions/InvalidCardErrorResponse"
+      - $ref: "#/definitions/AccountOrIpLockdownErrorResponse"
+      - $ref: "#/definitions/AccountDisabledErrorResponse"
+      - $ref: "#/definitions/TooManyObjectsErrorResponse"
+      - $ref: "#/definitions/BadSyntaxErrorResponse"
+      - $ref: "#/definitions/ObjectNotFoundErrorResponse"
+      - $ref: "#/definitions/ObjectAlreadyExistsErrorResponse"
+
+  CommonApiResponse:
+    x-one-of: true
+    allOf:
+      - $ref: "#/definitions/ErrorResponse"
+      - $ref: "#/definitions/CommonSuccessResponse"
+
+  CardItemObject:
+    type: object
+    properties:
+      card_date_issue:
+        $ref: "#/definitions/ShortDate"
+      ccdb_number:
+        $ref: "#/definitions/CcdbNumber"
+      card_date_expiration:
+        $ref: "#/definitions/ShortDate"
+      organization_id:
+        type: string
+        minLength: 1
+    required:
+      - card_date_issue
+      - ccdb_number
+      - card_date_expiration
+      - organization_id
+  CommonDataCardPayload:
+    type: object
+    properties:
+      data:
+        type: object
+        properties:
+          card:
+            type: array
+            items:
+              $ref: "#/definitions/CardItemObject"
+        required:
+          - card
+    required:
+      - data
+
+  CardOperationSuccessResponse:
+    allOf:
+      - $ref: "#/definitions/CommonSuccessResponse"
+      - $ref: "#/definitions/CommonDataCardPayload"
+  CommonCardOperationApiResponse:
+    x-one-of: true
+    allOf:
+      - $ref: "#/definitions/ErrorResponse"
+      - $ref: "#/definitions/CardOperationSuccessResponse"
+  CommonEycaResponse:
+    type: object
+    properties:
+      api_response:
+        $ref: "#/definitions/CommonApiResponse"
+    required:
+      - api_response
+  
+  CardOperationResponse:
+    type: object
+    properties:
+      api_response:
+        $ref: "#/definitions/CommonCardOperationApiResponse"
+    required:
+      - api_response    
+
+      

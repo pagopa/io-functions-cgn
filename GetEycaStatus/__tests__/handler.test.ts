@@ -13,13 +13,14 @@ import {
   StatusEnum as PendingStatusEnum
 } from "../../generated/definitions/CardPending";
 import { StatusEnum as RevokedStatusEnum } from "../../generated/definitions/CardRevoked";
+import { CcdbNumber } from "../../generated/definitions/CcdbNumber";
 import { EycaCardActivated } from "../../generated/definitions/EycaCardActivated";
 import { EycaCardRevoked } from "../../generated/definitions/EycaCardRevoked";
 import { UserEycaCard, UserEycaCardModel } from "../../models/user_eyca_card";
 import { GetEycaStatusHandler } from "../handler";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
-const aUserEycaCardNumber = "AN_ID" as NonEmptyString;
+const aUserEycaCardNumber = "A123-A123-A123-A123" as CcdbNumber;
 
 const aPendingEycaCard: CardPending = {
   status: PendingStatusEnum.PENDING
