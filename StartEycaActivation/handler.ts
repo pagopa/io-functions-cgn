@@ -209,7 +209,7 @@ export function StartEycaActivationHandler(
                 fromEither(extractEycaExpirationDate(fiscalCode))
                   .mapLeft(() =>
                     ResponseErrorInternal(
-                      `Error calculating Expiration Date from Fiscal Code`
+                      `Error extracting Expiration Date from Fiscal Code`
                     )
                   )
                   .chain(expirationDate =>
