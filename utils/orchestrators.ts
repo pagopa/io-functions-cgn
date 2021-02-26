@@ -193,7 +193,7 @@ export const trackExceptionAndThrow = (
   throw new Error(errMessage);
 };
 
-export const trackExceptionAndThrowWithErrorStatus = (
+export const getTrackExceptionAndThrowWithErrorStatus = (
   context: IOrchestrationFunctionContext,
   logPrefix: string
 ) => (err: Error | t.Errors, name: string) => {

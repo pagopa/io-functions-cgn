@@ -17,9 +17,9 @@ import { ActivityResult } from "../utils/activity";
 import { isEycaEligible } from "../utils/cgn_checks";
 import { getMessage } from "../utils/messages";
 import {
+  getTrackExceptionAndThrowWithErrorStatus,
   trackEventIfNotReplaying,
   trackExceptionAndThrow,
-  trackExceptionAndThrowWithErrorStatus,
   trackExceptionIfNotReplaying
 } from "../utils/orchestrators";
 import { internalRetryOptions } from "../utils/retry_policies";
@@ -37,7 +37,7 @@ export const handler = function*(
   logPrefix: string = "UpdateCgnOrchestrator"
 ): Generator {
   const trackExAndThrow = trackExceptionAndThrow(context, logPrefix);
-  const trackExAndThrowWithError = trackExceptionAndThrowWithErrorStatus(
+  const trackExAndThrowWithError = getTrackExceptionAndThrowWithErrorStatus(
     context,
     logPrefix
   );

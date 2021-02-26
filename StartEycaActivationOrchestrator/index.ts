@@ -9,7 +9,7 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { ActivityInput } from "../SuccessEycaActivationActivity/handler";
 import { ActivityResult } from "../utils/activity";
 import { trackException } from "../utils/appinsights";
-import { trackExceptionAndThrowWithErrorStatus } from "../utils/orchestrators";
+import { getTrackExceptionAndThrowWithErrorStatus } from "../utils/orchestrators";
 import { internalRetryOptions } from "../utils/retry_policies";
 
 export const OrchestratorInput = t.interface({
@@ -21,7 +21,7 @@ export const handler = function*(
   context: IOrchestrationFunctionContext,
   logPrefix: string = "StartEycaActivationOrchestrator"
 ): Generator {
-  const trackExAndThrowWithErrorStatus = trackExceptionAndThrowWithErrorStatus(
+  const trackExAndThrowWithErrorStatus = getTrackExceptionAndThrowWithErrorStatus(
     context,
     logPrefix
   );

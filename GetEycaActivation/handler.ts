@@ -2,8 +2,7 @@ import * as express from "express";
 
 import { Context } from "@azure/functions";
 import * as df from "durable-functions";
-import { DurableOrchestrationStatus } from "durable-functions/lib/src/classes";
-import { Either, left, right } from "fp-ts/lib/Either";
+import { fromOption } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
 import { fromNullable } from "fp-ts/lib/Option";
 import { fromEither, taskEither } from "fp-ts/lib/TaskEither";
@@ -25,6 +24,7 @@ import { CardActivated } from "../generated/definitions/CardActivated";
 import { StatusEnum } from "../generated/definitions/CgnActivationDetail";
 import { EycaActivationDetail } from "../generated/definitions/EycaActivationDetail";
 import { UserEycaCardModel } from "../models/user_eyca_card";
+import { getActivationStatus } from "../utils/activation";
 import { retrieveUserEycaCard } from "../utils/models";
 import {
   getOrchestratorStatus,
@@ -40,34 +40,6 @@ type IGetEycaActivationHandler = (
   context: Context,
   fiscalCode: FiscalCode
 ) => Promise<ResponseTypes>;
-
-const mapOrchestratorStatus = (
-  orchestratorStatus: DurableOrchestrationStatus
-): Either<Error, StatusEnum> => {
-  if (
-    orchestratorStatus.customStatus === "UPDATED" ||
-    orchestratorStatus.customStatus === "COMPLETED"
-  ) {
-    return right(StatusEnum.COMPLETED);
-  }
-
-  if (orchestratorStatus.customStatus === "ERROR") {
-    return right(StatusEnum.ERROR);
-  }
-  switch (orchestratorStatus.runtimeStatus) {
-    case df.OrchestrationRuntimeStatus.Pending:
-      return right(StatusEnum.PENDING);
-    case df.OrchestrationRuntimeStatus.Running:
-    case df.OrchestrationRuntimeStatus.ContinuedAsNew:
-      return right(StatusEnum.RUNNING);
-    case df.OrchestrationRuntimeStatus.Failed:
-      return right(StatusEnum.ERROR);
-    case df.OrchestrationRuntimeStatus.Completed:
-      return right(StatusEnum.COMPLETED);
-    default:
-      return left(new Error("Cannot recognize status"));
-  }
-};
 
 export function GetEycaActivationHandler(
   userEycaCardModel: UserEycaCardModel
@@ -88,13 +60,15 @@ export function GetEycaActivationHandler(
               () => fromLeft(new Error("Orchestrator instance not found")),
               orchestrationStatus =>
                 // now try to map orchestrator status
-                fromEither(mapOrchestratorStatus(orchestrationStatus)).map(
-                  _ => ({
-                    created_at: orchestrationStatus.createdTime,
-                    last_updated_at: orchestrationStatus.lastUpdatedTime,
-                    status: _
-                  })
-                )
+                fromEither(
+                  fromOption(new Error("Cannot recognize status"))(
+                    getActivationStatus(orchestrationStatus)
+                  )
+                ).map(_ => ({
+                  created_at: orchestrationStatus.createdTime,
+                  last_updated_at: orchestrationStatus.lastUpdatedTime,
+                  status: _
+                }))
             )
           )
           .foldTaskEither<
