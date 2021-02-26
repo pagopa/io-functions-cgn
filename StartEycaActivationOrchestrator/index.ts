@@ -2,7 +2,7 @@
 
 import { ExceptionTelemetry } from "applicationinsights/out/Declarations/Contracts";
 import * as df from "durable-functions";
-import { constVoid } from "fp-ts/lib/function";
+import { constVoid, identity } from "fp-ts/lib/function";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
@@ -13,6 +13,8 @@ import {
   ActivityResultSuccessWithValue
 } from "../SuccessEycaActivationActivity/handler";
 
+import { fromPredicate } from "fp-ts/lib/Either";
+import { ActivityResult } from "../utils/activity";
 import { trackException } from "../utils/appinsights";
 import { internalRetryOptions } from "../utils/retry_policies";
 
@@ -71,12 +73,29 @@ export const handler = function*(
       updateEycaStatusActivityInput
     );
 
-    const storedEycaCard = ActivityResultSuccessWithValue.decode(
-      updateStatusResult
-    ).fold(
-      _ => trackExAndThrow(_, "eyca.activate.exception.failure.activityOutput"),
-      result => result.value
-    );
+    const storedEycaCard = ActivityResult.decode(updateStatusResult)
+      .mapLeft(_ =>
+        trackExAndThrow(_, "eyca.activate.exception.decode.activityOutput")
+      )
+      .chain(
+        fromPredicate(
+          res => res.kind === "SUCCESS",
+          () =>
+            trackExAndThrow(
+              new Error("Cannot activate EYCA Card"),
+              "eyca.activate.exception.failure.activityOutput"
+            )
+        )
+      )
+      .chain(_ =>
+        ActivityResultSuccessWithValue.decode(_).mapLeft(err =>
+          trackExAndThrow(
+            err,
+            "eyca.activate.exception.decode.successActivityOutput"
+          )
+        )
+      )
+      .fold(identity, v => v.value);
 
     yield context.df.callActivityWithRetry(
       "StoreEycaExpirationActivity",
