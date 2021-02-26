@@ -9,25 +9,40 @@ import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 
+export const RedisParams = t.intersection([
+  t.interface({
+    REDIS_URL: NonEmptyString
+  }),
+  t.partial({
+    REDIS_CLUSTER_ENABLED: t.boolean,
+    REDIS_PASSWORD: NonEmptyString,
+    REDIS_PORT: NonEmptyString
+  })
+]);
+export type RedisParams = t.TypeOf<typeof RedisParams>;
+
 // global app configuration
 export type IConfig = t.TypeOf<typeof IConfig>;
-export const IConfig = t.interface({
-  APPINSIGHTS_INSTRUMENTATIONKEY: NonEmptyString,
+export const IConfig = t.intersection([
+  t.interface({
+    APPINSIGHTS_INSTRUMENTATIONKEY: NonEmptyString,
 
-  CGN_EXPIRATION_TABLE_NAME: NonEmptyString,
-  COSMOSDB_CGN_DATABASE_NAME: NonEmptyString,
-  COSMOSDB_CGN_KEY: NonEmptyString,
-  COSMOSDB_CGN_URI: NonEmptyString,
+    CGN_EXPIRATION_TABLE_NAME: NonEmptyString,
+    COSMOSDB_CGN_DATABASE_NAME: NonEmptyString,
+    COSMOSDB_CGN_KEY: NonEmptyString,
+    COSMOSDB_CGN_URI: NonEmptyString,
 
-  AzureWebJobsStorage: NonEmptyString,
-  CGN_STORAGE_CONNECTION_STRING: NonEmptyString,
+    AzureWebJobsStorage: NonEmptyString,
+    CGN_STORAGE_CONNECTION_STRING: NonEmptyString,
 
-  EYCA_API_BASE_URL: NonEmptyString,
-  EYCA_API_PASSWORD: NonEmptyString,
-  EYCA_API_USERNAME: NonEmptyString,
+    EYCA_API_BASE_URL: NonEmptyString,
+    EYCA_API_PASSWORD: NonEmptyString,
+    EYCA_API_USERNAME: NonEmptyString,
 
-  isProduction: t.boolean
-});
+    isProduction: t.boolean
+  }),
+  RedisParams
+]);
 
 // No need to re-evaluate this object for each call
 const errorOrConfig: t.Validation<IConfig> = IConfig.decode({
