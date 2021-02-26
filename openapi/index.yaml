@@ -105,8 +105,12 @@ paths:
             $ref: "#/definitions/EycaCard"
         "401":
           description: Wrong or missing function key.
+        "403":
+          description: Forbidden.
         "404":
           description: No EYCA found.
+        "409":
+          description: EYCA Card is missing while citizen is eligible to obtain it.
         "500":
           description: Service unavailable.
           schema:
