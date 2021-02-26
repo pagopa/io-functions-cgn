@@ -19,6 +19,7 @@ import * as orchUtils from "../../utils/orchestrators";
 import { ResponseSuccessAccepted } from "italia-ts-commons/lib/responses";
 import { CcdbNumber } from "../../generated/definitions/CcdbNumber";
 import { StartEycaActivationHandler } from "../handler";
+import * as cgn_checks from "../../utils/cgn_checks";
 
 const aFiscalCode = "RODFDS89S10H501T" as FiscalCode;
 const anEycaCardNumber = "A123-A123-A123-A123" as CcdbNumber;
@@ -53,6 +54,10 @@ const findLastVersionByModelIdMock = jest
 const userCgnModelMock = {
   findLastVersionByModelId: findLastVersionByModelIdMock
 };
+
+const extractEycaExpirationDateMock = jest
+  .spyOn(cgn_checks, "extractEycaExpirationDate")
+  .mockImplementation(() => right(addYears(new Date(), 5)));
 
 const findLastVersionEycaByModelIdMock = jest
   .fn()
@@ -149,6 +154,25 @@ describe("StartEycaActivation", () => {
     );
     const response = await startEycaActivationHandler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorInternal");
+  });
+
+  it("should return an Internal Error if it is not possible to calculate Expiration Date from FiscalCode", async () => {
+    extractEycaExpirationDateMock.mockImplementationOnce(() =>
+      left(new Error("Cannot extract date"))
+    );
+
+    const startEycaActivationHandler = StartEycaActivationHandler(
+      userEycaCardModelMock as any,
+      userCgnModelMock as any
+    );
+    const response = await startEycaActivationHandler({} as any, aFiscalCode);
+    expect(response.kind).toBe("IResponseErrorInternal");
+
+    if (response.kind === "IResponseErrorInternal") {
+      expect(response.detail).toBe(
+        "Internal server error: Error calculating Expiration Date from Fiscal Code"
+      );
+    }
   });
 
   it("should return a Conflict Error if an EYCA Card is already activated", async () => {

@@ -10,7 +10,6 @@ import { CcdbNumber } from "../../generated/eyca-api/CcdbNumber";
 import * as cgn_checks from "../../utils/cgn_checks";
 import {
   ActivityInput,
-  ActivityResultSuccessWithValue,
   getSuccessEycaActivationActivityHandler
 } from "../handler";
 import {
@@ -97,7 +96,9 @@ const eycaApiClient = {
 const anEycaApiUsername = "USERNAME" as NonEmptyString;
 const anEycaApiPassword = "PASSWORD" as NonEmptyString;
 const anActivityInput: ActivityInput = {
-  fiscalCode: aFiscalCode
+  fiscalCode: aFiscalCode,
+  activationDate: new Date(),
+  expirationDate: extractEycaExpirationDate(aFiscalCode).value as Date
 };
 const extractEycaExpirationDateMock = jest
   .spyOn(cgn_checks, "extractEycaExpirationDate")
@@ -108,7 +109,7 @@ describe("SuccessEycaActivationActivity", () => {
     jest.clearAllMocks();
   });
 
-  it("should return success with updated value if card activation succeded", async () => {
+  it("should return success if card activation succeded", async () => {
     const handler = getSuccessEycaActivationActivityHandler(
       eycaApiClient as any,
       anEycaApiUsername,
@@ -117,12 +118,6 @@ describe("SuccessEycaActivationActivity", () => {
     );
     const response = await handler(context, anActivityInput);
     expect(response.kind).toBe("SUCCESS");
-
-    const val = ActivityResultSuccessWithValue.decode(response)
-      .map(res => res.value)
-      .fold<EycaCardActivated | undefined>(_ => undefined, identity);
-
-    expect(val).toMatchObject(anActivatedEycaCard);
   });
 
   it("should return failure if an error occurs during UserEycaCard retrieve", async () => {
@@ -161,19 +156,6 @@ describe("SuccessEycaActivationActivity", () => {
         "No EYCA card found for the provided fiscalCode"
       );
     }
-  });
-  it("should return failure if expiration date extraction fails", async () => {
-    extractEycaExpirationDateMock.mockImplementationOnce(() =>
-      left(new Error("Cannot extract date"))
-    );
-    const handler = getSuccessEycaActivationActivityHandler(
-      eycaApiClient as any,
-      anEycaApiUsername,
-      anEycaApiPassword,
-      userEycaCardModelMock as any
-    );
-    const response = await handler(context, anActivityInput);
-    expect(response.kind).toBe("FAILURE");
   });
 
   it("should return failure if EYCA card code retrieve fails", async () => {

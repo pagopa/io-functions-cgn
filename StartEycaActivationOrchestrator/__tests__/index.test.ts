@@ -1,26 +1,17 @@
 // tslint:disable: object-literal-sort-keys
 
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { EycaCardActivated } from "../../generated/definitions/EycaCardActivated";
+import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { extractEycaExpirationDate } from "../../utils/cgn_checks";
-import { StatusEnum as ActivatedStatusEnum } from "../../generated/definitions/CardActivated";
 import { context as contextMock } from "../../__mocks__/durable-functions";
-import { now } from "../../__mocks__/mock";
 import { handler } from "../index";
 import { CcdbNumber } from "../../generated/eyca-api/CcdbNumber";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
-const aUserEycaCardNumber = "X321-Y321-Z321-W321" as CcdbNumber;
-
-const anActivatedEycaCard: EycaCardActivated = {
-  activation_date: now,
-  card_number: aUserEycaCardNumber,
-  expiration_date: extractEycaExpirationDate(aFiscalCode).value as Date,
-  status: ActivatedStatusEnum.ACTIVATED
-};
 
 const getInputMock = jest.fn().mockImplementation(() => ({
-  fiscalCode: aFiscalCode
+  fiscalCode: aFiscalCode,
+  activationDate: new Date(),
+  expirationDate: extractEycaExpirationDate(aFiscalCode).value
 }));
 
 const mockCallActivityWithRetry = jest.fn();
@@ -43,16 +34,18 @@ describe("StartEycaActivationOrchestrator", () => {
   it("should call the right activity to activate an EYCA card", async () => {
     mockCallActivityWithRetry
       // 1 SuccessEycaActivationActivity
-      .mockReturnValueOnce({ kind: "SUCCESS", value: anActivatedEycaCard });
+      .mockReturnValueOnce({ kind: "SUCCESS" })
+      .mockReturnValueOnce({ kind: "SUCCESS" });
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = handler(contextMockWithDf as any);
 
     const res1 = orchestrator.next();
     expect(res1.value.kind).toEqual("SUCCESS");
-    expect(res1.value.value).toEqual(anActivatedEycaCard);
 
     // Complete the orchestrator execution
     const res2 = orchestrator.next(res1.value);
+    expect(res2.value.kind).toEqual("SUCCESS");
+
     const res = orchestrator.next(res2.value);
 
     orchestrator.next(res);
@@ -85,7 +78,7 @@ describe("StartEycaActivationOrchestrator", () => {
     );
   });
 
-  it("should retry if EYCA activation fails", async () => {
+  it("should retry if EYCA expiration date store fails", async () => {
     mockCallActivityWithRetry
       // 1 SuccessEycaActivationActivity
       .mockReturnValueOnce({ kind: "FAILURE" });
@@ -107,10 +100,10 @@ describe("StartEycaActivationOrchestrator", () => {
     );
   });
 
-  it("should retry if EYCA expiration date store fails", async () => {
+  it("should retry if EYCA activation fails", async () => {
     mockCallActivityWithRetry
       // 1 SuccessEycaActivationActivity
-      .mockReturnValueOnce({ kind: "SUCCESS", value: anActivatedEycaCard })
+      .mockReturnValueOnce({ kind: "SUCCESS" })
       .mockReturnValueOnce({ kind: "FAILURE" });
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = handler(contextMockWithDf as any);

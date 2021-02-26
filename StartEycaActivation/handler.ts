@@ -43,7 +43,7 @@ import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
 import { UserEycaCardModel } from "../models/user_eyca_card";
 import { OrchestratorInput } from "../StartEycaActivationOrchestrator";
-import { isEycaEligible } from "../utils/cgn_checks";
+import { extractEycaExpirationDate, isEycaEligible } from "../utils/cgn_checks";
 import { makeEycaOrchestratorId } from "../utils/orchestrators";
 import { checkUpdateCardIsRunning } from "../utils/orchestrators";
 
@@ -206,25 +206,35 @@ export function StartEycaActivationHandler(
                 ResponseErrorInternal(`Cannot insert a new EYCA card|${e.kind}`)
               )
               .chain(() =>
-                tryCatch(
-                  () =>
-                    // Starting a new activation process with proper input
-                    client.startNew(
-                      "StartEycaActivationOrchestrator",
-                      orchestratorId,
-                      OrchestratorInput.encode({
-                        fiscalCode
-                      })
-                    ),
-                  toError
-                ).mapLeft(err => {
-                  context.log.error(
-                    `${logPrefix}|Cannot start StartEycaActivationOrchestrator|ERROR=${err.message}`
-                  );
-                  return ResponseErrorInternal(
-                    "Cannot start StartEycaActivationOrchestrator"
-                  );
-                })
+                fromEither(extractEycaExpirationDate(fiscalCode))
+                  .mapLeft(() =>
+                    ResponseErrorInternal(
+                      `Error calculating Expiration Date from Fiscal Code`
+                    )
+                  )
+                  .chain(expirationDate =>
+                    tryCatch(
+                      () =>
+                        // Starting a new activation process with proper input
+                        client.startNew(
+                          "StartEycaActivationOrchestrator",
+                          orchestratorId,
+                          OrchestratorInput.encode({
+                            activationDate: new Date(),
+                            expirationDate,
+                            fiscalCode
+                          })
+                        ),
+                      toError
+                    ).mapLeft(err => {
+                      context.log.error(
+                        `${logPrefix}|Cannot start StartEycaActivationOrchestrator|ERROR=${err.message}`
+                      );
+                      return ResponseErrorInternal(
+                        "Cannot start StartEycaActivationOrchestrator"
+                      );
+                    })
+                  )
               )
               .map(() => {
                 const instanceId: InstanceId = {
