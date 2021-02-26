@@ -40,7 +40,7 @@ export const index: AzureFunction = (
   message: unknown
 ): Promise<Failure | string> => {
   return fromEither(ContinueEycaActivationInput.decode(message))
-    .mapLeft(e => permanentDecodeFailure(e))
+    .mapLeft(permanentDecodeFailure)
     .chain(({ fiscalCode }) =>
       fromEither(extractEycaExpirationDate(fiscalCode))
         .mapLeft(e =>

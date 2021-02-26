@@ -10,14 +10,14 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { ActivityInput as StoreEycaExpirationActivityInput } from "../StoreEycaExpirationActivity/handler";
 import { ActivityInput as SuccessEycaActivationActivityInput } from "../SuccessEycaActivationActivity/handler";
 
-import { ShortDate } from "../generated/eyca-api/ShortDate";
 import { ActivityResult } from "../utils/activity";
 import { trackException } from "../utils/appinsights";
 import { internalRetryOptions } from "../utils/retry_policies";
+import { Timestamp } from "../generated/definitions/Timestamp";
 
 export const OrchestratorInput = t.interface({
-  activationDate: ShortDate,
-  expirationDate: ShortDate,
+  activationDate: Timestamp,
+  expirationDate: Timestamp,
   fiscalCode: FiscalCode
 });
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;

@@ -12,16 +12,16 @@ import * as t from "io-ts";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { EycaAPIClient } from "../clients/eyca";
 import { StatusEnum } from "../generated/definitions/CardActivated";
+import { Timestamp } from "../generated/definitions/Timestamp";
 import { CcdbNumber } from "../generated/eyca-api/CcdbNumber";
 import { ErrorResponse } from "../generated/eyca-api/ErrorResponse";
-import { ShortDate } from "../generated/eyca-api/ShortDate";
 import { UserEycaCardModel } from "../models/user_eyca_card";
 import { ActivityResult, failure, success } from "../utils/activity";
 import { errorsToError } from "../utils/conversions";
 
 export const ActivityInput = t.interface({
-  activationDate: ShortDate,
-  expirationDate: ShortDate,
+  activationDate: Timestamp,
+  expirationDate: Timestamp,
   fiscalCode: FiscalCode
 });
 
@@ -32,7 +32,7 @@ const updateCard = (
   username: NonEmptyString,
   password: NonEmptyString,
   ccdbNumber: CcdbNumber,
-  cardDateExpiration: ShortDate
+  cardDateExpiration: Timestamp
 ) =>
   tryCatch(
     () =>

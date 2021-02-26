@@ -170,7 +170,7 @@ describe("StartEycaActivation", () => {
 
     if (response.kind === "IResponseErrorInternal") {
       expect(response.detail).toBe(
-        "Internal server error: Error calculating Expiration Date from Fiscal Code"
+        "Internal server error: Error extracting Expiration Date from Fiscal Code"
       );
     }
   });
