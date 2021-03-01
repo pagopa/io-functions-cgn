@@ -5,6 +5,7 @@
  * The configuration is evaluate eagerly at the first access to the module. The module exposes convenient methods to access such value.
  */
 
+import { fromNullable } from "fp-ts/lib/Option";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
@@ -49,6 +50,9 @@ export const IConfig = t.intersection([
 // No need to re-evaluate this object for each call
 const errorOrConfig: t.Validation<IConfig> = IConfig.decode({
   ...process.env,
+  REDIS_CLUSTER_ENABLED: fromNullable(process.env.REDIS_CLUSTER_ENABLED)
+    .map(_ => _.toLowerCase() === "true")
+    .toUndefined(),
   isProduction: process.env.NODE_ENV === "production"
 });
 

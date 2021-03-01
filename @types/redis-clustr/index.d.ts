@@ -26,3 +26,4 @@ declare module "redis-clustr" {
   
     export = RedisClustr;
   }
+  
