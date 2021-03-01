@@ -2,14 +2,11 @@ import * as express from "express";
 
 import { Context } from "@azure/functions";
 import * as df from "durable-functions";
-import {
-  DurableOrchestrationClient,
-  DurableOrchestrationStatus
-} from "durable-functions/lib/src/classes";
-import { toError } from "fp-ts/lib/Either";
+import { DurableOrchestrationClient } from "durable-functions/lib/src/classes";
+import { fromOption, toError } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
 import { fromNullable } from "fp-ts/lib/Option";
-import { taskEither, TaskEither, tryCatch } from "fp-ts/lib/TaskEither";
+import { fromEither, taskEither, tryCatch } from "fp-ts/lib/TaskEither";
 import { fromLeft } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { RequiredParamMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_param";
@@ -37,6 +34,7 @@ import {
 } from "../generated/definitions/CgnActivationDetail";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
+import { getActivationStatus } from "../utils/activation";
 import { retrieveUserCgn } from "../utils/models";
 import {
   getOrchestratorStatus,
@@ -61,32 +59,6 @@ const ActivationStatusWithOrchestratorCustomStatus = t.interface({
 type ActivationStatusWithOrchestratorCustomStatus = t.TypeOf<
   typeof ActivationStatusWithOrchestratorCustomStatus
 >;
-
-const mapOrchestratorStatus = (
-  orchestratorStatus: DurableOrchestrationStatus
-): TaskEither<IResponseErrorNotFound, StatusEnum> => {
-  if (
-    orchestratorStatus.customStatus === "UPDATED" ||
-    orchestratorStatus.customStatus === "COMPLETED"
-  ) {
-    return taskEither.of(StatusEnum.COMPLETED);
-  }
-  switch (orchestratorStatus.runtimeStatus) {
-    case df.OrchestrationRuntimeStatus.Pending:
-      return taskEither.of(StatusEnum.PENDING);
-    case df.OrchestrationRuntimeStatus.Running:
-    case df.OrchestrationRuntimeStatus.ContinuedAsNew:
-      return taskEither.of(StatusEnum.RUNNING);
-    case df.OrchestrationRuntimeStatus.Failed:
-      return taskEither.of(StatusEnum.ERROR);
-    case df.OrchestrationRuntimeStatus.Completed:
-      return taskEither.of(StatusEnum.COMPLETED);
-    default:
-      return fromLeft(
-        ResponseErrorNotFound("Not found", "Cannot recognize status")
-      );
-  }
-};
 
 const terminateOrchestratorTask = (
   client: DurableOrchestrationClient,
@@ -129,7 +101,14 @@ export function GetCgnActivationHandler(
                   ),
                 orchestrationStatus =>
                   // now try to map orchestrator status
-                  mapOrchestratorStatus(orchestrationStatus).map(
+                  fromEither(
+                    fromOption(
+                      ResponseErrorNotFound(
+                        "Not Found",
+                        "User's CGN status not found"
+                      )
+                    )(getActivationStatus(orchestrationStatus))
+                  ).map(
                     _ =>
                       ({
                         activationDetail: {

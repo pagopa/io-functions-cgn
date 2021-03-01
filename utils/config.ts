@@ -28,6 +28,8 @@ export const IConfig = t.intersection([
     APPINSIGHTS_INSTRUMENTATIONKEY: NonEmptyString,
 
     CGN_EXPIRATION_TABLE_NAME: NonEmptyString,
+    EYCA_EXPIRATION_TABLE_NAME: NonEmptyString,
+
     COSMOSDB_CGN_DATABASE_NAME: NonEmptyString,
     COSMOSDB_CGN_KEY: NonEmptyString,
     COSMOSDB_CGN_URI: NonEmptyString,

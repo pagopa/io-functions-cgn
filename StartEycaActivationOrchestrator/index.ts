@@ -4,42 +4,32 @@ import { ExceptionTelemetry } from "applicationinsights/out/Declarations/Contrac
 import * as df from "durable-functions";
 import { constVoid } from "fp-ts/lib/function";
 import * as t from "io-ts";
-import { readableReport } from "italia-ts-commons/lib/reporters";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 
-import { ActivityInput } from "../SuccessEycaActivationActivity/handler";
+import { ActivityInput as StoreEycaExpirationActivityInput } from "../StoreEycaExpirationActivity/handler";
+import { ActivityInput as SuccessEycaActivationActivityInput } from "../SuccessEycaActivationActivity/handler";
+
+import { Timestamp } from "../generated/definitions/Timestamp";
 import { ActivityResult } from "../utils/activity";
 import { trackException } from "../utils/appinsights";
+import { getTrackExceptionAndThrowWithErrorStatus } from "../utils/orchestrators";
 import { internalRetryOptions } from "../utils/retry_policies";
 
 export const OrchestratorInput = t.interface({
+  activationDate: Timestamp,
+  expirationDate: Timestamp,
   fiscalCode: FiscalCode
 });
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
-
-const trackExceptionAndThrow = (
-  context: IOrchestrationFunctionContext,
-  logPrefix: string
-) => (err: Error | t.Errors, name: string) => {
-  context.log.verbose(
-    err instanceof Error
-      ? `${logPrefix}|ERROR=${err.message}`
-      : `${logPrefix}|ERROR=${readableReport(err)}`
-  );
-  trackException({
-    exception: new Error(`${logPrefix}|ERROR=${String(err)}`),
-    properties: {
-      name
-    }
-  });
-  throw new Error(String(err));
-};
 
 export const handler = function*(
   context: IOrchestrationFunctionContext,
   logPrefix: string = "StartEycaActivationOrchestrator"
 ): Generator {
-  const trackExAndThrow = trackExceptionAndThrow(context, logPrefix);
+  const trackExAndThrowWithErrorStatus = getTrackExceptionAndThrowWithErrorStatus(
+    context,
+    logPrefix
+  );
   context.df.setCustomStatus("RUNNING");
 
   const trackExceptionIfNotReplaying = (evt: ExceptionTelemetry) =>
@@ -47,8 +37,12 @@ export const handler = function*(
 
   const input = context.df.getInput();
 
-  const { fiscalCode } = OrchestratorInput.decode(input).getOrElseL(e =>
-    trackExAndThrow(e, "cgn.eyca.update.exception.decode.input")
+  const {
+    activationDate,
+    expirationDate,
+    fiscalCode
+  } = OrchestratorInput.decode(input).getOrElseL(e =>
+    trackExAndThrowWithErrorStatus(e, "cgn.eyca.update.exception.decode.input")
   );
   const tagOverrides = {
     "ai.operation.id": fiscalCode,
@@ -56,23 +50,61 @@ export const handler = function*(
   };
 
   try {
-    const updateEycaStatusActivityInput = ActivityInput.encode({
-      fiscalCode
-    });
-    const updateStatusResult = yield context.df.callActivityWithRetry(
+    const updateEycaStatusActivityInput = SuccessEycaActivationActivityInput.encode(
+      {
+        activationDate,
+        expirationDate,
+        fiscalCode
+      }
+    );
+
+    /** Store eyca card expiration date before activating the card.
+     * If the card activation process ends with error, it will be triggered again from the
+     * "ContinueEycaActivation" function
+     */
+    const expirationDateStoreActivityResult = yield context.df.callActivityWithRetry(
+      "StoreEycaExpirationActivity",
+      internalRetryOptions,
+      StoreEycaExpirationActivityInput.encode({
+        activationDate,
+        expirationDate,
+        fiscalCode
+      })
+    );
+
+    const expirationDateStoreActivityResultDecoded = ActivityResult.decode(
+      expirationDateStoreActivityResult
+    ).getOrElseL(_ =>
+      trackExAndThrowWithErrorStatus(
+        _,
+        "eyca.activate.exception.decode.activityOutput"
+      )
+    );
+
+    if (expirationDateStoreActivityResultDecoded.kind !== "SUCCESS") {
+      trackExAndThrowWithErrorStatus(
+        new Error("Cannot store EYCA Card expiration date"),
+        "eyca.activate.exception.failure.activityStoreExpirationDate"
+      );
+    }
+
+    const successEycaActivationActivityResult = yield context.df.callActivityWithRetry(
       "SuccessEycaActivationActivity",
       internalRetryOptions,
       updateEycaStatusActivityInput
     );
 
-    const updateEycaResult = ActivityResult.decode(
-      updateStatusResult
-    ).getOrElseL(e =>
-      trackExAndThrow(e, "eyca.activate.exception.decode.activityOutput")
+    const decodedSuccessEycaActivationActivity = ActivityResult.decode(
+      successEycaActivationActivityResult
+    ).getOrElseL(_ =>
+      trackExAndThrowWithErrorStatus(
+        _,
+        "eyca.activate.exception.decode.activityOutput"
+      )
     );
 
-    if (updateEycaResult.kind !== "SUCCESS") {
-      trackExAndThrow(
+    if (decodedSuccessEycaActivationActivity.kind !== "SUCCESS") {
+      trackExAndThrowWithErrorStatus(
         new Error("Cannot activate EYCA Card"),
         "eyca.activate.exception.failure.activityOutput"
       );

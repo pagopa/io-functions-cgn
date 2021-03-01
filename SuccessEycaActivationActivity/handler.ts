@@ -12,15 +12,16 @@ import * as t from "io-ts";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { EycaAPIClient } from "../clients/eyca";
 import { StatusEnum } from "../generated/definitions/CardActivated";
+import { Timestamp } from "../generated/definitions/Timestamp";
 import { CcdbNumber } from "../generated/eyca-api/CcdbNumber";
 import { ErrorResponse } from "../generated/eyca-api/ErrorResponse";
-import { ShortDate } from "../generated/eyca-api/ShortDate";
 import { UserEycaCardModel } from "../models/user_eyca_card";
 import { ActivityResult, failure, success } from "../utils/activity";
-import { extractEycaExpirationDate } from "../utils/cgn_checks";
 import { errorsToError } from "../utils/conversions";
 
 export const ActivityInput = t.interface({
+  activationDate: Timestamp,
+  expirationDate: Timestamp,
   fiscalCode: FiscalCode
 });
 
@@ -31,7 +32,7 @@ const updateCard = (
   username: NonEmptyString,
   password: NonEmptyString,
   ccdbNumber: CcdbNumber,
-  cardDateExpiration: ShortDate
+  cardDateExpiration: Timestamp
 ) =>
   tryCatch(
     () =>
@@ -94,7 +95,7 @@ export const getSuccessEycaActivationActivityHandler = (
   const fail = failure(context, logPrefix);
   return fromEither(ActivityInput.decode(input))
     .mapLeft(errs => fail(errorsToError(errs), "Cannot decode Activity Input"))
-    .chain(({ fiscalCode }) =>
+    .chain(({ fiscalCode, activationDate, expirationDate }) =>
       userEycaCardModel
         .findLastVersionByModelId([fiscalCode])
         .mapLeft(() =>
@@ -110,20 +111,16 @@ export const getSuccessEycaActivationActivityHandler = (
           )
         )
         .chain(eycaCard =>
-          fromEither(extractEycaExpirationDate(fiscalCode))
-            .chain(expirationDate =>
-              preIssueCard(eycaClient, eycaApiUsername, eycaApiPassword).map(
-                cardNumber => ({
-                  ...eycaCard,
-                  card: {
-                    activation_date: new Date(),
-                    card_number: cardNumber,
-                    expiration_date: expirationDate,
-                    status: StatusEnum.ACTIVATED
-                  }
-                })
-              )
-            )
+          preIssueCard(eycaClient, eycaApiUsername, eycaApiPassword)
+            .map(cardNumber => ({
+              ...eycaCard,
+              card: {
+                activation_date: activationDate,
+                card_number: cardNumber,
+                expiration_date: expirationDate,
+                status: StatusEnum.ACTIVATED
+              }
+            }))
             .mapLeft(fail)
         )
     )
@@ -141,8 +138,7 @@ export const getSuccessEycaActivationActivityHandler = (
             .update(_)
             .mapLeft(err => fail(toError(err), "Cannot update EYCA card"))
         )
-        .map(() => success())
     )
-    .fold<ActivityResult>(identity, identity)
+    .fold<ActivityResult>(identity, () => success())
     .run();
 };

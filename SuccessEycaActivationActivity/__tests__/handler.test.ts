@@ -12,13 +12,49 @@ import {
   ActivityInput,
   getSuccessEycaActivationActivityHandler
 } from "../handler";
+import {
+  CardPending,
+  StatusEnum as PendingStatusEnum
+} from "../../generated/definitions/CardPending";
+import { StatusEnum as ActivatedStatusEnum } from "../../generated/definitions/CardActivated";
+import { UserEycaCard } from "../../models/user_eyca_card";
+import { EycaCardActivated } from "../../generated/definitions/EycaCardActivated";
+import { now } from "../../__mocks__/mock";
+import { extractEycaExpirationDate } from "../../utils/cgn_checks";
+import { identity } from "fp-ts/lib/function";
+import { DateFromString } from "italia-ts-commons/lib/dates";
 
 const aFiscalCode = "RODFDS92S10H501T" as FiscalCode;
+const aUserEycaCardNumber = "X321-Y321-Z321-W321" as CcdbNumber;
+
+const aPendingEycaCard: CardPending = {
+  status: PendingStatusEnum.PENDING
+};
+
+const aPendingUserEycaCard: UserEycaCard = {
+  card: aPendingEycaCard,
+  fiscalCode: aFiscalCode
+};
+
+const anActivatedEycaCard: EycaCardActivated = {
+  activation_date: now,
+  card_number: aUserEycaCardNumber,
+  expiration_date: extractEycaExpirationDate(aFiscalCode).value as Date,
+  status: ActivatedStatusEnum.ACTIVATED
+};
+
+const anActivatedUserEycaCard: UserEycaCard = {
+  card: anActivatedEycaCard,
+  fiscalCode: aFiscalCode
+};
 
 const findLastVersionByModelIdMock = jest
   .fn()
-  .mockImplementation(() => taskEither.of(some({})));
-const updateMock = jest.fn().mockImplementation(() => taskEither.of({}));
+  .mockImplementation(() => taskEither.of(some(aPendingUserEycaCard)));
+
+const updateMock = jest.fn().mockImplementation(v => {
+  return taskEither.of(anActivatedUserEycaCard);
+});
 
 const userEycaCardModelMock = {
   findLastVersionByModelId: findLastVersionByModelIdMock,
@@ -60,13 +96,15 @@ const eycaApiClient = {
 const anEycaApiUsername = "USERNAME" as NonEmptyString;
 const anEycaApiPassword = "PASSWORD" as NonEmptyString;
 const anActivityInput: ActivityInput = {
-  fiscalCode: aFiscalCode
+  fiscalCode: aFiscalCode,
+  activationDate: new Date(),
+  expirationDate: extractEycaExpirationDate(aFiscalCode).value as Date
 };
 const extractEycaExpirationDateMock = jest
   .spyOn(cgn_checks, "extractEycaExpirationDate")
   .mockImplementation(() => right(addYears(new Date(), 5)));
 
-describe("UpdateCgnStatusActivity", () => {
+describe("SuccessEycaActivationActivity", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -81,6 +119,7 @@ describe("UpdateCgnStatusActivity", () => {
     const response = await handler(context, anActivityInput);
     expect(response.kind).toBe("SUCCESS");
   });
+
   it("should return failure if an error occurs during UserEycaCard retrieve", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       fromLeft(toCosmosErrorResponse(new Error("query error")))
@@ -117,19 +156,6 @@ describe("UpdateCgnStatusActivity", () => {
         "No EYCA card found for the provided fiscalCode"
       );
     }
-  });
-  it("should return failure if expiration date extraction fails", async () => {
-    extractEycaExpirationDateMock.mockImplementationOnce(() =>
-      left(new Error("Cannot extract date"))
-    );
-    const handler = getSuccessEycaActivationActivityHandler(
-      eycaApiClient as any,
-      anEycaApiUsername,
-      anEycaApiPassword,
-      userEycaCardModelMock as any
-    );
-    const response = await handler(context, anActivityInput);
-    expect(response.kind).toBe("FAILURE");
   });
 
   it("should return failure if EYCA card code retrieve fails", async () => {
