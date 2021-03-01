@@ -1,9 +1,17 @@
-import { ServiceResponse, TableQuery, TableService } from "azure-storage";
+import {
+  ServiceResponse,
+  TableQuery,
+  TableService,
+  TableUtilities
+} from "azure-storage";
 
 import { Either, isLeft, left, right } from "fp-ts/lib/Either";
 import { fromNullable } from "fp-ts/lib/Option";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { TaskEither, taskify } from "fp-ts/lib/TaskEither";
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { Timestamp } from "../generated/definitions/Timestamp";
+
+import * as date_fns from "date-fns";
 
 /**
  * A minimal Youth Card storage table Entry
@@ -85,3 +93,29 @@ export const queryFilterForKey = (partitionKey: string): TableQuery =>
   new TableQuery()
     .select("RowKey", "ActivationDate", "ExpirationDate")
     .where("PartitionKey == ?", partitionKey);
+
+/**
+ * Store a card expiration into `cardExpirationTableName` table
+ */
+export const insertCardExpiration = (
+  tableService: TableService,
+  cardExpirationTableName: NonEmptyString
+) => (
+  fiscalCode: FiscalCode,
+  activationDate: Date,
+  expirationDate: Date
+): TaskEither<Error, TableService.EntityMetadata> => {
+  const eg = TableUtilities.entityGenerator;
+  return taskify<Error, TableService.EntityMetadata>(cb =>
+    tableService.insertOrReplaceEntity(
+      cardExpirationTableName,
+      {
+        ActivationDate: eg.DateTime(activationDate),
+        ExpirationDate: eg.DateTime(expirationDate),
+        PartitionKey: eg.String(date_fns.format(expirationDate, "yyyy-MM-dd")),
+        RowKey: eg.String(fiscalCode)
+      },
+      cb
+    )
+  )();
+};

@@ -8,6 +8,7 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { StatusEnum } from "../generated/definitions/CardPending";
 import { OrchestratorInput } from "../StartEycaActivationOrchestrator/index";
 import { trackException } from "../utils/appinsights";
+import { extractEycaExpirationDate } from "../utils/cgn_checks";
 import { Failure, PermanentFailure, TransientFailure } from "../utils/errors";
 import { makeEycaOrchestratorId } from "../utils/orchestrators";
 
@@ -41,17 +42,28 @@ export const index: AzureFunction = (
   return fromEither(ContinueEycaActivationInput.decode(message))
     .mapLeft(permanentDecodeFailure)
     .chain(({ fiscalCode }) =>
-      tryCatch(
-        () =>
-          df.getClient(context).startNew(
-            "StartEycaActivationOrchestrator",
-            makeEycaOrchestratorId(fiscalCode, StatusEnum.PENDING),
-            OrchestratorInput.encode({
-              fiscalCode
-            })
-          ),
-        transientOrchestratorError
-      )
+      fromEither(extractEycaExpirationDate(fiscalCode))
+        .mapLeft(e =>
+          Failure.encode({
+            kind: "PERMANENT",
+            reason: `Cannot extractFiscalCode: ${e.message}`
+          })
+        )
+        .chain(expirationDate =>
+          tryCatch(
+            () =>
+              df.getClient(context).startNew(
+                "StartEycaActivationOrchestrator",
+                makeEycaOrchestratorId(fiscalCode, StatusEnum.PENDING),
+                OrchestratorInput.encode({
+                  activationDate: new Date(),
+                  expirationDate,
+                  fiscalCode
+                })
+              ),
+            transientOrchestratorError
+          )
+        )
     )
     .fold<Failure | string>(err => {
       const error = TransientFailure.is(err)

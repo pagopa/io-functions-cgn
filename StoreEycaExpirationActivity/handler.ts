@@ -17,24 +17,24 @@ export const ActivityInput = t.interface({
 
 export type ActivityInput = t.TypeOf<typeof ActivityInput>;
 
-export const getStoreCgnExpirationActivityHandler = (
+export const getStoreEycaExpirationActivityHandler = (
   tableService: TableService,
-  cgnExpirationTableName: NonEmptyString,
-  logPrefix: string = "StoreCgnExpirationActivity"
+  eycaExpirationTableName: NonEmptyString,
+  logPrefix: string = "StoreEycaExpirationActivity"
 ) => (context: Context, input: unknown): Promise<ActivityResult> => {
   const fail = failure(context, logPrefix);
-  const insertCgnExpirationTask = insertCardExpiration(
+  const insertEycaExpirationTask = insertCardExpiration(
     tableService,
-    cgnExpirationTableName
+    eycaExpirationTableName
   );
   return fromEither(ActivityInput.decode(input))
     .mapLeft(errs => fail(errorsToError(errs), "Cannot decode Activity Input"))
     .chain(activityInput =>
-      insertCgnExpirationTask(
+      insertEycaExpirationTask(
         activityInput.fiscalCode,
         activityInput.activationDate,
         activityInput.expirationDate
-      ).bimap(err => fail(err, "Cannot insert CGN expiration tuple"), success)
+      ).bimap(err => fail(err, "Cannot insert Eyca expiration tuple"), success)
     )
     .fold<ActivityResult>(identity, identity)
     .run();
