@@ -20,7 +20,7 @@ pr: none
 
 # This pipeline has been implemented to be run on hosted agent pools based both
 # on 'windows' and 'ubuntu' virtual machine images and using the scripts defined
-# in the package.json file. Since we are deploying on Azure functions on Windows
+# in the package.json file. Since we are degitploying on Azure functions on Windows
 # runtime, the pipeline is currently configured to use a Windows hosted image for
 # the build and deploy.
 pool:
@@ -37,7 +37,7 @@ resources:
     - repository: pagopaCommons
       type: github
       name: pagopa/azure-pipeline-templates
-      ref: refs/tags/v12
+      ref: refs/tags/v13
       endpoint: 'pagopa'
 
 stages:
