@@ -77,7 +77,7 @@ export const handler = function*(
      * If the card activation process ends with error, it will be triggered again from the
      * "ContinueEycaActivation" function
      */
-    const expirationDateStoreActivityResultUnknown = yield context.df.callActivityWithRetry(
+    const expirationDateStoreActivityResult = yield context.df.callActivityWithRetry(
       "StoreEycaExpirationActivity",
       internalRetryOptions,
       StoreEycaExpirationActivityInput.encode({
@@ -87,32 +87,32 @@ export const handler = function*(
       })
     );
 
-    const expirationDateStoreActivityResult = ActivityResult.decode(
-      expirationDateStoreActivityResultUnknown
+    const expirationDateStoreActivityResultDecoded = ActivityResult.decode(
+      expirationDateStoreActivityResult
     ).getOrElseL(_ =>
       trackExAndThrow(_, "eyca.activate.exception.decode.activityOutput")
     );
 
-    if (expirationDateStoreActivityResult.kind !== "SUCCESS") {
+    if (expirationDateStoreActivityResultDecoded.kind !== "SUCCESS") {
       trackExAndThrow(
         new Error("Cannot store EYCA Card expiration date"),
         "eyca.activate.exception.failure.activityStoreExpirationDate"
       );
     }
 
-    const successEycaActivationActivityU = yield context.df.callActivityWithRetry(
+    const successEycaActivationActivityResult = yield context.df.callActivityWithRetry(
       "SuccessEycaActivationActivity",
       internalRetryOptions,
       updateEycaStatusActivityInput
     );
 
-    const successEycaActivationActivity = ActivityResult.decode(
-      successEycaActivationActivityU
+    const decodedSuccessEycaActivationActivity = ActivityResult.decode(
+      successEycaActivationActivityResult
     ).getOrElseL(_ =>
       trackExAndThrow(_, "eyca.activate.exception.decode.activityOutput")
     );
 
-    if (successEycaActivationActivity.kind !== "SUCCESS") {
+    if (decodedSuccessEycaActivationActivity.kind !== "SUCCESS") {
       trackExAndThrow(
         new Error("Cannot activate EYCA Card"),
         "eyca.activate.exception.failure.activityOutput"
