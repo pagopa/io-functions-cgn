@@ -229,6 +229,30 @@ paths:
           description: Service unavailable.
           schema:
             $ref: "#/definitions/ProblemJson"
+
+  "/cgn/otp/{fiscalcode}":
+    post:
+      operationId: generateOtp
+      summary: |
+        Generate a new Otp related to a CGN
+      description: |
+        Generate a new Otp used to discount an online purchase
+        through a valid CGN
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
+      responses:
+        "200":
+            description: Otp generated.
+            schema:
+              $ref: "#/definitions/Otp"
+        "401":
+          description: Wrong or missing function key.
+        "403":
+          description: Forbidden.
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
 consumes:
   - application/json
 produces:
@@ -437,3 +461,21 @@ definitions:
         $ref: "#/definitions/Timestamp"
     required:
       - status
+
+  OtpCode:
+    description: The unique otp code that identifies can be use for discounts
+    type: string
+    pattern: "^[A-Z0-9]{9,13}$"
+  Otp:
+    type: object
+    properties:
+      code:
+        $ref: "#/definitions/OtpCode"
+      expires_at:
+        $ref: "#/definitions/Timestamp"
+      ttl:
+        type: number
+    required:
+      - code
+      - expires_at
+      - ttl
