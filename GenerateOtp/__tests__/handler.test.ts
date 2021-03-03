@@ -26,6 +26,7 @@ const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const aUserCgnId = "AN_ID" as NonEmptyString;
 const aDefaultOtpTtl = 6000 as NonNegativeInteger;
 const anOtpCode = "AAAAAAAA123" as OtpCode;
+
 const aPendingCgn: CardPending = {
   status: PendingStatusEnum.PENDING
 };
