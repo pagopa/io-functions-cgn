@@ -13,6 +13,7 @@ import {
   withRequestMiddlewares,
   wrapRequestHandler
 } from "io-functions-commons/dist/src/utils/request_middleware";
+import * as t from "io-ts";
 import {
   IResponseErrorForbiddenNotAuthorized,
   IResponseErrorInternal,
@@ -22,10 +23,14 @@ import {
   ResponseSuccessJson
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { RedisClient } from "redis";
 import { CardActivated } from "../generated/definitions/CardActivated";
 import { Otp } from "../generated/definitions/Otp";
+import { OtpCode } from "../generated/definitions/OtpCode";
+import { Timestamp } from "../generated/definitions/Timestamp";
 import { UserCgnModel } from "../models/user_cgn";
 import { generateOtpCode } from "../utils/cgnCode";
+import { setWithExpirationTask } from "../utils/redis_storage";
 
 type ResponseTypes =
   | IResponseSuccessJson<Otp>
@@ -37,8 +42,24 @@ type IGetGenerateOtpHandler = (
   fiscalCode: FiscalCode
 ) => Promise<ResponseTypes>;
 
+const OtpPayload = t.interface({
+  expiresAt: Timestamp,
+  fiscalCode: FiscalCode
+});
+
+type OtpPayload = t.TypeOf<typeof OtpPayload>;
+
+const storeOtp = (
+  redisClient: RedisClient,
+  otpCode: OtpCode,
+  payload: OtpPayload,
+  otpTtl: NonNegativeInteger
+) =>
+  setWithExpirationTask(redisClient, otpCode, JSON.stringify(payload), otpTtl);
+
 export function GetGenerateOtpHandler(
   userCgnModel: UserCgnModel,
+  redisClient: RedisClient,
   otpTtl: NonNegativeInteger
 ): IGetGenerateOtpHandler {
   return async (_, fiscalCode) => {
@@ -69,6 +90,17 @@ export function GetGenerateOtpHandler(
         expires_at: date_fns.addSeconds(Date.now(), otpTtl),
         ttl: otpTtl
       }))
+      .chain(otp =>
+        storeOtp(
+          redisClient,
+          otp.code,
+          { expiresAt: otp.expires_at, fiscalCode },
+          otpTtl
+        ).bimap(
+          err => ResponseErrorInternal(err.message),
+          () => otp
+        )
+      )
       .fold<ResponseTypes>(identity, ResponseSuccessJson)
       .run();
   };
@@ -76,9 +108,10 @@ export function GetGenerateOtpHandler(
 
 export function GetGenerateOtp(
   userCgnModel: UserCgnModel,
+  redisClient: RedisClient,
   otpTtl: NonNegativeInteger
 ): express.RequestHandler {
-  const handler = GetGenerateOtpHandler(userCgnModel, otpTtl);
+  const handler = GetGenerateOtpHandler(userCgnModel, redisClient, otpTtl);
 
   const middlewaresWrap = withRequestMiddlewares(
     ContextMiddleware(),
