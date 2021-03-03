@@ -2,7 +2,6 @@ import * as express from "express";
 
 import { Context } from "@azure/functions";
 import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
-import { Second } from "@pagopa/ts-commons/lib/units";
 import * as date_fns from "date-fns";
 import { fromOption, toError } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
