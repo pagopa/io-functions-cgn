@@ -67,7 +67,7 @@ export function GetGenerateOtpHandler(
       .map(otpCode => ({
         code: otpCode,
         expires_at: date_fns.addSeconds(Date.now(), otpTtl),
-        ttl: 10
+        ttl: otpTtl
       }))
       .fold<ResponseTypes>(identity, ResponseSuccessJson)
       .run();

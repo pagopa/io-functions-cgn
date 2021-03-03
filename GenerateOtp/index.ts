@@ -36,8 +36,8 @@ const app = express();
 secureExpressApp(app);
 
 // Add express route
-app.get(
-  "/api/v1/cgn/status/:fiscalcode",
+app.post(
+  "/api/v1/cgn/otp/:fiscalcode",
   GetGenerateOtp(userCgnModel, config.OTP_TTL_IN_SECONDS)
 );
 
