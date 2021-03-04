@@ -19,12 +19,14 @@ import { Otp } from "../../generated/definitions/Otp";
 import { OtpCode } from "../../generated/definitions/OtpCode";
 import { UserCgn } from "../../models/user_cgn";
 import * as cgnCode from "../../utils/cgnCode";
+import * as redis_storage from "../../utils/redis_storage";
 import { GetGenerateOtpHandler } from "../handler";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const aUserCgnId = "AN_ID" as NonEmptyString;
 const aDefaultOtpTtl = 6000 as NonNegativeInteger;
 const anOtpCode = "AAAAAAAA123" as OtpCode;
+
 const aPendingCgn: CardPending = {
   status: PendingStatusEnum.PENDING
 };
@@ -46,6 +48,13 @@ const anOtp: Otp = {
   ttl: 10
 };
 
+const setWithExpirationTaskMock = jest
+  .fn()
+  .mockImplementation(() => taskEither.of(true));
+jest
+  .spyOn(redis_storage, "setWithExpirationTask")
+  .mockImplementation(setWithExpirationTaskMock);
+
 const findLastVersionByModelIdMock = jest
   .fn()
   .mockImplementation(() =>
@@ -63,6 +72,7 @@ jest.spyOn(cgnCode, "generateOtpCode").mockImplementation(generateOtpCodeMock);
 const successImpl = async () => {
   const handler = GetGenerateOtpHandler(
     userCgnModelMock as any,
+    {} as any,
     aDefaultOtpTtl
   );
   const response = await handler({} as any, aFiscalCode);
@@ -80,6 +90,7 @@ describe("GetGenerateOtpHandler", () => {
     );
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
+      {} as any,
       aDefaultOtpTtl
     );
     const response = await handler({} as any, aFiscalCode);
@@ -92,6 +103,20 @@ describe("GetGenerateOtpHandler", () => {
     );
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
+      {} as any,
+      aDefaultOtpTtl
+    );
+    const response = await handler({} as any, aFiscalCode);
+    expect(response.kind).toBe("IResponseErrorInternal");
+  });
+
+  it("should return an internal error if Redis OTP store fails", async () => {
+    setWithExpirationTaskMock.mockImplementationOnce(() =>
+      fromLeft(new Error("Cannot store OTP on Redis"))
+    );
+    const handler = GetGenerateOtpHandler(
+      userCgnModelMock as any,
+      {} as any,
       aDefaultOtpTtl
     );
     const response = await handler({} as any, aFiscalCode);
@@ -104,6 +129,7 @@ describe("GetGenerateOtpHandler", () => {
     );
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
+      {} as any,
       aDefaultOtpTtl
     );
     const response = await handler({} as any, aFiscalCode);
@@ -116,6 +142,7 @@ describe("GetGenerateOtpHandler", () => {
     );
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
+      {} as any,
       aDefaultOtpTtl
     );
     const response = await handler({} as any, aFiscalCode);

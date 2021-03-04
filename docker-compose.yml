@@ -2,7 +2,7 @@ version: "3.2"
 
 services:
 
-  functions:
+  functions-cgn:
     image: functions-template:v2.0.0
     build:
       context: ./
@@ -18,14 +18,14 @@ services:
     networks:
       - io-fn
     depends_on:
-      - fnstorage
+      - redis
     volumes:
       - .:/usr/src/app
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.functions.rule=Host(`localhost`)"
-      - "traefik.http.routers.functions.entrypoints=web"
-      - "traefik.http.services.functions.loadbalancer.server.port=7071"
+      - "traefik.http.routers.functions-cgn.rule=Host(`localhost`)"
+      - "traefik.http.routers.functions-cgn.entrypoints=web"
+      - "traefik.http.services.functions-cgn.loadbalancer.server.port=7071"
 
       - "traefik.http.middlewares.testHeader.headers.customrequestheaders.x-user-id=unused"
       - "traefik.http.middlewares.testHeader.headers.customrequestheaders.x-user-groups=${REQ_USER_GROUPS}"
@@ -36,42 +36,6 @@ services:
 
       # apply middleware to route
       - "traefik.http.routers.functions.middlewares=testHeader"
-
-  fnstorage:
-    image: azurite
-    build:
-      context: ./
-      dockerfile: docker/azurite/Dockerfile
-    ports:
-      - "10000:10000"
-      - "10001:10001"
-      - "10002:10002"
-    networks:
-      - io-fn
-
-  storage:
-    image: azurite
-    command: ["sh", "-c", "node bin/azurite -l /opt/azurite/folder --blobPort 10003 --queuePort 10004 --tablePort 10005"]
-    ports:
-      - "10003:10003"
-      - "10004:10004"
-      - "10005:10005"
-    depends_on:
-      - fnstorage
-    networks:
-      - io-fn
-
-  cosmosdb:
-    image: cosmosdb
-    env_file:
-      - .env
-    build:
-      context: ./
-      dockerfile: docker/cosmosdb/Dockerfile
-    ports:
-      - ${COSMOSDB_PORT}:3000
-    networks:
-      - io-fn
 
   traefik:
     image: traefik:v2.0
@@ -89,6 +53,17 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
+  redis:
+    container_name: redis-cgn
+    image: wodby/redis:3.2-2.1.5
+    ports:
+      - "6379:6379"
+    environment:
+      REDIS_TIMEOUT: 300
+      REDIS_TCP_KEEPALIVE: 60
+      REDIS_MAXMEMORY: 182m
+    networks:
+      - io-fn
 networks:
   io-fn:
     driver: bridge

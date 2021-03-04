@@ -10,6 +10,7 @@ import createAzureFunctionHandler from "io-functions-express/dist/src/createAzur
 import { USER_CGN_COLLECTION_NAME, UserCgnModel } from "../models/user_cgn";
 import { getConfigOrThrow } from "../utils/config";
 import { cosmosdbClient } from "../utils/cosmosdb";
+import { REDIS_CLIENT } from "../utils/redis";
 import { GetGenerateOtp } from "./handler";
 
 //
@@ -38,7 +39,7 @@ secureExpressApp(app);
 // Add express route
 app.post(
   "/api/v1/cgn/otp/:fiscalcode",
-  GetGenerateOtp(userCgnModel, config.OTP_TTL_IN_SECONDS)
+  GetGenerateOtp(userCgnModel, REDIS_CLIENT, config.OTP_TTL_IN_SECONDS)
 );
 
 const azureFunctionHandler = createAzureFunctionHandler(app);

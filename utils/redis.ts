@@ -8,7 +8,7 @@ function createSimpleRedisClient(
   redisUrl: string,
   password?: string,
   port?: string,
-  useTls: boolean = false
+  useTls: boolean = true
 ): redis.RedisClient {
   const DEFAULT_REDIS_PORT = "6379";
 
@@ -60,6 +60,6 @@ export const REDIS_CLIENT = fromPredicate<boolean>(_ => _)(config.isProduction)
       config.REDIS_URL,
       config.REDIS_PASSWORD,
       config.REDIS_PORT,
-      true
+      config.REDIS_TLS_ENABLED
     )
   );
