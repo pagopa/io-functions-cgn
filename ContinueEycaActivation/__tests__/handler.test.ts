@@ -1,9 +1,9 @@
+import { addYears } from "date-fns";
+import { left, right } from "fp-ts/lib/Either";
 import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import { aFiscalCode } from "../../__mocks__/mock";
-import ContinueEycaActivationHandler from "../index";
 import * as cgn_checks from "../../utils/cgn_checks";
-import { left, right } from "fp-ts/lib/Either";
-import { addYears } from "date-fns";
+import ContinueEycaActivationHandler from "../index";
 
 const extractEycaExpirationDateMock = jest
   .spyOn(cgn_checks, "extractEycaExpirationDate")
