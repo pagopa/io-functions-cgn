@@ -1,8 +1,13 @@
 import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { toError, tryCatch2v } from "fp-ts/lib/Either";
-import { none, some } from "fp-ts/lib/Option";
-import { fromEither, fromPredicate, taskEither } from "fp-ts/lib/TaskEither";
+import { none, Option, some } from "fp-ts/lib/Option";
+import {
+  fromEither,
+  fromPredicate,
+  TaskEither,
+  taskEither
+} from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { RedisClient } from "redis";
 import { Otp } from "../generated/definitions/Otp";
@@ -26,7 +31,7 @@ export const storeOtpAndRelatedFiscalCode = (
   otpCode: OtpCode,
   payload: OtpPayload,
   otpTtl: NonNegativeInteger
-) =>
+): TaskEither<Error, boolean> =>
   setWithExpirationTask(redisClient, otpCode, JSON.stringify(payload), otpTtl)
     .chain(
       fromPredicate(
@@ -46,7 +51,7 @@ export const storeOtpAndRelatedFiscalCode = (
 export const retrieveOtpByFiscalCode = (
   redisClient: RedisClient,
   fiscalCode: FiscalCode
-) =>
+): TaskEither<Error, Option<Otp>> =>
   getTask(redisClient, `${OTP_FISCAL_CODE_PREFIX}${fiscalCode}`).chain(_ =>
     _.foldL(
       () => taskEither.of(none),
