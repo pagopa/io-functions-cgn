@@ -19,8 +19,8 @@ import { Otp } from "../../generated/definitions/Otp";
 import { OtpCode } from "../../generated/definitions/OtpCode";
 import { UserCgn } from "../../models/user_cgn";
 import * as cgnCode from "../../utils/cgnCode";
-import * as redis_storage from "../../utils/redis_storage";
 import { GetGenerateOtpHandler } from "../handler";
+import * as redis_util from "../redis";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const aUserCgnId = "AN_ID" as NonEmptyString;
@@ -48,12 +48,18 @@ const anOtp: Otp = {
   ttl: 10
 };
 
-const setWithExpirationTaskMock = jest
+const storeOtpAndRelatedFiscalCodeMock = jest
   .fn()
   .mockImplementation(() => taskEither.of(true));
+const retrieveOtpByFiscalCodeMock = jest
+  .fn()
+  .mockImplementation(() => taskEither.of(none));
 jest
-  .spyOn(redis_storage, "setWithExpirationTask")
-  .mockImplementation(setWithExpirationTaskMock);
+  .spyOn(redis_util, "retrieveOtpByFiscalCode")
+  .mockImplementation(retrieveOtpByFiscalCodeMock);
+jest
+  .spyOn(redis_util, "storeOtpAndRelatedFiscalCode")
+  .mockImplementation(storeOtpAndRelatedFiscalCodeMock);
 
 const findLastVersionByModelIdMock = jest
   .fn()
@@ -84,6 +90,9 @@ const successImpl = async () => {
   }
 };
 describe("GetGenerateOtpHandler", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
   it("should return an internal error when a query error occurs", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       fromLeft(new Error("Query Error"))
@@ -111,8 +120,21 @@ describe("GetGenerateOtpHandler", () => {
   });
 
   it("should return an internal error if Redis OTP store fails", async () => {
-    setWithExpirationTaskMock.mockImplementationOnce(() =>
+    storeOtpAndRelatedFiscalCodeMock.mockImplementationOnce(() =>
       fromLeft(new Error("Cannot store OTP on Redis"))
+    );
+    const handler = GetGenerateOtpHandler(
+      userCgnModelMock as any,
+      {} as any,
+      aDefaultOtpTtl
+    );
+    const response = await handler({} as any, aFiscalCode);
+    expect(response.kind).toBe("IResponseErrorInternal");
+  });
+
+  it("should return an internal error if Redis OTP retrieve fails", async () => {
+    retrieveOtpByFiscalCodeMock.mockImplementationOnce(() =>
+      fromLeft(new Error("Cannot retrieve OTP on Redis"))
     );
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
@@ -147,6 +169,23 @@ describe("GetGenerateOtpHandler", () => {
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
+  });
+
+  it("should return success with a previous stored OTP if it is present", async () => {
+    retrieveOtpByFiscalCodeMock.mockImplementationOnce(() =>
+      taskEither.of(some(anOtp))
+    );
+    const handler = GetGenerateOtpHandler(
+      userCgnModelMock as any,
+      {} as any,
+      aDefaultOtpTtl
+    );
+    const response = await handler({} as any, aFiscalCode);
+    expect(storeOtpAndRelatedFiscalCodeMock).not.toHaveBeenCalled();
+    expect(response.kind).toBe("IResponseSuccessJson");
+    if (response.kind === "IResponseSuccessJson") {
+      expect(response.value).toEqual(anOtp);
+    }
   });
   it("should return success if an activated userCgn is found and an OTP has been generated", async () => {
     await successImpl();

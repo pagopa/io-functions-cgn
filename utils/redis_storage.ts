@@ -73,10 +73,10 @@ export const setWithExpirationTask = (
   value: string,
   expirationInSeconds: number,
   errorMsg?: string
-): TaskEither<Error, boolean> =>
+): TaskEither<Error, true> =>
   tryCatch(
     () =>
-      new Promise<Either<Error, boolean>>(resolve =>
+      new Promise<Either<Error, true>>(resolve =>
         // Set key to hold the string value. If key already holds a value, it is overwritten, regardless of its type.
         // @see https://redis.io/commands/set
         redisClient.set(

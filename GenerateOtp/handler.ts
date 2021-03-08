@@ -5,7 +5,7 @@ import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import * as date_fns from "date-fns";
 import { fromOption, toError } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
-import { fromEither, fromPredicate } from "fp-ts/lib/TaskEither";
+import { fromEither, fromPredicate, taskEither } from "fp-ts/lib/TaskEither";
 import { tryCatch } from "fp-ts/lib/TaskEither";
 import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { RequiredParamMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_param";
@@ -13,7 +13,6 @@ import {
   withRequestMiddlewares,
   wrapRequestHandler
 } from "io-functions-commons/dist/src/utils/request_middleware";
-import * as t from "io-ts";
 import {
   IResponseErrorForbiddenNotAuthorized,
   IResponseErrorInternal,
@@ -26,11 +25,9 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { RedisClient } from "redis";
 import { CardActivated } from "../generated/definitions/CardActivated";
 import { Otp } from "../generated/definitions/Otp";
-import { OtpCode } from "../generated/definitions/OtpCode";
-import { Timestamp } from "../generated/definitions/Timestamp";
 import { UserCgnModel } from "../models/user_cgn";
 import { generateOtpCode } from "../utils/cgnCode";
-import { setWithExpirationTask } from "../utils/redis_storage";
+import { retrieveOtpByFiscalCode, storeOtpAndRelatedFiscalCode } from "./redis";
 
 type ResponseTypes =
   | IResponseSuccessJson<Otp>
@@ -41,21 +38,6 @@ type IGetGenerateOtpHandler = (
   context: Context,
   fiscalCode: FiscalCode
 ) => Promise<ResponseTypes>;
-
-const OtpPayload = t.interface({
-  expiresAt: Timestamp,
-  fiscalCode: FiscalCode
-});
-
-type OtpPayload = t.TypeOf<typeof OtpPayload>;
-
-const storeOtp = (
-  redisClient: RedisClient,
-  otpCode: OtpCode,
-  payload: OtpPayload,
-  otpTtl: NonNegativeInteger
-) =>
-  setWithExpirationTask(redisClient, otpCode, JSON.stringify(payload), otpTtl);
 
 export function GetGenerateOtpHandler(
   userCgnModel: UserCgnModel,
@@ -81,25 +63,40 @@ export function GetGenerateOtpHandler(
         )
       )
       .chain(() =>
-        tryCatch(() => generateOtpCode(), toError).mapLeft(e =>
-          ResponseErrorInternal(`Cannot generate OTP Code| ${e.message}`)
-        )
-      )
-      .map(otpCode => ({
-        code: otpCode,
-        expires_at: date_fns.addSeconds(Date.now(), otpTtl),
-        ttl: otpTtl
-      }))
-      .chain(otp =>
-        storeOtp(
-          redisClient,
-          otp.code,
-          { expiresAt: otp.expires_at, fiscalCode },
-          otpTtl
-        ).bimap(
-          err => ResponseErrorInternal(err.message),
-          () => otp
-        )
+        retrieveOtpByFiscalCode(redisClient, fiscalCode)
+          .mapLeft(e =>
+            ResponseErrorInternal(
+              `Cannot retrieve OTP from fiscalCode| ${e.message}`
+            )
+          )
+          .chain(maybeOtp =>
+            maybeOtp.foldL(
+              () =>
+                tryCatch(() => generateOtpCode(), toError)
+                  .mapLeft(e =>
+                    ResponseErrorInternal(
+                      `Cannot generate OTP Code| ${e.message}`
+                    )
+                  )
+                  .map(otpCode => ({
+                    code: otpCode,
+                    expires_at: date_fns.addSeconds(Date.now(), otpTtl),
+                    ttl: otpTtl
+                  }))
+                  .chain(newOtp =>
+                    storeOtpAndRelatedFiscalCode(
+                      redisClient,
+                      newOtp.code,
+                      { expiresAt: newOtp.expires_at, fiscalCode, ttl: otpTtl },
+                      otpTtl
+                    ).bimap(
+                      err => ResponseErrorInternal(err.message),
+                      () => newOtp
+                    )
+                  ),
+              otp => taskEither.of(otp)
+            )
+          )
       )
       .fold<ResponseTypes>(identity, ResponseSuccessJson)
       .run();
