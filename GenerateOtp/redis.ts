@@ -2,12 +2,7 @@ import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { toError, tryCatch2v } from "fp-ts/lib/Either";
 import { none, Option, some } from "fp-ts/lib/Option";
-import {
-  fromEither,
-  fromPredicate,
-  TaskEither,
-  taskEither
-} from "fp-ts/lib/TaskEither";
+import { fromEither, TaskEither, taskEither } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { RedisClient } from "redis";
 import { Otp } from "../generated/definitions/Otp";
@@ -38,21 +33,14 @@ export const storeOtpAndRelatedFiscalCode = (
     `${OTP_PREFIX}${otpCode}`,
     JSON.stringify(payload),
     otpTtl
-  )
-    .chain(
-      fromPredicate(
-        _ => _,
-        () => new Error("Cannot Store OTP")
-      )
+  ).chain(() =>
+    setWithExpirationTask(
+      redisClient,
+      `${OTP_FISCAL_CODE_PREFIX}${payload.fiscalCode}`,
+      otpCode,
+      otpTtl
     )
-    .chain(() =>
-      setWithExpirationTask(
-        redisClient,
-        `${OTP_FISCAL_CODE_PREFIX}${payload.fiscalCode}`,
-        otpCode,
-        otpTtl
-      )
-    );
+  );
 
 export const retrieveOtpByFiscalCode = (
   redisClient: RedisClient,
