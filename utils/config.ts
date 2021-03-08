@@ -5,7 +5,10 @@
  * The configuration is evaluate eagerly at the first access to the module. The module exposes convenient methods to access such value.
  */
 
-import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
+import {
+  IntegerFromString,
+  NonNegativeInteger
+} from "@pagopa/ts-commons/lib/numbers";
 import { fromNullable } from "fp-ts/lib/Option";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
@@ -53,15 +56,15 @@ export const IConfig = t.intersection([
 // No need to re-evaluate this object for each call
 const errorOrConfig: t.Validation<IConfig> = IConfig.decode({
   ...process.env,
-  OTP_TTL_IN_SECONDS: NonNegativeInteger.decode(
+  OTP_TTL_IN_SECONDS: IntegerFromString.decode(
     process.env.OTP_TTL_IN_SECONDS
   ).getOrElse(600 as NonNegativeInteger),
   REDIS_CLUSTER_ENABLED: fromNullable(process.env.REDIS_CLUSTER_ENABLED)
     .map(_ => _.toLowerCase() === "true")
     .toUndefined(),
-  REDIS_TLS_ENABLED: fromNullable(process.env.REDIS_TLS_ENABLED).map(
-    _ => _.toLowerCase() === "true"
-  ),
+  REDIS_TLS_ENABLED: fromNullable(process.env.REDIS_TLS_ENABLED)
+    .map(_ => _.toLowerCase() === "true")
+    .toUndefined(),
   isProduction: process.env.NODE_ENV === "production"
 });
 
