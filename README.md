@@ -1,29 +1,22 @@
-# IO Functions template
+# IO Functions CGN
 
-Template per l'utilizzo di Azure Functions (e Durable Functions) all'interno del
-progetto IO.
+Azure Functions dedicated to CGN's project (Carta Giovani Nazionale).
+These functions implements business logic for:
+- Card activation
+- Card revocation
+- Card expiration 
 
-Una volta clonato il repo assicurarsi di:
+also providing an integration through **EYCA (European Youth Card Association)** 
 
-- editare i metadati del repository nel file `package.json`
-
-- specificare un nome per il
-  [TaskHub](https://docs.microsoft.com/it-it/azure/azure-functions/durable/durable-functions-task-hubs)
-  in host.json in modo da evitare di condividere lo stesso per function diverse
-  che usano lo stesso storage
-
-- effettuare il [tuning dei parametri per le durable
-  function](https://docs.microsoft.com/it-it/azure/azure-functions/durable/durable-functions-bindings#host-json)
-
-- impostare a `false` il parametro `FUNCTIONS_V2_COMPATIBILITY_MODE` nel file
-  `local.settings.json` nel caso di upgrade a `azure-functions@3.x`
-
-- modificare l' endpoint di healthcheck all' interno del file `deploy-pipelines.yml` in base al `basePath` configurato.
-
-## Sviluppo in locale
+## Local development
 
 ```shell
 cp env.example .env
+```
+
+Replace in `.env` file the envs with the proper values.
+
+```shell
 yarn install
 yarn build
 docker-compose up -d --build
@@ -33,12 +26,25 @@ open http://localhost/some/path/test
 
 ## Deploy
 
-Il deploy avviene tramite una [pipeline](./.devops/deploy-pipelines.yml)
-(workflow) configurata su [Azure DevOps](https://dev.azure.com/pagopa-io/).
+Deploy appens with this [pipeline](./azure-pipelines.yml)
+(workflow) configured on [Azure DevOps - io-functions-cgn](https://dev.azure.com/pagopa-io/io-functions-cgn).
 
-## Esempi di function
+## Environment variables
 
-Sono presenti alcune function di esempio che permettono di testare la corretta
-esecuzione del runtime delle durable functions. Le funzioni attivate 
-da [trigger HTTP](./HttpTriggerFunction) utilizzano il pacchetto
-[io-functions-express](https://github.com/teamdigitale/io-functions-express).
+Those are all Environment variables needed by the application:
+
+| Variable name                            | Description                                                                       | type   |
+|------------------------------------------|-----------------------------------------------------------------------------------|--------|
+| CGN_STORAGE_CONNECTION_STRING            | Storage connection string                                                         | string |
+| SLOT_TASK_HUBNAME                        | The unique slot task hubname                                                      | string |
+| COSMOSDB_URI                             | URI for the cosmos database                                                       | string |
+| COSMOSDB_KEY                             | Key for the cosmos database                                                       | string |
+| COSMOSDB_NAME                            | Name for the cosmos database                                                      | string |
+| CGN_EXPIRATION_TABLE_NAME                | Name for table storage used to store CGN card expirations                         | string |
+| EYCA_EXPIRATION_TABLE_NAME               | Name for table storage used to store EYCA card expirations                        | string |
+| EYCA_API_BASE_URL                        | The EYCA's CCDB API Base URL                                                      | string |
+| EYCA_API_PASSWORD                        | The EYCA's CCDB API's account password                                            | string |
+| EYCA_API_USERNAME                        | The EYCA's CCDB API's account username                                            | string |
+| OTP_TTL_IN_SECONDS                       | The number of seconds through an OTP is still valid                               | number |
+| REDIS_URL                                | The Redis instance URL                                                            | string |
+| REDIS_TLS_ENABLED                        | `OPTIONAL` Enable TLS on Redis connection. It accepts `true` or `false`. If undefined it will be considered `true`.        | string |

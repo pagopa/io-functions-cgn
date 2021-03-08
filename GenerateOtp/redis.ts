@@ -24,7 +24,8 @@ export const OtpPayload = t.interface({
 
 export type OtpPayload = t.TypeOf<typeof OtpPayload>;
 
-const OTP_FISCAL_CODE_PREFIX = "OTP_";
+const OTP_FISCAL_CODE_PREFIX = "OTP_FISCALCODE_";
+const OTP_PREFIX = "OTP_";
 
 export const storeOtpAndRelatedFiscalCode = (
   redisClient: RedisClient,
@@ -32,7 +33,12 @@ export const storeOtpAndRelatedFiscalCode = (
   payload: OtpPayload,
   otpTtl: NonNegativeInteger
 ): TaskEither<Error, boolean> =>
-  setWithExpirationTask(redisClient, otpCode, JSON.stringify(payload), otpTtl)
+  setWithExpirationTask(
+    redisClient,
+    `${OTP_PREFIX}${otpCode}`,
+    JSON.stringify(payload),
+    otpTtl
+  )
     .chain(
       fromPredicate(
         _ => _,
@@ -56,7 +62,7 @@ export const retrieveOtpByFiscalCode = (
     _.foldL(
       () => taskEither.of(none),
       otpCode =>
-        getTask(redisClient, otpCode).chain(maybeOtp =>
+        getTask(redisClient, `${OTP_PREFIX}${otpCode}`).chain(maybeOtp =>
           maybeOtp.foldL(
             () => taskEither.of(none),
             otpPayloadString =>
