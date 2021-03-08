@@ -32,7 +32,7 @@ export const storeOtpAndRelatedFiscalCode = (
   otpCode: OtpCode,
   payload: OtpPayload,
   otpTtl: NonNegativeInteger
-): TaskEither<Error, boolean> =>
+): TaskEither<Error, true> =>
   setWithExpirationTask(
     redisClient,
     `${OTP_PREFIX}${otpCode}`,
