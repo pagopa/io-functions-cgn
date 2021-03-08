@@ -43,9 +43,9 @@ describe("storeOtpAndRelatedFiscalCode", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
-  it("should return an error when if error occurs while storing otp", async () => {
+  it("should return an error when otp store fails", async () => {
     setWithExpirationTaskMock.mockImplementationOnce(() =>
-      fromLeft("Cannot store OTP")
+      fromLeft(new Error("Cannot store OTP"))
     );
     await storeOtpAndRelatedFiscalCode(
       {} as any,
@@ -60,10 +60,10 @@ describe("storeOtpAndRelatedFiscalCode", () => {
       .run();
   });
 
-  it("should return an error when if error occurs while storing otp related fiscalCode", async () => {
+  it("should return an error when otp related fiscalCode store fails", async () => {
     setWithExpirationTaskMock.mockImplementationOnce(() => taskEither.of(true));
     setWithExpirationTaskMock.mockImplementationOnce(() =>
-      fromLeft("Cannot store OTP related Fiscal Code")
+      fromLeft(new Error("Cannot store OTP related Fiscal Code"))
     );
     await storeOtpAndRelatedFiscalCode(
       {} as any,
@@ -99,8 +99,10 @@ describe("retrieveOtpByFiscalCode", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
-  it("should return an error when if error occurs while retrieving fiscalCode", async () => {
-    getTaskMock.mockImplementationOnce(() => fromLeft("Cannot retrieve OTP"));
+  it("should return an error when fiscalCode retrieve fails", async () => {
+    getTaskMock.mockImplementationOnce(() =>
+      fromLeft(new Error("Cannot retrieve OTP"))
+    );
     await retrieveOtpByFiscalCode({} as any, aFiscalCode)
       .fold(
         _ => expect(_).toBeDefined(),
@@ -122,7 +124,7 @@ describe("retrieveOtpByFiscalCode", () => {
   it("should return an error when if error occurs while retrieving related fiscalCode's OTP", async () => {
     getTaskMock.mockImplementationOnce(() => taskEither.of(some(anOtpCode)));
     getTaskMock.mockImplementationOnce(() =>
-      fromLeft("Cannot retrieve OTP code")
+      fromLeft(new Error("Cannot retrieve OTP code"))
     );
     await retrieveOtpByFiscalCode({} as any, aFiscalCode)
       .fold(
