@@ -78,13 +78,13 @@ export function GetGenerateOtpHandler(
                       `Cannot generate OTP Code| ${e.message}`
                     )
                   )
-                  .chain(otpCode => {
-                    const newOtp = {
-                      code: otpCode,
-                      expires_at: date_fns.addSeconds(Date.now(), otpTtl),
-                      ttl: otpTtl
-                    };
-                    return storeOtpAndRelatedFiscalCode(
+                  .map(otpCode => ({
+                    code: otpCode,
+                    expires_at: date_fns.addSeconds(Date.now(), otpTtl),
+                    ttl: otpTtl
+                  }))
+                  .chain(newOtp =>
+                    storeOtpAndRelatedFiscalCode(
                       redisClient,
                       newOtp.code,
                       { expiresAt: newOtp.expires_at, fiscalCode, ttl: otpTtl },
@@ -92,8 +92,8 @@ export function GetGenerateOtpHandler(
                     ).bimap(
                       err => ResponseErrorInternal(err.message),
                       () => newOtp
-                    );
-                  }),
+                    )
+                  ),
               otp => taskEither.of(otp)
             )
           )
