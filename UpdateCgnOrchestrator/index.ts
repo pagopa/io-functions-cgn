@@ -15,7 +15,7 @@ import { ActivityInput as StoreCgnExpirationActivityInput } from "../StoreCgnExp
 import { ActivityInput } from "../UpdateCgnStatusActivity/handler";
 import { ActivityResult } from "../utils/activity";
 import { isEycaEligible } from "../utils/cgn_checks";
-import { getMessage } from "../utils/messages";
+import { getErrorMessage, getMessage } from "../utils/messages";
 import {
   getTrackExceptionAndThrowWithErrorStatus,
   trackEventIfNotReplaying,
@@ -57,53 +57,88 @@ export const handler = function*(
   };
 
   try {
-    if (newStatusCard.status === ActivatedStatusEnum.ACTIVATED) {
-      const storeCgnExpirationResult = yield context.df.callActivityWithRetry(
-        "StoreCgnExpirationActivity",
+    try {
+      if (newStatusCard.status === ActivatedStatusEnum.ACTIVATED) {
+        const storeCgnExpirationResult = yield context.df.callActivityWithRetry(
+          "StoreCgnExpirationActivity",
+          internalRetryOptions,
+          StoreCgnExpirationActivityInput.encode({
+            activationDate: newStatusCard.activation_date,
+            expirationDate: newStatusCard.expiration_date,
+            fiscalCode
+          })
+        );
+        const decodedStoreCgnExpirationResult = ActivityResult.decode(
+          storeCgnExpirationResult
+        ).getOrElseL(e =>
+          trackExAndThrowWithError(
+            e,
+            "cgn.update.exception.decode.storeCgnExpirationActivityOutput"
+          )
+        );
+
+        if (decodedStoreCgnExpirationResult.kind !== "SUCCESS") {
+          trackExAndThrowWithError(
+            new Error("Cannot store CGN Expiration"),
+            "cgn.update.exception.failure.storeCgnExpirationActivityOutput"
+          );
+        }
+      }
+      const updateCgnStatusActivityInput = ActivityInput.encode({
+        card: newStatusCard,
+        fiscalCode
+      });
+      const updateStatusResult = yield context.df.callActivityWithRetry(
+        "UpdateCgnStatusActivity",
         internalRetryOptions,
-        StoreCgnExpirationActivityInput.encode({
-          activationDate: newStatusCard.activation_date,
-          expirationDate: newStatusCard.expiration_date,
-          fiscalCode
-        })
+        updateCgnStatusActivityInput
       );
-      const decodedStoreCgnExpirationResult = ActivityResult.decode(
-        storeCgnExpirationResult
+
+      const updateCgnResult = ActivityResult.decode(
+        updateStatusResult
       ).getOrElseL(e =>
         trackExAndThrowWithError(
           e,
-          "cgn.update.exception.decode.storeCgnExpirationActivityOutput"
+          "cgn.update.exception.decode.activityOutput"
         )
       );
 
-      if (decodedStoreCgnExpirationResult.kind !== "SUCCESS") {
+      if (updateCgnResult.kind !== "SUCCESS") {
         trackExAndThrowWithError(
-          new Error("Cannot store CGN Expiration"),
-          "cgn.update.exception.failure.storeCgnExpirationActivityOutput"
+          new Error("Cannot update CGN Status"),
+          "cgn.update.exception.failure.activityOutput"
         );
       }
-    }
-    const updateCgnStatusActivityInput = ActivityInput.encode({
-      card: newStatusCard,
-      fiscalCode
-    });
-    const updateStatusResult = yield context.df.callActivityWithRetry(
-      "UpdateCgnStatusActivity",
-      internalRetryOptions,
-      updateCgnStatusActivityInput
-    );
+    } catch (err) {
+      if (
+        !context.df.isReplaying &&
+        newStatusCard.status === ActivatedStatusEnum.ACTIVATED
+      ) {
+        // CGN Activation is failed so we try to send error message if sync flow is stopped
+        yield context.df.createTimer(
+          addSeconds(context.df.currentUtcDateTime, NOTIFICATION_DELAY_SECONDS)
+        );
+        trackEvtIfNotReplaying({
+          name: "cgn.update.timer",
+          properties: {
+            id: fiscalCode,
+            status: "ERROR"
+          },
+          tagOverrides
+        });
 
-    const updateCgnResult = ActivityResult.decode(
-      updateStatusResult
-    ).getOrElseL(e =>
-      trackExAndThrowWithError(e, "cgn.update.exception.decode.activityOutput")
-    );
-
-    if (updateCgnResult.kind !== "SUCCESS") {
-      trackExAndThrowWithError(
-        new Error("Cannot update CGN Status"),
-        "cgn.update.exception.failure.activityOutput"
-      );
+        const content = getErrorMessage();
+        yield context.df.callActivityWithRetry(
+          "SendMessageActivity",
+          internalRetryOptions,
+          SendMessageActivityInput.encode({
+            checkProfile: false,
+            content,
+            fiscalCode
+          })
+        );
+      }
+      throw err;
     }
 
     if (newStatusCard.status === ActivatedStatusEnum.ACTIVATED) {
@@ -166,7 +201,7 @@ export const handler = function*(
         name: "cgn.update.timer",
         properties: {
           id: fiscalCode,
-          status: `${updateCgnResult.kind}`
+          status: "SUCCESS"
         },
         tagOverrides
       });

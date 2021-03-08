@@ -144,7 +144,8 @@ export function GetCgnActivationHandler(
               // we can try to terminate running orchestrator in fire&forget to allow sync flow
               // i.e UPDATED status means that the orchestrator is running and userCgn status' update is performed.
               // Otherwise we return the original orchestrator status
-              customStatus === "UPDATED" && CardActivated.is(cgn)
+              (customStatus === "UPDATED" && CardActivated.is(cgn)) ||
+              customStatus === "ERROR"
                 ? terminateOrchestratorTask(
                     client,
                     orchestratorId
