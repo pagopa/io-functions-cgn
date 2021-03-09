@@ -43,7 +43,9 @@ export const handler = function*(
   );
   const trackExIfNotReplaying = trackExceptionIfNotReplaying(context);
   const trackEvtIfNotReplaying = trackEventIfNotReplaying(context);
-  context.df.setCustomStatus("RUNNING");
+  if (!context.df.isReplaying) {
+    context.df.setCustomStatus("RUNNING");
+  }
 
   const input = context.df.getInput();
   const decodedInput = OrchestratorInput.decode(input).getOrElseL(e =>
@@ -88,12 +90,12 @@ export const handler = function*(
         card: newStatusCard,
         fiscalCode
       });
+
       const updateStatusResult = yield context.df.callActivityWithRetry(
         "UpdateCgnStatusActivity",
         internalRetryOptions,
         updateCgnStatusActivityInput
       );
-
       const updateCgnResult = ActivityResult.decode(
         updateStatusResult
       ).getOrElseL(e =>
@@ -109,11 +111,9 @@ export const handler = function*(
           "cgn.update.exception.failure.activityOutput"
         );
       }
+      // tslint:disable-next-line: no-useless-catch
     } catch (err) {
-      if (
-        !context.df.isReplaying &&
-        newStatusCard.status === ActivatedStatusEnum.ACTIVATED
-      ) {
+      if (newStatusCard.status === ActivatedStatusEnum.ACTIVATED) {
         // CGN Activation is failed so we try to send error message if sync flow is stopped
         yield context.df.createTimer(
           addSeconds(context.df.currentUtcDateTime, NOTIFICATION_DELAY_SECONDS)
@@ -126,17 +126,18 @@ export const handler = function*(
           },
           tagOverrides
         });
-
-        const content = getErrorMessage();
-        yield context.df.callActivityWithRetry(
-          "SendMessageActivity",
-          internalRetryOptions,
-          SendMessageActivityInput.encode({
-            checkProfile: false,
-            content,
-            fiscalCode
-          })
-        );
+        if (!context.df.isReplaying) {
+          const content = getErrorMessage();
+          yield context.df.callActivityWithRetry(
+            "SendMessageActivity",
+            internalRetryOptions,
+            SendMessageActivityInput.encode({
+              checkProfile: false,
+              content,
+              fiscalCode
+            })
+          );
+        }
       }
       throw err;
     }
