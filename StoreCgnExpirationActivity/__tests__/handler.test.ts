@@ -4,11 +4,11 @@ import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
 import { now } from "../../__mocks__/mock";
+import * as tableUtils from "../../utils/table_storage";
 import {
   ActivityInput,
   getStoreCgnExpirationActivityHandler
 } from "../handler";
-import * as tableUtils from "../../utils/table_storage";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const tableServiceMock = jest.fn();
