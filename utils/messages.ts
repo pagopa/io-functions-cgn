@@ -54,3 +54,14 @@ export const getMessage = (card: Card): MessageContent => {
 
   return assertNever(card);
 };
+
+export const getErrorMessage = (): MessageContent =>
+  ({
+    subject: "Abbiamo riscontrato dei problemi",
+    markdown: `
+Si è verificato un errore nel processare la tua richiesta di Carta Giovani.
+Ti chiediamo di riprovare.
+
+Ci scusiamo per il disagio.
+`
+  } as MessageContent);

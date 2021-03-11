@@ -26,6 +26,7 @@ export const getActivationStatus = (
     case df.OrchestrationRuntimeStatus.Failed:
       return some(StatusEnum.ERROR);
     case df.OrchestrationRuntimeStatus.Completed:
+    case df.OrchestrationRuntimeStatus.Terminated:
       return some(StatusEnum.COMPLETED);
     default:
       return none;
