@@ -30,7 +30,9 @@ export const handler = function*(
     context,
     logPrefix
   );
-  context.df.setCustomStatus("RUNNING");
+  if (!context.df.isReplaying) {
+    context.df.setCustomStatus("RUNNING");
+  }
 
   const trackExceptionIfNotReplaying = (evt: ExceptionTelemetry) =>
     context.df.isReplaying ? constVoid : trackException(evt);

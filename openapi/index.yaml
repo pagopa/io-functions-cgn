@@ -463,7 +463,7 @@ definitions:
       - status
 
   OtpCode:
-    description: The unique otp code that identifies can be use for discounts
+    description: The unique otp code that can be use for discounts
     type: string
     pattern: "^[A-Z0-9]{9,13}$"
   Otp:
