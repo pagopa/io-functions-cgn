@@ -18,7 +18,7 @@ import {
 import { ActivityResult } from "../../utils/activity";
 import { DEFAULT_EYCA_UPPER_BOUND_AGE } from "../../utils/config";
 import { MESSAGES } from "../../utils/messages";
-import { updateCgnOrchestratorHandler } from "../handler";
+import { UpdateCgnOrchestratorHandler } from "../handler";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const now = new Date();
@@ -76,7 +76,7 @@ describe("UpdateCgnOrchestrator", () => {
       // 4 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
     // tslint:disable-next-line: no-any no-useless-cast
-    const orchestrator = updateCgnOrchestratorHandler(
+    const orchestrator = UpdateCgnOrchestratorHandler(
       contextMockWithDf as any,
       DEFAULT_EYCA_UPPER_BOUND_AGE
     );
@@ -131,7 +131,7 @@ describe("UpdateCgnOrchestrator", () => {
       // 5 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
     // tslint:disable-next-line: no-any no-useless-cast
-    const orchestrator = updateCgnOrchestratorHandler(
+    const orchestrator = UpdateCgnOrchestratorHandler(
       contextMockWithDf as any,
       DEFAULT_EYCA_UPPER_BOUND_AGE
     );
@@ -183,7 +183,7 @@ describe("UpdateCgnOrchestrator", () => {
       // 5 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
     // tslint:disable-next-line: no-any no-useless-cast
-    const orchestrator = updateCgnOrchestratorHandler(
+    const orchestrator = UpdateCgnOrchestratorHandler(
       contextMockWithDf as any,
       DEFAULT_EYCA_UPPER_BOUND_AGE
     );

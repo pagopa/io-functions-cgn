@@ -32,7 +32,7 @@ export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 const NOTIFICATION_DELAY_SECONDS = 10;
 
-export const updateCgnOrchestratorHandler = function*(
+export const UpdateCgnOrchestratorHandler = function*(
   context: IOrchestrationFunctionContext,
   eycaUpperBoundAge: NonNegativeInteger,
   logPrefix: string = "UpdateCgnOrchestrator"
