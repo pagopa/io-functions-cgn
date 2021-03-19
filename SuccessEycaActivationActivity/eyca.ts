@@ -4,6 +4,7 @@ import { toError } from "fp-ts/lib/Either";
 import {
   fromEither,
   fromLeft,
+  TaskEither,
   taskEither,
   tryCatch
 } from "fp-ts/lib/TaskEither";
@@ -16,13 +17,18 @@ import { errorsToError } from "../utils/conversions";
 import { getTask, setWithExpirationTask } from "../utils/redis_storage";
 
 export const CCDB_SESSION_ID_KEY = "CCDB_SESSION_ID";
-export const CCDB_SESSION_ID_TTL = 1500;
+export const CCDB_SESSION_ID_TTL = 1700;
 
+/**
+ * Performs a login through EYCA CCDB Login API
+ * via username and password credentials.
+ * A success response includes a session_id token
+ */
 const ccdbLogin = (
   eycaClient: ReturnType<EycaAPIClient>,
   username: NonEmptyString,
   password: NonEmptyString
-) =>
+): TaskEither<Error, NonEmptyString> =>
   tryCatch(
     () =>
       eycaClient.authLogin({
@@ -43,30 +49,30 @@ const ccdbLogin = (
         : taskEither.of(res.value.api_response.text)
     );
 
+/**
+ * Retrieves a previous stored session_id on Redis cache.
+ * If missing a new login is performed and the related session_id
+ * is stored on Redis.
+ */
 const retrieveCcdbSessionId = (
   redisClient: RedisClient,
   eycaClient: ReturnType<EycaAPIClient>,
   username: NonEmptyString,
   password: NonEmptyString
-) =>
-  getTask(redisClient, CCDB_SESSION_ID_KEY).foldTaskEither(
-    () => ccdbLogin(eycaClient, username, password),
-    maybeSessionId =>
-      maybeSessionId.foldL(
-        () =>
-          ccdbLogin(eycaClient, username, password).chain(_ =>
-            setWithExpirationTask(
-              redisClient,
-              CCDB_SESSION_ID_KEY,
-              _,
-              CCDB_SESSION_ID_TTL
-            ).foldTaskEither(
-              () => taskEither.of(_),
-              () => taskEither.of(_)
-            )
-          ),
-        sessionId => taskEither.of(sessionId as NonEmptyString)
-      )
+): TaskEither<Error, NonEmptyString> =>
+  getTask(redisClient, CCDB_SESSION_ID_KEY).chain(maybeSessionId =>
+    maybeSessionId.foldL(
+      () =>
+        ccdbLogin(eycaClient, username, password).chain(_ =>
+          setWithExpirationTask(
+            redisClient,
+            CCDB_SESSION_ID_KEY,
+            _,
+            CCDB_SESSION_ID_TTL
+          ).map(() => _)
+        ),
+      sessionId => taskEither.of(sessionId as NonEmptyString)
+    )
   );
 
 export const updateCard = (

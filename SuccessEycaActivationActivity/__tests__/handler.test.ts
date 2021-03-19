@@ -1,4 +1,5 @@
 /* tslint:disable: no-any */
+import * as date_fns from "date-fns";
 import { none, some } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { toCosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
@@ -22,6 +23,7 @@ import {
 
 const aFiscalCode = "RODFDS92S10H501T" as FiscalCode;
 const aUserEycaCardNumber = "X321-Y321-Z321-W321" as CcdbNumber;
+const expirationDate = date_fns.addYears(now, 5);
 
 const aPendingEycaCard: CardPending = {
   status: PendingStatusEnum.PENDING
@@ -35,7 +37,7 @@ const aPendingUserEycaCard: UserEycaCard = {
 const anActivatedEycaCard: EycaCardActivated = {
   activation_date: now,
   card_number: aUserEycaCardNumber,
-  expiration_date: extractEycaExpirationDate(aFiscalCode).value as Date,
+  expiration_date: expirationDate,
   status: ActivatedStatusEnum.ACTIVATED
 };
 

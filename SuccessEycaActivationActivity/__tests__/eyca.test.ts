@@ -155,26 +155,6 @@ describe("preIssueCard", () => {
       .run();
   });
 
-  it("should succeed with a new sessionId provided by EYCA authLogin even if Redis is unreachable", async () => {
-    getTaskMock.mockImplementationOnce(() => fromLeft(new Error("Timeout")));
-    await preIssueCard(
-      {} as any,
-      eycaApiClient,
-      anEycaApiUsername,
-      anEycaApiPassword
-    )
-      .fold(
-        () => fail(),
-        ccdbNumber => {
-          expect(getTaskMock).toBeCalledTimes(1);
-          expect(authLoginMock).toBeCalledTimes(1);
-          expect(setWithExpirationTaskMock).not.toHaveBeenCalled();
-          expect(ccdbNumber).toEqual(aCcdbNumber);
-        }
-      )
-      .run();
-  });
-
   it("should succeed with a valid sessionId retrieved from Redis", async () => {
     await preIssueCard(
       {} as any,
@@ -279,7 +259,7 @@ describe("updateCard", () => {
       .run();
   });
 
-  it("should succeed with a new sessionId provided by EYCA authLogin even if Redis is unreachable", async () => {
+  it("should fail if Redis is unreachable", async () => {
     getTaskMock.mockImplementationOnce(() => fromLeft(new Error("Timeout")));
     await updateCard(
       {} as any,
@@ -290,12 +270,12 @@ describe("updateCard", () => {
       new Date()
     )
       .fold(
-        () => fail(),
         () => {
           expect(getTaskMock).toBeCalledTimes(1);
-          expect(authLoginMock).toBeCalledTimes(1);
+          expect(authLoginMock).not.toHaveBeenCalled();
           expect(setWithExpirationTaskMock).not.toHaveBeenCalled();
-        }
+        },
+        () => fail()
       )
       .run();
   });
