@@ -14,7 +14,6 @@ import {
 import { EycaCardActivated } from "../../generated/definitions/EycaCardActivated";
 import { CcdbNumber } from "../../generated/eyca-api/CcdbNumber";
 import { UserEycaCard } from "../../models/user_eyca_card";
-import { extractEycaExpirationDate } from "../../utils/cgn_checks";
 import * as eyca from "../eyca";
 import {
   ActivityInput,
@@ -75,7 +74,7 @@ const anEycaApiUsername = "USERNAME" as NonEmptyString;
 const anEycaApiPassword = "PASSWORD" as NonEmptyString;
 const anActivityInput: ActivityInput = {
   activationDate: new Date(),
-  expirationDate: extractEycaExpirationDate(aFiscalCode).value as Date,
+  expirationDate,
   fiscalCode: aFiscalCode
 };
 

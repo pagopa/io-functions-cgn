@@ -30,7 +30,7 @@ import { StatusEnum } from "../generated/definitions/CardRevoked";
 import { CgnStatusUpsertRequest } from "../generated/definitions/CgnStatusUpsertRequest";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
-import { OrchestratorInput } from "../UpdateCgnOrchestrator";
+import { OrchestratorInput } from "../UpdateCgnOrchestrator/handler";
 import { makeUpdateCgnOrchestratorId } from "../utils/orchestrators";
 import { checkUpdateCardIsRunning } from "../utils/orchestrators";
 
