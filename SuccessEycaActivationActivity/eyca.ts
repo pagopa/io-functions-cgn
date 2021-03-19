@@ -63,13 +63,13 @@ const retrieveCcdbSessionId = (
   getTask(redisClient, CCDB_SESSION_ID_KEY).chain(maybeSessionId =>
     maybeSessionId.foldL(
       () =>
-        ccdbLogin(eycaClient, username, password).chain(_ =>
+        ccdbLogin(eycaClient, username, password).chain(sessionId =>
           setWithExpirationTask(
             redisClient,
             CCDB_SESSION_ID_KEY,
-            _,
+            sessionId,
             CCDB_SESSION_ID_TTL
-          ).map(() => _)
+          ).map(() => sessionId)
         ),
       sessionId => taskEither.of(sessionId as NonEmptyString)
     )
