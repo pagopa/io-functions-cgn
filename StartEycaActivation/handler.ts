@@ -1,6 +1,7 @@
 import * as express from "express";
 
 import { Context } from "@azure/functions";
+import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import * as df from "durable-functions";
 import { DurableOrchestrationStatus } from "durable-functions/lib/src/classes";
 import { fromOption, toError } from "fp-ts/lib/Either";
@@ -51,12 +52,12 @@ type ErrorTypes =
   | IResponseErrorInternal
   | IResponseErrorForbiddenNotAuthorized
   | IResponseErrorConflict;
-type ReturnTypes =
+export type ReturnTypes =
   | IResponseSuccessAccepted
   | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
   | ErrorTypes;
 
-type IStartCgnActivationHandler = (
+export type IStartCgnActivationHandler = (
   context: Context,
   fiscalCode: FiscalCode
 ) => Promise<ReturnTypes>;
@@ -84,12 +85,13 @@ const mapOrchestratorStatus = (
  */
 const getEycaEligibleTask = (
   fiscalCode: FiscalCode,
-  userCgnModel: UserCgnModel
+  userCgnModel: UserCgnModel,
+  eycaBetaTestUpperBoundAge: NonNegativeInteger | undefined
 ): TaskEither<
   IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
   true
 > =>
-  fromEither(isEycaEligible(fiscalCode))
+  fromEither(isEycaEligible(fiscalCode, eycaBetaTestUpperBoundAge))
     .mapLeft<IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized>(
       () => ResponseErrorInternal("Cannot perform EYCA Eligibility Check")
     )
@@ -120,6 +122,7 @@ const getEycaEligibleTask = (
 export function StartEycaActivationHandler(
   userEycaCardModel: UserEycaCardModel,
   userCgnModel: UserCgnModel,
+  eycaBetaTestUpperBoundAge: NonNegativeInteger | undefined,
   logPrefix: string = "StartEycaActivationHandler"
 ): IStartCgnActivationHandler {
   return async (context, fiscalCode) => {
@@ -131,7 +134,8 @@ export function StartEycaActivationHandler(
 
     const isEycaEligibleOrError = await getEycaEligibleTask(
       fiscalCode,
-      userCgnModel
+      userCgnModel,
+      eycaBetaTestUpperBoundAge
     ).run();
     if (isLeft(isEycaEligibleOrError)) {
       return isEycaEligibleOrError.value;
@@ -206,7 +210,12 @@ export function StartEycaActivationHandler(
                 ResponseErrorInternal(`Cannot insert a new EYCA card|${e.kind}`)
               )
               .chain(() =>
-                fromEither(extractEycaExpirationDate(fiscalCode))
+                fromEither(
+                  extractEycaExpirationDate(
+                    fiscalCode,
+                    eycaBetaTestUpperBoundAge
+                  )
+                )
                   .mapLeft(() =>
                     ResponseErrorInternal(
                       `Error extracting Expiration Date from Fiscal Code`
@@ -255,9 +264,14 @@ export function StartEycaActivationHandler(
 
 export function StartEycaActivation(
   userEycaCardModel: UserEycaCardModel,
-  userCgnModel: UserCgnModel
+  userCgnModel: UserCgnModel,
+  eycaBetaTestUpperBoundAge: NonNegativeInteger | undefined
 ): express.RequestHandler {
-  const handler = StartEycaActivationHandler(userEycaCardModel, userCgnModel);
+  const handler = StartEycaActivationHandler(
+    userEycaCardModel,
+    userCgnModel,
+    eycaBetaTestUpperBoundAge
+  );
 
   const middlewaresWrap = withRequestMiddlewares(
     ContextMiddleware(),

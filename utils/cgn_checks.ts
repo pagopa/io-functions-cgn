@@ -97,7 +97,8 @@ export const toBirthDate = (fiscalCode: FiscalCode): Option<Date> => {
  * @param fiscalCode: the citizen's fiscalCode
  */
 export const extractCgnExpirationDate = (
-  fiscalCode: FiscalCode
+  fiscalCode: FiscalCode,
+  cgnUpperBoundAge: number = CGN_UPPER_BOUND_AGE
 ): TaskEither<Error, Date> =>
   taskEither
     .of<Error, FiscalCode>(fiscalCode)
@@ -111,9 +112,7 @@ export const extractCgnExpirationDate = (
         birthDate => taskEither.of<Error, Date>(birthDate)
       )
     )
-    .chain(birthDate =>
-      taskEither.of(addYears(birthDate, CGN_UPPER_BOUND_AGE))
-    );
+    .chain(birthDate => taskEither.of(addYears(birthDate, cgnUpperBoundAge)));
 
 /**
  * Check if a citizen is eligible for getting a CGN
@@ -121,7 +120,8 @@ export const extractCgnExpirationDate = (
  * @param fiscalCode the citizen's fiscalCode
  */
 export const checkCgnRequirements = (
-  fiscalCode: FiscalCode
+  fiscalCode: FiscalCode,
+  cgnUpperBoundAge: number = CGN_UPPER_BOUND_AGE
 ): TaskEither<Error, boolean> =>
   taskEither
     .of<Error, FiscalCode>(fiscalCode)
@@ -138,24 +138,26 @@ export const checkCgnRequirements = (
     .chain(birthDate =>
       taskEither.of(
         isOlderThan(CGN_LOWER_BOUND_AGE)(birthDate, new Date()) &&
-          isYoungerThan(CGN_UPPER_BOUND_AGE)(birthDate, new Date())
+          isYoungerThan(cgnUpperBoundAge)(birthDate, new Date())
       )
     );
 
 export const isEycaEligible = (
-  fiscalCode: FiscalCode
+  fiscalCode: FiscalCode,
+  eycaUpperBoundAge: number = EYCA_UPPER_BOUND_AGE
 ): Either<Error, boolean> =>
   fromOption(new Error("Cannot recognize EYCA eligibility"))(
     toBirthDate(fiscalCode)
   ).map(
     birthDate =>
       isOlderThan(EYCA_LOWER_BOUND_AGE)(birthDate, new Date()) &&
-      isYoungerThan(EYCA_UPPER_BOUND_AGE)(birthDate, new Date())
+      isYoungerThan(eycaUpperBoundAge)(birthDate, new Date())
   );
 
 export const extractEycaExpirationDate = (
-  fiscalCode: FiscalCode
+  fiscalCode: FiscalCode,
+  eycaUpperBoundAge: number = EYCA_UPPER_BOUND_AGE
 ): Either<Error, Date> =>
   fromOption(new Error("Cannot extract birth date from FiscalCode"))(
     toBirthDate(fiscalCode)
-  ).map(birthDate => addYears(birthDate, EYCA_UPPER_BOUND_AGE));
+  ).map(birthDate => addYears(birthDate, eycaUpperBoundAge));

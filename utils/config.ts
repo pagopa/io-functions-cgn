@@ -9,7 +9,7 @@ import {
   IntegerFromString,
   NonNegativeInteger
 } from "@pagopa/ts-commons/lib/numbers";
-import { fromNullable } from "fp-ts/lib/Option";
+import { fromNullable, none, some } from "fp-ts/lib/Option";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
@@ -26,6 +26,12 @@ export const RedisParams = t.intersection([
   })
 ]);
 export type RedisParams = t.TypeOf<typeof RedisParams>;
+
+export const BetaTestParams = t.partial({
+  CGN_BETA_TEST_UPPER_BOUND_AGE: NonNegativeInteger,
+  EYCA_BETA_TEST_UPPER_BOUND_AGE: NonNegativeInteger
+});
+export type BetaTestParams = t.TypeOf<typeof BetaTestParams>;
 
 // global app configuration
 export type IConfig = t.TypeOf<typeof IConfig>;
@@ -50,12 +56,29 @@ export const IConfig = t.intersection([
     OTP_TTL_IN_SECONDS: NonNegativeInteger,
     isProduction: t.boolean
   }),
+  BetaTestParams,
   RedisParams
 ]);
 
 // No need to re-evaluate this object for each call
 const errorOrConfig: t.Validation<IConfig> = IConfig.decode({
   ...process.env,
+  CGN_BETA_TEST_UPPER_BOUND_AGE: IntegerFromString.decode(
+    process.env.CGN_BETA_TEST_UPPER_BOUND_AGE
+  )
+    .fold(
+      () => none,
+      _ => some(_ as NonNegativeInteger)
+    )
+    .toUndefined(),
+  EYCA_BETA_TEST_UPPER_BOUND_AGE: IntegerFromString.decode(
+    process.env.EYCA_BETA_TEST_UPPER_BOUND_AGE
+  )
+    .fold(
+      () => none,
+      _ => some(_ as NonNegativeInteger)
+    )
+    .toUndefined(),
   OTP_TTL_IN_SECONDS: IntegerFromString.decode(
     process.env.OTP_TTL_IN_SECONDS
   ).getOrElse(600 as NonNegativeInteger),

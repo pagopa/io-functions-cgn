@@ -48,7 +48,11 @@ secureExpressApp(app);
 // Add express route
 app.get(
   "/api/v1/cgn/eyca/status/:fiscalcode",
-  GetEycaStatus(userEycaCardModel, userCgnModel)
+  GetEycaStatus(
+    userEycaCardModel,
+    userCgnModel,
+    config.EYCA_BETA_TEST_UPPER_BOUND_AGE
+  )
 );
 
 const azureFunctionHandler = createAzureFunctionHandler(app);

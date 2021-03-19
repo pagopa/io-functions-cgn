@@ -8,11 +8,7 @@ import {
   ResponseSuccessAccepted
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import {
-  mockGetStatus,
-  mockStartNew,
-  mockStatusRunning
-} from "../../__mocks__/durable-functions";
+import { mockStartNew } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
   CardActivated,
@@ -88,7 +84,8 @@ describe("StartCgnActivation", () => {
       fromLeft(toCosmosErrorResponse(new Error("query error")))
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      undefined
     );
     const response = await startCgnActivationHandler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -99,7 +96,8 @@ describe("StartCgnActivation", () => {
       fromLeft(ResponseErrorInternal("Error"))
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      undefined
     );
     const response = await startCgnActivationHandler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -110,7 +108,8 @@ describe("StartCgnActivation", () => {
       fromLeft(ResponseSuccessAccepted())
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      undefined
     );
     const response = await startCgnActivationHandler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseSuccessAccepted");
@@ -122,7 +121,8 @@ describe("StartCgnActivation", () => {
     );
     upsertModelMock.mockImplementationOnce(() => taskEither.of({}));
     const startCgnActivationHandler = StartCgnActivationHandler(
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      undefined
     );
     await startCgnActivationHandler({} as any, aFiscalCode);
     expect(mockStartNew).toBeCalledTimes(1);
@@ -133,7 +133,8 @@ describe("StartCgnActivation", () => {
       taskEither.of(some(anActivatedUserCgn))
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      undefined
     );
     const response = await startCgnActivationHandler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorConflict");
@@ -147,7 +148,8 @@ describe("StartCgnActivation", () => {
       fromLeft(new Error("Insert error"))
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      undefined
     );
     const response = await startCgnActivationHandler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -159,7 +161,8 @@ describe("StartCgnActivation", () => {
       fromLeft(toCosmosErrorResponse(new Error("query error")))
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      undefined
     );
     const response = await startCgnActivationHandler(
       {} as any,

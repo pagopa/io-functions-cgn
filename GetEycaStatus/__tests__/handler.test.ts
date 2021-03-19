@@ -84,7 +84,8 @@ jest.spyOn(cgn_checks, "isEycaEligible").mockImplementation(isEycaEligibleMock);
 const successImpl = async (userEycaCard: UserEycaCard) => {
   const handler = GetEycaStatusHandler(
     userEycaCardModelMock as any,
-    userCgnModelMock as any
+    userCgnModelMock as any,
+    undefined
   );
   const response = await handler({} as any, aFiscalCode);
   expect(response.kind).toBe("IResponseSuccessJson");
@@ -123,7 +124,8 @@ describe("GetEycaCardStatusHandler", () => {
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      undefined
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -135,7 +137,8 @@ describe("GetEycaCardStatusHandler", () => {
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      undefined
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -150,7 +153,8 @@ describe("GetEycaCardStatusHandler", () => {
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      undefined
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -165,7 +169,8 @@ describe("GetEycaCardStatusHandler", () => {
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      undefined
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorNotFound");
@@ -180,7 +185,8 @@ describe("GetEycaCardStatusHandler", () => {
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      undefined
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorNotFound");
@@ -190,7 +196,8 @@ describe("GetEycaCardStatusHandler", () => {
     isEycaEligibleMock.mockImplementationOnce(() => right(false));
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      undefined
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
@@ -202,7 +209,8 @@ describe("GetEycaCardStatusHandler", () => {
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      undefined
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorConflict");
@@ -217,7 +225,8 @@ describe("GetEycaCardStatusHandler", () => {
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      undefined
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorInternal");

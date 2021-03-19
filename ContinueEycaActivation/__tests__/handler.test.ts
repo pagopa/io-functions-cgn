@@ -3,7 +3,7 @@ import { left, right } from "fp-ts/lib/Either";
 import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import { aFiscalCode } from "../../__mocks__/mock";
 import * as cgn_checks from "../../utils/cgn_checks";
-import ContinueEycaActivationHandler from "../index";
+import { continueEycaActivationHandler } from "../handler";
 
 const extractEycaExpirationDateMock = jest
   .spyOn(cgn_checks, "extractEycaExpirationDate")
@@ -15,7 +15,7 @@ describe("ContinueEycaActivation", () => {
   });
 
   it("should return a permanent error if input cannot be decoded", async () => {
-    const result = ContinueEycaActivationHandler(context, {});
+    const result = continueEycaActivationHandler(context, {}, undefined);
     return expect(result).resolves.toMatchObject({ kind: "PERMANENT" });
   });
 
@@ -23,9 +23,13 @@ describe("ContinueEycaActivation", () => {
     extractEycaExpirationDateMock.mockImplementationOnce(() =>
       left(new Error("Cannot extract date"))
     );
-    const result = ContinueEycaActivationHandler(context, {
-      fiscalCode: aFiscalCode
-    });
+    const result = continueEycaActivationHandler(
+      context,
+      {
+        fiscalCode: aFiscalCode
+      },
+      undefined
+    );
     return expect(result).resolves.toMatchObject({ kind: "PERMANENT" });
   });
 
@@ -34,9 +38,13 @@ describe("ContinueEycaActivation", () => {
       throw new Error("foobar");
     });
     try {
-      await ContinueEycaActivationHandler(context, {
-        fiscalCode: aFiscalCode
-      });
+      await continueEycaActivationHandler(
+        context,
+        {
+          fiscalCode: aFiscalCode
+        },
+        undefined
+      );
       fail();
     } catch (e) {
       expect(e).toBeInstanceOf(Error);
