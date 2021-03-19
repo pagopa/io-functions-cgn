@@ -12,29 +12,31 @@ import { assertNever } from "./types";
 export const MESSAGES = {
   CardRevoked: (card: CardRevoked) =>
     ({
-      subject: "La tua Carta Giovani Nazionale è stata revocata",
+      subject: "La tua carta è stata annullata",
       markdown: `
-A seguito di una segnalazione la tua Carta Giovani Nazionale è stata **revocata** in data **${format(
+Ti avvisiamo che la tua Carta Giovani Nazionale è stata annullata il giorno ${format(
         card.revocation_date,
         "dd-MM-yyyy"
-      )}** con la seguente motivazione:
-${card.revocation_reason}
-`
+      )} per ${card.revocation_reason}.
+            
+Non sarà più possibile utilizzare la carta nè nei punti fisici nè online.`
     } as MessageContent),
   CardActivated: () =>
     ({
-      subject: "La tua Carta Nazionale Giovani è attiva",
-      markdown: `A seguito della tua richiesta di attivazione, la tua Carta Giovani Nazionale è
-**attiva** e pronta all' utilizzo.
+      subject: "La tua Carta Giovani è attiva!",
+      markdown: `Buone notizie! **La tua Carta Giovani Nazionale è attiva** e la potrai trovare all’interno della sezione Portafoglio.
+
+Ti ricordiamo che solo tu puoi usufruire degli sconti presentando la Carta presso gli esercenti fisici aderenti, oppure inserendo i codici nell’apposito campo presso gli esercenti aderenti online.
+
+La Carta Giovani Nazionale sarà valida da oggi fino al compimento dei 36 anni. Buono shopping!
 `
     } as MessageContent),
   CardExpired: () =>
     ({
-      subject: "La tua Carta Nazionale Giovani è scaduta",
-      markdown: `
-A seguito del compimento del tuo trentaseiesimo anno di età, la carta è **scaduta**
-in quanto non rientri nei requisiti per il suo utilizzo.      
-`
+      subject: "La tua Carta Giovani Nazionale è scaduta",
+      markdown: `Ti avvisiamo che da oggi non è più possibile utilizzare la tua Carta Giovani Nazionale.
+
+Grazie per aver partecipato al programma, speriamo tu abbia fatto ottimi acquisti!`
     } as MessageContent)
 };
 
