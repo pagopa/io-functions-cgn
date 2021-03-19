@@ -47,10 +47,10 @@ type IGetEycaStatusHandler = (
 export function GetEycaStatusHandler(
   userEycaCardModel: UserEycaCardModel,
   userCgnModel: UserCgnModel,
-  eycaBetaTestUpperBoundAge: NonNegativeInteger | undefined
+  eycaUpperBoundAge: NonNegativeInteger
 ): IGetEycaStatusHandler {
   return async (_, fiscalCode) =>
-    fromEither(isEycaEligible(fiscalCode, eycaBetaTestUpperBoundAge))
+    fromEither(isEycaEligible(fiscalCode, eycaUpperBoundAge))
       .mapLeft<ErrorTypes>(() =>
         ResponseErrorInternal("Cannot perform user's EYCA eligibility check")
       )
@@ -111,12 +111,12 @@ export function GetEycaStatusHandler(
 export function GetEycaStatus(
   userEycaCardModel: UserEycaCardModel,
   userCgnModel: UserCgnModel,
-  eycaBetaTestUpperBoundAge: NonNegativeInteger | undefined
+  eycaUpperBoundAge: NonNegativeInteger
 ): express.RequestHandler {
   const handler = GetEycaStatusHandler(
     userEycaCardModel,
     userCgnModel,
-    eycaBetaTestUpperBoundAge
+    eycaUpperBoundAge
   );
 
   const middlewaresWrap = withRequestMiddlewares(

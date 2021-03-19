@@ -38,7 +38,7 @@ secureExpressApp(app);
 // Add express route
 app.post(
   "/api/v1/cgn/:fiscalcode/activation",
-  StartCgnActivation(userCgnModel, config.CGN_BETA_TEST_UPPER_BOUND_AGE)
+  StartCgnActivation(userCgnModel, config.CGN_UPPER_BOUND_AGE)
 );
 
 const azureFunctionHandler = createAzureFunctionHandler(app);

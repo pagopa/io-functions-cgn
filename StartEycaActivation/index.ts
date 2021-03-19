@@ -51,7 +51,7 @@ app.post(
   StartEycaActivation(
     userEycaCardModel,
     userCgnModel,
-    config.EYCA_BETA_TEST_UPPER_BOUND_AGE
+    config.EYCA_UPPER_BOUND_AGE
   )
 );
 

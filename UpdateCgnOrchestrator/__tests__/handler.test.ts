@@ -1,4 +1,4 @@
-// tslint:disable: object-literal-sort-keys
+// tslint:disable: object-literal-sort-keys no-undefined-argument no-any
 
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context as contextMock } from "../../__mocks__/durable-functions";
@@ -17,7 +17,7 @@ import {
 } from "../../generated/definitions/CardRevoked";
 import { ActivityResult } from "../../utils/activity";
 import { MESSAGES } from "../../utils/messages";
-import { handler } from "../handler";
+import { updateCgnOrchestratorHandler } from "../handler";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const now = new Date();
@@ -75,7 +75,10 @@ describe("UpdateCgnOrchestrator", () => {
       // 4 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
     // tslint:disable-next-line: no-any no-useless-cast
-    const orchestrator = handler(contextMockWithDf as any, undefined);
+    const orchestrator = updateCgnOrchestratorHandler(
+      contextMockWithDf as any,
+      undefined
+    );
 
     // 1 StoreCgnExpiration
     const res1 = orchestrator.next();
@@ -127,7 +130,10 @@ describe("UpdateCgnOrchestrator", () => {
       // 5 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
     // tslint:disable-next-line: no-any no-useless-cast
-    const orchestrator = handler(contextMockWithDf as any, undefined);
+    const orchestrator = updateCgnOrchestratorHandler(
+      contextMockWithDf as any,
+      undefined
+    );
 
     // 1 UpdateCgnStauts
     const res1 = orchestrator.next();
@@ -176,7 +182,10 @@ describe("UpdateCgnOrchestrator", () => {
       // 5 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
     // tslint:disable-next-line: no-any no-useless-cast
-    const orchestrator = handler(contextMockWithDf as any, undefined);
+    const orchestrator = updateCgnOrchestratorHandler(
+      contextMockWithDf as any,
+      undefined
+    );
 
     // 1 UpdateCgnStauts
     const res1 = orchestrator.next();

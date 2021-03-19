@@ -32,9 +32,9 @@ export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 const NOTIFICATION_DELAY_SECONDS = 10;
 
-export const handler = function*(
+export const updateCgnOrchestratorHandler = function*(
   context: IOrchestrationFunctionContext,
-  eycaBetaTestUpperBoundAge: NonNegativeInteger | undefined,
+  eycaUpperBoundAge: NonNegativeInteger,
   logPrefix: string = "UpdateCgnOrchestrator"
 ): Generator {
   const trackExAndThrow = trackExceptionAndThrow(context, logPrefix);
@@ -147,7 +147,7 @@ export const handler = function*(
       // now we try to enqueue an EYCA activation if user is eligible for eyca
       const isEycaEligibleResult = isEycaEligible(
         fiscalCode,
-        eycaBetaTestUpperBoundAge
+        eycaUpperBoundAge
       ).getOrElseL(e =>
         trackExAndThrow(e, "cgn.update.exception.eyca.eligibilityCheck")
       );

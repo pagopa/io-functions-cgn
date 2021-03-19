@@ -37,7 +37,7 @@ const aPendingUserEycaCard: UserEycaCard = {
 const anActivatedEycaCard: EycaCardActivated = {
   activation_date: now,
   card_number: aUserEycaCardNumber,
-  expiration_date: extractEycaExpirationDate(aFiscalCode).value as Date,
+  expiration_date: now,
   status: ActivatedStatusEnum.ACTIVATED
 };
 
@@ -94,13 +94,10 @@ const eycaApiClient = {
 const anEycaApiUsername = "USERNAME" as NonEmptyString;
 const anEycaApiPassword = "PASSWORD" as NonEmptyString;
 const anActivityInput: ActivityInput = {
-  activationDate: new Date(),
-  expirationDate: extractEycaExpirationDate(aFiscalCode).value as Date,
+  activationDate: now,
+  expirationDate: now,
   fiscalCode: aFiscalCode
 };
-const extractEycaExpirationDateMock = jest
-  .spyOn(cgn_checks, "extractEycaExpirationDate")
-  .mockImplementation(() => right(addYears(new Date(), 5)));
 
 describe("SuccessEycaActivationActivity", () => {
   beforeEach(() => {

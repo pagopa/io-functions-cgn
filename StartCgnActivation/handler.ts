@@ -10,6 +10,7 @@ import { identity } from "fp-ts/lib/function";
 import { fromNullable } from "fp-ts/lib/Option";
 import {
   fromLeft,
+  fromPredicate,
   TaskEither,
   taskEither,
   tryCatch
@@ -90,27 +91,26 @@ const mapOrchestratorStatus = (
  */
 const getCgnExpirationDataTask = (
   fiscalCode: FiscalCode,
-  cgnBetaTestUpperBoundAge: NonNegativeInteger | undefined
+  cgnUpperBoundAge: NonNegativeInteger
 ): TaskEither<
   IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
   Date
 > =>
-  checkCgnRequirements(fiscalCode, cgnBetaTestUpperBoundAge).foldTaskEither<
-    IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
-    Date
-  >(
-    () =>
-      fromLeft(ResponseErrorInternal("Cannot perform CGN Eligibility Check")),
-    isEligible =>
-      isEligible
-        ? extractCgnExpirationDate(
-            fiscalCode,
-            cgnBetaTestUpperBoundAge
-          ).mapLeft(() =>
-            ResponseErrorInternal("Cannot perform CGN Eligibility Check")
-          )
-        : fromLeft(ResponseErrorForbiddenNotAuthorized)
-  );
+  checkCgnRequirements(fiscalCode, cgnUpperBoundAge)
+    .mapLeft<IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized>(
+      () => ResponseErrorInternal("Cannot perform CGN Eligibility Check")
+    )
+    .chain(
+      fromPredicate(
+        isEligible => isEligible === true,
+        () => ResponseErrorForbiddenNotAuthorized
+      )
+    )
+    .chain(() =>
+      extractCgnExpirationDate(fiscalCode, cgnUpperBoundAge).mapLeft(() =>
+        ResponseErrorInternal("Cannot perform CGN Eligibility Check")
+      )
+    );
 
 const getCgnCodeTask = () =>
   tryCatch(() => genRandomCardCode(), toError).mapLeft(() =>
@@ -119,7 +119,7 @@ const getCgnCodeTask = () =>
 
 export function StartCgnActivationHandler(
   userCgnModel: UserCgnModel,
-  cgnBetaTestUpperBoundAge: NonNegativeInteger | undefined,
+  cgnUpperBoundAge: NonNegativeInteger,
   logPrefix: string = "StartCgnActivationHandler"
 ): IStartCgnActivationHandler {
   return async (context, fiscalCode) => {
@@ -131,7 +131,7 @@ export function StartCgnActivationHandler(
 
     const cgnExpirationDateOrError = await getCgnExpirationDataTask(
       fiscalCode,
-      cgnBetaTestUpperBoundAge
+      cgnUpperBoundAge
     ).run();
     if (isLeft(cgnExpirationDateOrError)) {
       return cgnExpirationDateOrError.value;
@@ -253,12 +253,9 @@ export function StartCgnActivationHandler(
 
 export function StartCgnActivation(
   userCgnModel: UserCgnModel,
-  cgnBetaTestUpperBoundAge: NonNegativeInteger | undefined
+  cgnUpperBoundAge: NonNegativeInteger
 ): express.RequestHandler {
-  const handler = StartCgnActivationHandler(
-    userCgnModel,
-    cgnBetaTestUpperBoundAge
-  );
+  const handler = StartCgnActivationHandler(userCgnModel, cgnUpperBoundAge);
 
   const middlewaresWrap = withRequestMiddlewares(
     ContextMiddleware(),

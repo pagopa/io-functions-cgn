@@ -1,17 +1,15 @@
 // tslint:disable: object-literal-sort-keys
 
 import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { extractEycaExpirationDate } from "../../utils/cgn_checks";
 import { context as contextMock } from "../../__mocks__/durable-functions";
 import { handler } from "../index";
-import { CcdbNumber } from "../../generated/eyca-api/CcdbNumber";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 
 const getInputMock = jest.fn().mockImplementation(() => ({
   fiscalCode: aFiscalCode,
   activationDate: new Date(),
-  expirationDate: extractEycaExpirationDate(aFiscalCode).value
+  expirationDate: new Date()
 }));
 
 const mockCallActivityWithRetry = jest.fn();

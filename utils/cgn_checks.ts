@@ -1,3 +1,4 @@
+import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import { addYears, isAfter } from "date-fns";
 import { Either, fromOption } from "fp-ts/lib/Either";
 import { Option, tryCatch } from "fp-ts/lib/Option";
@@ -5,10 +6,8 @@ import { fromLeft, TaskEither } from "fp-ts/lib/TaskEither";
 import { taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 
-const CGN_UPPER_BOUND_AGE = 36;
 const CGN_LOWER_BOUND_AGE = 18;
 
-const EYCA_UPPER_BOUND_AGE = 31;
 const EYCA_LOWER_BOUND_AGE = 18;
 
 /**
@@ -98,7 +97,7 @@ export const toBirthDate = (fiscalCode: FiscalCode): Option<Date> => {
  */
 export const extractCgnExpirationDate = (
   fiscalCode: FiscalCode,
-  cgnUpperBoundAge: number = CGN_UPPER_BOUND_AGE
+  cgnUpperBoundAge: NonNegativeInteger
 ): TaskEither<Error, Date> =>
   taskEither
     .of<Error, FiscalCode>(fiscalCode)
@@ -121,7 +120,7 @@ export const extractCgnExpirationDate = (
  */
 export const checkCgnRequirements = (
   fiscalCode: FiscalCode,
-  cgnUpperBoundAge: number = CGN_UPPER_BOUND_AGE
+  cgnUpperBoundAge: NonNegativeInteger
 ): TaskEither<Error, boolean> =>
   taskEither
     .of<Error, FiscalCode>(fiscalCode)
@@ -144,7 +143,7 @@ export const checkCgnRequirements = (
 
 export const isEycaEligible = (
   fiscalCode: FiscalCode,
-  eycaUpperBoundAge: number = EYCA_UPPER_BOUND_AGE
+  eycaUpperBoundAge: NonNegativeInteger
 ): Either<Error, boolean> =>
   fromOption(new Error("Cannot recognize EYCA eligibility"))(
     toBirthDate(fiscalCode)
@@ -156,7 +155,7 @@ export const isEycaEligible = (
 
 export const extractEycaExpirationDate = (
   fiscalCode: FiscalCode,
-  eycaUpperBoundAge: number = EYCA_UPPER_BOUND_AGE
+  eycaUpperBoundAge: NonNegativeInteger
 ): Either<Error, Date> =>
   fromOption(new Error("Cannot extract birth date from FiscalCode"))(
     toBirthDate(fiscalCode)

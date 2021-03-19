@@ -1,4 +1,4 @@
-/* tslint:disable: no-any */
+/* tslint:disable: no-any no-undefined-argument */
 import { addYears } from "date-fns";
 import { some } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
@@ -23,6 +23,7 @@ import {
   StatusEnum as RevokedStatusEnum
 } from "../../generated/definitions/CardRevoked";
 import { UserCgn } from "../../models/user_cgn";
+import { DEFAULT_CGN_UPPER_BOUND_AGE } from "../../utils/config";
 import * as orchUtils from "../../utils/orchestrators";
 import { StartCgnActivationHandler } from "../handler";
 
@@ -85,7 +86,7 @@ describe("StartCgnActivation", () => {
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
       userCgnModelMock as any,
-      undefined
+      DEFAULT_CGN_UPPER_BOUND_AGE
     );
     const response = await startCgnActivationHandler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -97,7 +98,7 @@ describe("StartCgnActivation", () => {
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
       userCgnModelMock as any,
-      undefined
+      DEFAULT_CGN_UPPER_BOUND_AGE
     );
     const response = await startCgnActivationHandler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -109,7 +110,7 @@ describe("StartCgnActivation", () => {
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
       userCgnModelMock as any,
-      undefined
+      DEFAULT_CGN_UPPER_BOUND_AGE
     );
     const response = await startCgnActivationHandler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseSuccessAccepted");
@@ -122,7 +123,7 @@ describe("StartCgnActivation", () => {
     upsertModelMock.mockImplementationOnce(() => taskEither.of({}));
     const startCgnActivationHandler = StartCgnActivationHandler(
       userCgnModelMock as any,
-      undefined
+      DEFAULT_CGN_UPPER_BOUND_AGE
     );
     await startCgnActivationHandler({} as any, aFiscalCode);
     expect(mockStartNew).toBeCalledTimes(1);
@@ -134,7 +135,7 @@ describe("StartCgnActivation", () => {
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
       userCgnModelMock as any,
-      undefined
+      DEFAULT_CGN_UPPER_BOUND_AGE
     );
     const response = await startCgnActivationHandler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorConflict");
@@ -149,7 +150,7 @@ describe("StartCgnActivation", () => {
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
       userCgnModelMock as any,
-      undefined
+      DEFAULT_CGN_UPPER_BOUND_AGE
     );
     const response = await startCgnActivationHandler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -162,7 +163,7 @@ describe("StartCgnActivation", () => {
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
       userCgnModelMock as any,
-      undefined
+      DEFAULT_CGN_UPPER_BOUND_AGE
     );
     const response = await startCgnActivationHandler(
       {} as any,

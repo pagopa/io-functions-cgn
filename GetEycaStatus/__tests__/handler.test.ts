@@ -1,5 +1,4 @@
-/* tslint:disable: no-any */
-
+/* tslint:disable: no-any no-undefined-argument */
 import * as date_fns from "date-fns";
 import { left, right } from "fp-ts/lib/Either";
 import { some } from "fp-ts/lib/Option";

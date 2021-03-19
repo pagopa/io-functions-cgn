@@ -9,7 +9,7 @@ import {
   IntegerFromString,
   NonNegativeInteger
 } from "@pagopa/ts-commons/lib/numbers";
-import { fromNullable, none, some } from "fp-ts/lib/Option";
+import { fromNullable } from "fp-ts/lib/Option";
 import * as t from "io-ts";
 import { readableReport } from "italia-ts-commons/lib/reporters";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
@@ -27,11 +27,8 @@ export const RedisParams = t.intersection([
 ]);
 export type RedisParams = t.TypeOf<typeof RedisParams>;
 
-export const BetaTestParams = t.partial({
-  CGN_BETA_TEST_UPPER_BOUND_AGE: NonNegativeInteger,
-  EYCA_BETA_TEST_UPPER_BOUND_AGE: NonNegativeInteger
-});
-export type BetaTestParams = t.TypeOf<typeof BetaTestParams>;
+export const DEFAULT_CGN_UPPER_BOUND_AGE = 36 as NonNegativeInteger;
+export const DEFAULT_EYCA_UPPER_BOUND_AGE = 31 as NonNegativeInteger;
 
 // global app configuration
 export type IConfig = t.TypeOf<typeof IConfig>;
@@ -41,6 +38,9 @@ export const IConfig = t.intersection([
 
     CGN_EXPIRATION_TABLE_NAME: NonEmptyString,
     EYCA_EXPIRATION_TABLE_NAME: NonEmptyString,
+
+    CGN_UPPER_BOUND_AGE: NonNegativeInteger,
+    EYCA_UPPER_BOUND_AGE: NonNegativeInteger,
 
     COSMOSDB_CGN_DATABASE_NAME: NonEmptyString,
     COSMOSDB_CGN_KEY: NonEmptyString,
@@ -56,29 +56,20 @@ export const IConfig = t.intersection([
     OTP_TTL_IN_SECONDS: NonNegativeInteger,
     isProduction: t.boolean
   }),
-  BetaTestParams,
   RedisParams
 ]);
 
 // No need to re-evaluate this object for each call
 const errorOrConfig: t.Validation<IConfig> = IConfig.decode({
   ...process.env,
-  CGN_BETA_TEST_UPPER_BOUND_AGE: IntegerFromString.decode(
-    process.env.CGN_BETA_TEST_UPPER_BOUND_AGE
+  CGN_UPPER_BOUND_AGE: IntegerFromString.decode(process.env.CGN_UPPER_BOUND_AGE)
+    .map(_ => _ as NonNegativeInteger)
+    .getOrElse(DEFAULT_CGN_UPPER_BOUND_AGE),
+  EYCA_UPPER_BOUND_AGE: IntegerFromString.decode(
+    process.env.EYCA_UPPER_BOUND_AGE
   )
-    .fold(
-      () => none,
-      _ => some(_ as NonNegativeInteger)
-    )
-    .toUndefined(),
-  EYCA_BETA_TEST_UPPER_BOUND_AGE: IntegerFromString.decode(
-    process.env.EYCA_BETA_TEST_UPPER_BOUND_AGE
-  )
-    .fold(
-      () => none,
-      _ => some(_ as NonNegativeInteger)
-    )
-    .toUndefined(),
+    .map(_ => _ as NonNegativeInteger)
+    .getOrElse(DEFAULT_EYCA_UPPER_BOUND_AGE),
   OTP_TTL_IN_SECONDS: IntegerFromString.decode(
     process.env.OTP_TTL_IN_SECONDS
   ).getOrElse(600 as NonNegativeInteger),

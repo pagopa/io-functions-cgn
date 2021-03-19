@@ -86,12 +86,12 @@ const mapOrchestratorStatus = (
 const getEycaEligibleTask = (
   fiscalCode: FiscalCode,
   userCgnModel: UserCgnModel,
-  eycaBetaTestUpperBoundAge: NonNegativeInteger | undefined
+  eycaUpperBoundAge: NonNegativeInteger
 ): TaskEither<
   IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
   true
 > =>
-  fromEither(isEycaEligible(fiscalCode, eycaBetaTestUpperBoundAge))
+  fromEither(isEycaEligible(fiscalCode, eycaUpperBoundAge))
     .mapLeft<IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized>(
       () => ResponseErrorInternal("Cannot perform EYCA Eligibility Check")
     )
@@ -122,7 +122,7 @@ const getEycaEligibleTask = (
 export function StartEycaActivationHandler(
   userEycaCardModel: UserEycaCardModel,
   userCgnModel: UserCgnModel,
-  eycaBetaTestUpperBoundAge: NonNegativeInteger | undefined,
+  eycaUpperBoundAge: NonNegativeInteger,
   logPrefix: string = "StartEycaActivationHandler"
 ): IStartCgnActivationHandler {
   return async (context, fiscalCode) => {
@@ -135,7 +135,7 @@ export function StartEycaActivationHandler(
     const isEycaEligibleOrError = await getEycaEligibleTask(
       fiscalCode,
       userCgnModel,
-      eycaBetaTestUpperBoundAge
+      eycaUpperBoundAge
     ).run();
     if (isLeft(isEycaEligibleOrError)) {
       return isEycaEligibleOrError.value;
@@ -211,10 +211,7 @@ export function StartEycaActivationHandler(
               )
               .chain(() =>
                 fromEither(
-                  extractEycaExpirationDate(
-                    fiscalCode,
-                    eycaBetaTestUpperBoundAge
-                  )
+                  extractEycaExpirationDate(fiscalCode, eycaUpperBoundAge)
                 )
                   .mapLeft(() =>
                     ResponseErrorInternal(
@@ -265,12 +262,12 @@ export function StartEycaActivationHandler(
 export function StartEycaActivation(
   userEycaCardModel: UserEycaCardModel,
   userCgnModel: UserCgnModel,
-  eycaBetaTestUpperBoundAge: NonNegativeInteger | undefined
+  eycaUpperBoundAge: NonNegativeInteger
 ): express.RequestHandler {
   const handler = StartEycaActivationHandler(
     userEycaCardModel,
     userCgnModel,
-    eycaBetaTestUpperBoundAge
+    eycaUpperBoundAge
   );
 
   const middlewaresWrap = withRequestMiddlewares(

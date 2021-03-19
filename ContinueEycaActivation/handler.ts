@@ -36,17 +36,15 @@ const transientOrchestratorError = (err: unknown) =>
  * Reads from a queue the fiscalCode
  * then try to start the orchestrator to activate the EYCA card.
  */
-export const continueEycaActivationHandler = (
+export const ContinueEycaActivationHandler = (
   context: Context,
   message: unknown,
-  eycaBetaTestUpperBoundAge: NonNegativeInteger | undefined
+  eycaUpperBoundAge: NonNegativeInteger
 ): Promise<Failure | string> => {
   return fromEither(ContinueEycaActivationInput.decode(message))
     .mapLeft(permanentDecodeFailure)
     .chain(({ fiscalCode }) =>
-      fromEither(
-        extractEycaExpirationDate(fiscalCode, eycaBetaTestUpperBoundAge)
-      )
+      fromEither(extractEycaExpirationDate(fiscalCode, eycaUpperBoundAge))
         .mapLeft(e =>
           Failure.encode({
             kind: "PERMANENT",

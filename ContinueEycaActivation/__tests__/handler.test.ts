@@ -1,9 +1,10 @@
+// tslint:disable: no-undefined-argument
 import { addYears } from "date-fns";
 import { left, right } from "fp-ts/lib/Either";
 import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import { aFiscalCode } from "../../__mocks__/mock";
 import * as cgn_checks from "../../utils/cgn_checks";
-import { continueEycaActivationHandler } from "../handler";
+import { ContinueEycaActivationHandler } from "../handler";
 
 const extractEycaExpirationDateMock = jest
   .spyOn(cgn_checks, "extractEycaExpirationDate")
@@ -15,7 +16,7 @@ describe("ContinueEycaActivation", () => {
   });
 
   it("should return a permanent error if input cannot be decoded", async () => {
-    const result = continueEycaActivationHandler(context, {}, undefined);
+    const result = ContinueEycaActivationHandler(context, {}, undefined);
     return expect(result).resolves.toMatchObject({ kind: "PERMANENT" });
   });
 
@@ -23,7 +24,7 @@ describe("ContinueEycaActivation", () => {
     extractEycaExpirationDateMock.mockImplementationOnce(() =>
       left(new Error("Cannot extract date"))
     );
-    const result = continueEycaActivationHandler(
+    const result = ContinueEycaActivationHandler(
       context,
       {
         fiscalCode: aFiscalCode
@@ -38,7 +39,7 @@ describe("ContinueEycaActivation", () => {
       throw new Error("foobar");
     });
     try {
-      await continueEycaActivationHandler(
+      await ContinueEycaActivationHandler(
         context,
         {
           fiscalCode: aFiscalCode
