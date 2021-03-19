@@ -1,6 +1,5 @@
 /* tslint:disable: no-any */
-import { addYears } from "date-fns";
-import { right } from "fp-ts/lib/Either";
+import * as date_fns from "date-fns";
 import { none, some } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { toCosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
@@ -15,8 +14,7 @@ import {
 import { EycaCardActivated } from "../../generated/definitions/EycaCardActivated";
 import { CcdbNumber } from "../../generated/eyca-api/CcdbNumber";
 import { UserEycaCard } from "../../models/user_eyca_card";
-import * as cgn_checks from "../../utils/cgn_checks";
-import { extractEycaExpirationDate } from "../../utils/cgn_checks";
+import * as eyca from "../eyca";
 import {
   ActivityInput,
   getSuccessEycaActivationActivityHandler
@@ -24,6 +22,7 @@ import {
 
 const aFiscalCode = "RODFDS92S10H501T" as FiscalCode;
 const aUserEycaCardNumber = "X321-Y321-Z321-W321" as CcdbNumber;
+const expirationDate = date_fns.addYears(now, 5);
 
 const aPendingEycaCard: CardPending = {
   status: PendingStatusEnum.PENDING
@@ -37,7 +36,7 @@ const aPendingUserEycaCard: UserEycaCard = {
 const anActivatedEycaCard: EycaCardActivated = {
   activation_date: now,
   card_number: aUserEycaCardNumber,
-  expiration_date: now,
+  expiration_date: expirationDate,
   status: ActivatedStatusEnum.ACTIVATED
 };
 
@@ -50,7 +49,7 @@ const findLastVersionByModelIdMock = jest
   .fn()
   .mockImplementation(() => taskEither.of(some(aPendingUserEycaCard)));
 
-const updateMock = jest.fn().mockImplementation(v => {
+const updateMock = jest.fn().mockImplementation(() => {
   return taskEither.of(anActivatedUserEycaCard);
 });
 
@@ -60,42 +59,22 @@ const userEycaCardModelMock = {
 };
 
 const aCcdbNumber = "X123-Y123-Z123-W123" as CcdbNumber;
-const preIssueCardMock = jest.fn().mockImplementation(() =>
-  Promise.resolve(
-    right({
-      status: 200,
-      value: {
-        api_response: {
-          data: {
-            card: [{ ccdb_number: aCcdbNumber }]
-          }
-        }
-      }
-    })
-  )
-);
-const updateCardMock = jest.fn().mockImplementation(() =>
-  Promise.resolve(
-    right({
-      status: 200,
-      value: {
-        api_response: {
-          text: "Object(s) updated."
-        }
-      }
-    })
-  )
-);
-const eycaApiClient = {
-  preIssueCard: preIssueCardMock,
-  updateCard: updateCardMock
-};
+const preIssueCardMock = jest
+  .fn()
+  .mockImplementation(() => taskEither.of(aCcdbNumber));
+const updateCardMock = jest
+  .fn()
+  .mockImplementation(() =>
+    taskEither.of("Object(s) updated." as NonEmptyString)
+  );
 
+jest.spyOn(eyca, "updateCard").mockImplementation(updateCardMock);
+jest.spyOn(eyca, "preIssueCard").mockImplementation(preIssueCardMock);
 const anEycaApiUsername = "USERNAME" as NonEmptyString;
 const anEycaApiPassword = "PASSWORD" as NonEmptyString;
 const anActivityInput: ActivityInput = {
-  activationDate: now,
-  expirationDate: now,
+  activationDate: new Date(),
+  expirationDate,
   fiscalCode: aFiscalCode
 };
 
@@ -106,7 +85,8 @@ describe("SuccessEycaActivationActivity", () => {
 
   it("should return success if card activation succeded", async () => {
     const handler = getSuccessEycaActivationActivityHandler(
-      eycaApiClient as any,
+      {} as any,
+      {} as any,
       anEycaApiUsername,
       anEycaApiPassword,
       userEycaCardModelMock as any
@@ -120,7 +100,8 @@ describe("SuccessEycaActivationActivity", () => {
       fromLeft(toCosmosErrorResponse(new Error("query error")))
     );
     const handler = getSuccessEycaActivationActivityHandler(
-      eycaApiClient as any,
+      {} as any,
+      {} as any,
       anEycaApiUsername,
       anEycaApiPassword,
       userEycaCardModelMock as any
@@ -139,7 +120,8 @@ describe("SuccessEycaActivationActivity", () => {
       taskEither.of(none)
     );
     const handler = getSuccessEycaActivationActivityHandler(
-      eycaApiClient as any,
+      {} as any,
+      {} as any,
       anEycaApiUsername,
       anEycaApiPassword,
       userEycaCardModelMock as any
@@ -155,19 +137,11 @@ describe("SuccessEycaActivationActivity", () => {
 
   it("should return failure if EYCA card code retrieve fails", async () => {
     preIssueCardMock.mockImplementationOnce(() =>
-      Promise.resolve(
-        right({
-          status: 500,
-          value: {
-            api_response: {
-              error: 1
-            }
-          }
-        })
-      )
+      fromLeft("Error on PreIssueCard")
     );
     const handler = getSuccessEycaActivationActivityHandler(
-      eycaApiClient as any,
+      {} as any,
+      {} as any,
       anEycaApiUsername,
       anEycaApiPassword,
       userEycaCardModelMock as any
@@ -178,19 +152,11 @@ describe("SuccessEycaActivationActivity", () => {
 
   it("should return failure if EYCA card update API fails", async () => {
     updateCardMock.mockImplementationOnce(() =>
-      Promise.resolve(
-        right({
-          status: 500,
-          value: {
-            api_response: {
-              error: 1
-            }
-          }
-        })
-      )
+      fromLeft("Error on UpdateCard")
     );
     const handler = getSuccessEycaActivationActivityHandler(
-      eycaApiClient as any,
+      {} as any,
+      {} as any,
       anEycaApiUsername,
       anEycaApiPassword,
       userEycaCardModelMock as any
@@ -204,7 +170,8 @@ describe("SuccessEycaActivationActivity", () => {
       fromLeft("Cannot update EYCA card")
     );
     const handler = getSuccessEycaActivationActivityHandler(
-      eycaApiClient as any,
+      {} as any,
+      {} as any,
       anEycaApiUsername,
       anEycaApiPassword,
       userEycaCardModelMock as any

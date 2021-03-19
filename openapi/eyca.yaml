@@ -70,12 +70,7 @@ paths:
       parameters:
         - $ref: "#/parameters/JsonType"
         - in: query
-          name: username
-          type: string
-          required: true
-          minLength: 1
-        - in: query
-          name: password
+          name: session_id
           type: string
           required: true
           minLength: 1
@@ -120,12 +115,7 @@ paths:
         Perform EYCA Card update and eventually activation
       parameters:
         - in: query
-          name: username
-          type: string
-          required: true
-          minLength: 1
-        - in: query
-          name: password
+          name: session_id
           type: string
           required: true
           minLength: 1
