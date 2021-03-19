@@ -9,6 +9,7 @@ import {
 import {
   checkCgnRequirements,
   extractCgnExpirationDate,
+  extractEycaExpirationDate,
   isEycaEligible
 } from "../cgn_checks";
 
@@ -17,7 +18,7 @@ const anUnElibibleFiscalCode = "DROLSS84S20H501F" as FiscalCode;
 const anEycaElibibleFiscalCode = "DROLSS02S20H501F" as FiscalCode;
 const aWrongFiscalCode = "AAAAAADSB00H000F" as FiscalCode;
 describe("checkCgnRequirements", () => {
-  it("should return an Error if there is an error extracting birthDate from FiscalCode", async () => {
+  it("should return an Error if birthDate extraction from FiscalCode fails", async () => {
     const result = await checkCgnRequirements(
       aWrongFiscalCode,
       DEFAULT_CGN_UPPER_BOUND_AGE
@@ -121,6 +122,27 @@ describe("isEycaEligible", () => {
     expect(isRight(result)).toBeTruthy();
     if (isRight(result)) {
       expect(result.value).toEqual(true);
+    }
+  });
+});
+
+describe("extractEycaExpirationDate", () => {
+  it("should return an Error if there is an error extracting birthDate from FiscalCode", async () => {
+    const result = extractEycaExpirationDate(
+      aWrongFiscalCode,
+      DEFAULT_EYCA_UPPER_BOUND_AGE
+    );
+    expect(isLeft(result)).toBeTruthy();
+  });
+
+  it("should return an expiration Date", async () => {
+    const result = extractEycaExpirationDate(
+      anEycaElibibleFiscalCode,
+      DEFAULT_EYCA_UPPER_BOUND_AGE
+    );
+    expect(isRight(result)).toBeTruthy();
+    if (isRight(result)) {
+      expect(date_fns.format(result.value, "yyyy-MM-dd")).toEqual("2033-11-20");
     }
   });
 });
