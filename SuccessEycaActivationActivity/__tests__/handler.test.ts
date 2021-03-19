@@ -1,28 +1,26 @@
 /* tslint:disable: no-any */
 import { addYears } from "date-fns";
-import { left, right } from "fp-ts/lib/Either";
+import { right } from "fp-ts/lib/Either";
 import { none, some } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { toCosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
-import { CcdbNumber } from "../../generated/eyca-api/CcdbNumber";
-import * as cgn_checks from "../../utils/cgn_checks";
-import {
-  ActivityInput,
-  getSuccessEycaActivationActivityHandler
-} from "../handler";
+import { now } from "../../__mocks__/mock";
+import { StatusEnum as ActivatedStatusEnum } from "../../generated/definitions/CardActivated";
 import {
   CardPending,
   StatusEnum as PendingStatusEnum
 } from "../../generated/definitions/CardPending";
-import { StatusEnum as ActivatedStatusEnum } from "../../generated/definitions/CardActivated";
-import { UserEycaCard } from "../../models/user_eyca_card";
 import { EycaCardActivated } from "../../generated/definitions/EycaCardActivated";
-import { now } from "../../__mocks__/mock";
+import { CcdbNumber } from "../../generated/eyca-api/CcdbNumber";
+import { UserEycaCard } from "../../models/user_eyca_card";
+import * as cgn_checks from "../../utils/cgn_checks";
 import { extractEycaExpirationDate } from "../../utils/cgn_checks";
-import { identity } from "fp-ts/lib/function";
-import { DateFromString } from "italia-ts-commons/lib/dates";
+import {
+  ActivityInput,
+  getSuccessEycaActivationActivityHandler
+} from "../handler";
 
 const aFiscalCode = "RODFDS92S10H501T" as FiscalCode;
 const aUserEycaCardNumber = "X321-Y321-Z321-W321" as CcdbNumber;
@@ -39,7 +37,7 @@ const aPendingUserEycaCard: UserEycaCard = {
 const anActivatedEycaCard: EycaCardActivated = {
   activation_date: now,
   card_number: aUserEycaCardNumber,
-  expiration_date: extractEycaExpirationDate(aFiscalCode).value as Date,
+  expiration_date: now,
   status: ActivatedStatusEnum.ACTIVATED
 };
 
@@ -96,13 +94,10 @@ const eycaApiClient = {
 const anEycaApiUsername = "USERNAME" as NonEmptyString;
 const anEycaApiPassword = "PASSWORD" as NonEmptyString;
 const anActivityInput: ActivityInput = {
-  fiscalCode: aFiscalCode,
-  activationDate: new Date(),
-  expirationDate: extractEycaExpirationDate(aFiscalCode).value as Date
+  activationDate: now,
+  expirationDate: now,
+  fiscalCode: aFiscalCode
 };
-const extractEycaExpirationDateMock = jest
-  .spyOn(cgn_checks, "extractEycaExpirationDate")
-  .mockImplementation(() => right(addYears(new Date(), 5)));
 
 describe("SuccessEycaActivationActivity", () => {
   beforeEach(() => {

@@ -8,7 +8,7 @@ import {
   ResponseErrorNotFound
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { ContinueEycaActivationInput } from "../ContinueEycaActivation";
+import { ContinueEycaActivationInput } from "../ContinueEycaActivation/handler";
 import { UserCgnModel } from "../models/user_cgn";
 import { UserEycaCardModel } from "../models/user_eyca_card";
 

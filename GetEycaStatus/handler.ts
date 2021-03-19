@@ -24,6 +24,7 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 
+import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import { fromPredicate } from "fp-ts/lib/TaskEither";
 import { CardPending } from "../generated/definitions/CardPending";
 import { EycaCard } from "../generated/definitions/EycaCard";
@@ -45,10 +46,11 @@ type IGetEycaStatusHandler = (
 
 export function GetEycaStatusHandler(
   userEycaCardModel: UserEycaCardModel,
-  userCgnModel: UserCgnModel
+  userCgnModel: UserCgnModel,
+  eycaUpperBoundAge: NonNegativeInteger
 ): IGetEycaStatusHandler {
   return async (_, fiscalCode) =>
-    fromEither(isEycaEligible(fiscalCode))
+    fromEither(isEycaEligible(fiscalCode, eycaUpperBoundAge))
       .mapLeft<ErrorTypes>(() =>
         ResponseErrorInternal("Cannot perform user's EYCA eligibility check")
       )
@@ -108,9 +110,14 @@ export function GetEycaStatusHandler(
 
 export function GetEycaStatus(
   userEycaCardModel: UserEycaCardModel,
-  userCgnModel: UserCgnModel
+  userCgnModel: UserCgnModel,
+  eycaUpperBoundAge: NonNegativeInteger
 ): express.RequestHandler {
-  const handler = GetEycaStatusHandler(userEycaCardModel, userCgnModel);
+  const handler = GetEycaStatusHandler(
+    userEycaCardModel,
+    userCgnModel,
+    eycaUpperBoundAge
+  );
 
   const middlewaresWrap = withRequestMiddlewares(
     ContextMiddleware(),

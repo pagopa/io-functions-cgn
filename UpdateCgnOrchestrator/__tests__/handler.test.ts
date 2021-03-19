@@ -1,4 +1,4 @@
-// tslint:disable: object-literal-sort-keys
+// tslint:disable: object-literal-sort-keys no-any
 
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context as contextMock } from "../../__mocks__/durable-functions";
@@ -16,8 +16,9 @@ import {
   StatusEnum as RevokedCgnStatusEnum
 } from "../../generated/definitions/CardRevoked";
 import { ActivityResult } from "../../utils/activity";
+import { DEFAULT_EYCA_UPPER_BOUND_AGE } from "../../utils/config";
 import { MESSAGES } from "../../utils/messages";
-import { handler } from "../index";
+import { UpdateCgnOrchestratorHandler } from "../handler";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const now = new Date();
@@ -75,7 +76,10 @@ describe("UpdateCgnOrchestrator", () => {
       // 4 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
     // tslint:disable-next-line: no-any no-useless-cast
-    const orchestrator = handler(contextMockWithDf as any);
+    const orchestrator = UpdateCgnOrchestratorHandler(
+      contextMockWithDf as any,
+      DEFAULT_EYCA_UPPER_BOUND_AGE
+    );
 
     // 1 StoreCgnExpiration
     const res1 = orchestrator.next();
@@ -127,7 +131,10 @@ describe("UpdateCgnOrchestrator", () => {
       // 5 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
     // tslint:disable-next-line: no-any no-useless-cast
-    const orchestrator = handler(contextMockWithDf as any);
+    const orchestrator = UpdateCgnOrchestratorHandler(
+      contextMockWithDf as any,
+      DEFAULT_EYCA_UPPER_BOUND_AGE
+    );
 
     // 1 UpdateCgnStauts
     const res1 = orchestrator.next();
@@ -176,7 +183,10 @@ describe("UpdateCgnOrchestrator", () => {
       // 5 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
     // tslint:disable-next-line: no-any no-useless-cast
-    const orchestrator = handler(contextMockWithDf as any);
+    const orchestrator = UpdateCgnOrchestratorHandler(
+      contextMockWithDf as any,
+      DEFAULT_EYCA_UPPER_BOUND_AGE
+    );
 
     // 1 UpdateCgnStauts
     const res1 = orchestrator.next();

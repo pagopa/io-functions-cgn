@@ -18,8 +18,9 @@ import * as orchUtils from "../../utils/orchestrators";
 
 import { ResponseSuccessAccepted } from "italia-ts-commons/lib/responses";
 import { CcdbNumber } from "../../generated/definitions/CcdbNumber";
-import { StartEycaActivationHandler } from "../handler";
 import * as cgn_checks from "../../utils/cgn_checks";
+import { DEFAULT_EYCA_UPPER_BOUND_AGE } from "../../utils/config";
+import { ReturnTypes, StartEycaActivationHandler } from "../handler";
 
 const aFiscalCode = "RODFDS89S10H501T" as FiscalCode;
 const anEycaCardNumber = "A123-A123-A123-A123" as CcdbNumber;
@@ -77,6 +78,15 @@ jest
 const isEycaEligibleMock = jest.fn().mockImplementation(() => right(true));
 jest.spyOn(checks, "isEycaEligible").mockImplementation(isEycaEligibleMock);
 
+const startHandler = (): Promise<ReturnTypes> => {
+  const startEycaActivationHandler = StartEycaActivationHandler(
+    userEycaCardModelMock as any,
+    userCgnModelMock as any,
+    DEFAULT_EYCA_UPPER_BOUND_AGE
+  );
+  return startEycaActivationHandler({} as any, aFiscalCode);
+};
+
 describe("StartEycaActivation", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -86,11 +96,7 @@ describe("StartEycaActivation", () => {
     isEycaEligibleMock.mockImplementationOnce(() =>
       left(new Error("Cannot recognize eligibility for EYCA"))
     );
-    const startEycaActivationHandler = StartEycaActivationHandler(
-      userEycaCardModelMock as any,
-      userCgnModelMock as any
-    );
-    const response = await startEycaActivationHandler({} as any, aFiscalCode);
+    const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
@@ -98,32 +104,20 @@ describe("StartEycaActivation", () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       fromLeft(new Error("Cannot read CGN info"))
     );
-    const startEycaActivationHandler = StartEycaActivationHandler(
-      userEycaCardModelMock as any,
-      userCgnModelMock as any
-    );
-    const response = await startEycaActivationHandler({} as any, aFiscalCode);
+    const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
   it("should return Unauthorized the user is not eligible for EYCA", async () => {
     isEycaEligibleMock.mockImplementationOnce(() => right(false));
-    const startEycaActivationHandler = StartEycaActivationHandler(
-      userEycaCardModelMock as any,
-      userCgnModelMock as any
-    );
-    const response = await startEycaActivationHandler({} as any, aFiscalCode);
+    const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
   });
   it("should return Unauthorized if the user does not have a related CGN", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       taskEither.of(none)
     );
-    const startEycaActivationHandler = StartEycaActivationHandler(
-      userEycaCardModelMock as any,
-      userCgnModelMock as any
-    );
-    const response = await startEycaActivationHandler({} as any, aFiscalCode);
+    const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
   });
 
@@ -136,11 +130,7 @@ describe("StartEycaActivation", () => {
         })
       )
     );
-    const startEycaActivationHandler = StartEycaActivationHandler(
-      userEycaCardModelMock as any,
-      userCgnModelMock as any
-    );
-    const response = await startEycaActivationHandler({} as any, aFiscalCode);
+    const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
   });
 
@@ -148,11 +138,7 @@ describe("StartEycaActivation", () => {
     findLastVersionEycaByModelIdMock.mockImplementationOnce(() =>
       fromLeft(new Error("Cannot read EYCA info"))
     );
-    const startEycaActivationHandler = StartEycaActivationHandler(
-      userEycaCardModelMock as any,
-      userCgnModelMock as any
-    );
-    const response = await startEycaActivationHandler({} as any, aFiscalCode);
+    const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
@@ -161,11 +147,7 @@ describe("StartEycaActivation", () => {
       left(new Error("Cannot extract date"))
     );
 
-    const startEycaActivationHandler = StartEycaActivationHandler(
-      userEycaCardModelMock as any,
-      userCgnModelMock as any
-    );
-    const response = await startEycaActivationHandler({} as any, aFiscalCode);
+    const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorInternal");
 
     if (response.kind === "IResponseErrorInternal") {
@@ -179,11 +161,7 @@ describe("StartEycaActivation", () => {
     findLastVersionEycaByModelIdMock.mockImplementationOnce(() =>
       taskEither.of(some(aUserEycaCard))
     );
-    const startEycaActivationHandler = StartEycaActivationHandler(
-      userEycaCardModelMock as any,
-      userCgnModelMock as any
-    );
-    const response = await startEycaActivationHandler({} as any, aFiscalCode);
+    const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorConflict");
   });
 
@@ -197,11 +175,7 @@ describe("StartEycaActivation", () => {
       )
     );
     mockGetStatus.mockImplementationOnce(() => Promise.reject("An error"));
-    const startEycaActivationHandler = StartEycaActivationHandler(
-      userEycaCardModelMock as any,
-      userCgnModelMock as any
-    );
-    const response = await startEycaActivationHandler({} as any, aFiscalCode);
+    const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
@@ -217,11 +191,7 @@ describe("StartEycaActivation", () => {
     upsertMock.mockImplementationOnce(() =>
       fromLeft(new Error("Cannot upsert EYCA card"))
     );
-    const startEycaActivationHandler = StartEycaActivationHandler(
-      userEycaCardModelMock as any,
-      userCgnModelMock as any
-    );
-    const response = await startEycaActivationHandler({} as any, aFiscalCode);
+    const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorInternal");
   });
   it("should return an Internal Error if EYCA Card activation's orchestrator start fails", async () => {
@@ -238,7 +208,8 @@ describe("StartEycaActivation", () => {
     );
     const startEycaActivationHandler = StartEycaActivationHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      DEFAULT_EYCA_UPPER_BOUND_AGE
     );
     const response = await startEycaActivationHandler(
       // tslint:disable-next-line: no-console
@@ -249,11 +220,7 @@ describe("StartEycaActivation", () => {
   });
 
   it("should start a new orchestrator if there aren' t conflict on the same id", async () => {
-    const startEycaActivationHandler = StartEycaActivationHandler(
-      userEycaCardModelMock as any,
-      userCgnModelMock as any
-    );
-    await startEycaActivationHandler({} as any, aFiscalCode);
+    await startHandler();
     expect(mockStartNew).toBeCalledTimes(1);
   });
 
@@ -261,20 +228,12 @@ describe("StartEycaActivation", () => {
     checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
       fromLeft(ResponseSuccessAccepted())
     );
-    const startEycaActivationHandler = StartEycaActivationHandler(
-      userEycaCardModelMock as any,
-      userCgnModelMock as any
-    );
-    const response = await startEycaActivationHandler({} as any, aFiscalCode);
+    const response = await startHandler();
     expect(response.kind).toBe("IResponseSuccessAccepted");
   });
 
   it("should return an Response redirect to resource response if all steps succeed", async () => {
-    const startEycaActivationHandler = StartEycaActivationHandler(
-      userEycaCardModelMock as any,
-      userCgnModelMock as any
-    );
-    const response = await startEycaActivationHandler({} as any, aFiscalCode);
+    const response = await startHandler();
     expect(response.kind).toBe("IResponseSuccessRedirectToResource");
   });
 });

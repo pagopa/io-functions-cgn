@@ -1,5 +1,4 @@
 /* tslint:disable: no-any */
-
 import * as date_fns from "date-fns";
 import { left, right } from "fp-ts/lib/Either";
 import { some } from "fp-ts/lib/Option";
@@ -23,6 +22,7 @@ import { EycaCardRevoked } from "../../generated/definitions/EycaCardRevoked";
 import { UserCgn } from "../../models/user_cgn";
 import { UserEycaCard } from "../../models/user_eyca_card";
 import * as cgn_checks from "../../utils/cgn_checks";
+import { DEFAULT_EYCA_UPPER_BOUND_AGE } from "../../utils/config";
 import { GetEycaStatusHandler } from "../handler";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
@@ -84,7 +84,8 @@ jest.spyOn(cgn_checks, "isEycaEligible").mockImplementation(isEycaEligibleMock);
 const successImpl = async (userEycaCard: UserEycaCard) => {
   const handler = GetEycaStatusHandler(
     userEycaCardModelMock as any,
-    userCgnModelMock as any
+    userCgnModelMock as any,
+    DEFAULT_EYCA_UPPER_BOUND_AGE
   );
   const response = await handler({} as any, aFiscalCode);
   expect(response.kind).toBe("IResponseSuccessJson");
@@ -123,7 +124,8 @@ describe("GetEycaCardStatusHandler", () => {
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      DEFAULT_EYCA_UPPER_BOUND_AGE
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -135,7 +137,8 @@ describe("GetEycaCardStatusHandler", () => {
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      DEFAULT_EYCA_UPPER_BOUND_AGE
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -150,7 +153,8 @@ describe("GetEycaCardStatusHandler", () => {
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      DEFAULT_EYCA_UPPER_BOUND_AGE
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -165,7 +169,8 @@ describe("GetEycaCardStatusHandler", () => {
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      DEFAULT_EYCA_UPPER_BOUND_AGE
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorNotFound");
@@ -180,7 +185,8 @@ describe("GetEycaCardStatusHandler", () => {
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      DEFAULT_EYCA_UPPER_BOUND_AGE
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorNotFound");
@@ -190,7 +196,8 @@ describe("GetEycaCardStatusHandler", () => {
     isEycaEligibleMock.mockImplementationOnce(() => right(false));
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      DEFAULT_EYCA_UPPER_BOUND_AGE
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
@@ -202,7 +209,8 @@ describe("GetEycaCardStatusHandler", () => {
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      DEFAULT_EYCA_UPPER_BOUND_AGE
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorConflict");
@@ -217,7 +225,8 @@ describe("GetEycaCardStatusHandler", () => {
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
-      userCgnModelMock as any
+      userCgnModelMock as any,
+      DEFAULT_EYCA_UPPER_BOUND_AGE
     );
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorInternal");
