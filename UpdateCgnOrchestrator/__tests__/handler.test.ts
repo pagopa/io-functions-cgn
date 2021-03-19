@@ -1,4 +1,4 @@
-// tslint:disable: object-literal-sort-keys no-undefined-argument no-any
+// tslint:disable: object-literal-sort-keys no-any
 
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context as contextMock } from "../../__mocks__/durable-functions";
@@ -16,6 +16,7 @@ import {
   StatusEnum as RevokedCgnStatusEnum
 } from "../../generated/definitions/CardRevoked";
 import { ActivityResult } from "../../utils/activity";
+import { DEFAULT_EYCA_UPPER_BOUND_AGE } from "../../utils/config";
 import { MESSAGES } from "../../utils/messages";
 import { updateCgnOrchestratorHandler } from "../handler";
 
@@ -77,7 +78,7 @@ describe("UpdateCgnOrchestrator", () => {
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = updateCgnOrchestratorHandler(
       contextMockWithDf as any,
-      undefined
+      DEFAULT_EYCA_UPPER_BOUND_AGE
     );
 
     // 1 StoreCgnExpiration
@@ -132,7 +133,7 @@ describe("UpdateCgnOrchestrator", () => {
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = updateCgnOrchestratorHandler(
       contextMockWithDf as any,
-      undefined
+      DEFAULT_EYCA_UPPER_BOUND_AGE
     );
 
     // 1 UpdateCgnStauts
@@ -184,7 +185,7 @@ describe("UpdateCgnOrchestrator", () => {
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = updateCgnOrchestratorHandler(
       contextMockWithDf as any,
-      undefined
+      DEFAULT_EYCA_UPPER_BOUND_AGE
     );
 
     // 1 UpdateCgnStauts

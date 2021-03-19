@@ -19,6 +19,7 @@ import * as orchUtils from "../../utils/orchestrators";
 import { ResponseSuccessAccepted } from "italia-ts-commons/lib/responses";
 import { CcdbNumber } from "../../generated/definitions/CcdbNumber";
 import * as cgn_checks from "../../utils/cgn_checks";
+import { DEFAULT_EYCA_UPPER_BOUND_AGE } from "../../utils/config";
 import { ReturnTypes, StartEycaActivationHandler } from "../handler";
 
 const aFiscalCode = "RODFDS89S10H501T" as FiscalCode;
@@ -81,7 +82,7 @@ const startHandler = (): Promise<ReturnTypes> => {
   const startEycaActivationHandler = StartEycaActivationHandler(
     userEycaCardModelMock as any,
     userCgnModelMock as any,
-    undefined
+    DEFAULT_EYCA_UPPER_BOUND_AGE
   );
   return startEycaActivationHandler({} as any, aFiscalCode);
 };
@@ -208,7 +209,7 @@ describe("StartEycaActivation", () => {
     const startEycaActivationHandler = StartEycaActivationHandler(
       userEycaCardModelMock as any,
       userCgnModelMock as any,
-      undefined
+      DEFAULT_EYCA_UPPER_BOUND_AGE
     );
     const response = await startEycaActivationHandler(
       // tslint:disable-next-line: no-console

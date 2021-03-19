@@ -1,4 +1,4 @@
-/* tslint:disable: no-any no-undefined-argument */
+/* tslint:disable: no-any */
 import { addYears } from "date-fns";
 import { some } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";

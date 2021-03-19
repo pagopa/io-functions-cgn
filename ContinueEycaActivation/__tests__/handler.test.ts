@@ -1,9 +1,9 @@
-// tslint:disable: no-undefined-argument
 import { addYears } from "date-fns";
 import { left, right } from "fp-ts/lib/Either";
 import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import { aFiscalCode } from "../../__mocks__/mock";
 import * as cgn_checks from "../../utils/cgn_checks";
+import { DEFAULT_EYCA_UPPER_BOUND_AGE } from "../../utils/config";
 import { ContinueEycaActivationHandler } from "../handler";
 
 const extractEycaExpirationDateMock = jest
@@ -16,7 +16,11 @@ describe("ContinueEycaActivation", () => {
   });
 
   it("should return a permanent error if input cannot be decoded", async () => {
-    const result = ContinueEycaActivationHandler(context, {}, undefined);
+    const result = ContinueEycaActivationHandler(
+      context,
+      {},
+      DEFAULT_EYCA_UPPER_BOUND_AGE
+    );
     return expect(result).resolves.toMatchObject({ kind: "PERMANENT" });
   });
 
@@ -29,7 +33,7 @@ describe("ContinueEycaActivation", () => {
       {
         fiscalCode: aFiscalCode
       },
-      undefined
+      DEFAULT_EYCA_UPPER_BOUND_AGE
     );
     return expect(result).resolves.toMatchObject({ kind: "PERMANENT" });
   });
@@ -44,7 +48,7 @@ describe("ContinueEycaActivation", () => {
         {
           fiscalCode: aFiscalCode
         },
-        undefined
+        DEFAULT_EYCA_UPPER_BOUND_AGE
       );
       fail();
     } catch (e) {
