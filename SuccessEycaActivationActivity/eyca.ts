@@ -33,6 +33,7 @@ const ccdbLogin = (
     () =>
       eycaClient.authLogin({
         password,
+        type: "json",
         username
       }),
     toError
