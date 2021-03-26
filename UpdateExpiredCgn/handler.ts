@@ -11,11 +11,11 @@ import { StatusEnum as CardExpiredStatusEnum } from "../generated/definitions/Ca
 import { StatusEnum as CardRevokedStatusEnum } from "../generated/definitions/CardRevoked";
 import { OrchestratorInput } from "../UpdateCgnOrchestrator/handler";
 import { initTelemetryClient, trackException } from "../utils/appinsights";
+import { getExpiredCardUsers } from "../utils/card_expiration";
 import {
   makeUpdateCgnOrchestratorId,
   terminateUpdateCgnOrchestratorTask
 } from "../utils/orchestrators";
-import { getExpiredCgnUsers } from "./table";
 
 const finish = () => Promise.resolve(void 0);
 
@@ -29,7 +29,7 @@ export const getUpdateExpiredCgnHandler = (
 ) => async (context: Context): Promise<unknown> => {
   const today = date_fns.format(Date.now(), "yyyy-MM-dd");
 
-  const errorOrExpiredCgnUsers = await getExpiredCgnUsers(
+  const errorOrExpiredCgnUsers = await getExpiredCardUsers(
     tableService,
     cgnExpirationTableName,
     today

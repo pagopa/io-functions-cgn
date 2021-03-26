@@ -4,16 +4,16 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
-import * as expirationUtils from "../../utils/card_expiration";
+import * as tableUtils from "../../utils/card_expiration";
 import * as orchUtils from "../../utils/orchestrators";
-import { getUpdateExpiredCgnHandler } from "../handler";
+import { getUpdateExpiredEycaHandler } from "../handler";
 
 const activationAndExpirationDates = {
   activationDate: cgnActivatedDates.activation_date,
   expirationDate: cgnActivatedDates.expiration_date
 };
 // tslint:disable-next-line: readonly-array
-const aSetOfExpiredRows: expirationUtils.ExpiredCardRowKey[] = [
+const aSetOfExpiredRows: tableUtils.ExpiredCardRowKey[] = [
   {
     fiscalCode: "RODFDS82S10H501T" as FiscalCode,
     ...activationAndExpirationDates
@@ -24,82 +24,80 @@ const aSetOfExpiredRows: expirationUtils.ExpiredCardRowKey[] = [
   }
 ];
 const tableServiceMock = jest.fn();
-const expiredCgnTableName = "aTable" as NonEmptyString;
+const expiredEycaTableName = "aTable" as NonEmptyString;
 
-const getExpiredCgnUsersMock = jest.fn();
+const getExpiredEycaUsersMock = jest.fn();
 jest
-  .spyOn(expirationUtils, "getExpiredCardUsers")
-  .mockImplementation(getExpiredCgnUsersMock);
+  .spyOn(tableUtils, "getExpiredCardUsers")
+  .mockImplementation(getExpiredEycaUsersMock);
 
 const terminateOrchestratorMock = jest
   .fn()
   .mockImplementation(() => taskEither.of(void 0));
 jest
-  .spyOn(orchUtils, "terminateUpdateCgnOrchestratorTask")
+  .spyOn(orchUtils, "terminateOrchestratorById")
   .mockImplementation(terminateOrchestratorMock);
 describe("UpdateExpiredCgn", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
   it("should process all fiscalCodes present on table", async () => {
-    getExpiredCgnUsersMock.mockImplementationOnce(() =>
+    getExpiredEycaUsersMock.mockImplementationOnce(() =>
       taskEither.of(aSetOfExpiredRows)
     );
-    const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
+    const updateExpiredEycaHandler = getUpdateExpiredEycaHandler(
       tableServiceMock as any,
-      expiredCgnTableName
+      expiredEycaTableName
     );
-    await updateExpiredCgnHandler(context);
+    await updateExpiredEycaHandler(context);
     expect(mockStartNew).toBeCalledTimes(aSetOfExpiredRows.length);
   });
 
-  it("should terminate other orchestrators running for activation and revocation", async () => {
-    getExpiredCgnUsersMock.mockImplementationOnce(() =>
+  it("should terminate other orchestrators running for activation", async () => {
+    getExpiredEycaUsersMock.mockImplementationOnce(() =>
       taskEither.of(aSetOfExpiredRows)
     );
-    const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
+    const updateExpiredEycaHandler = getUpdateExpiredEycaHandler(
       tableServiceMock as any,
-      expiredCgnTableName
+      expiredEycaTableName
     );
-    await updateExpiredCgnHandler(context);
-    expect(terminateOrchestratorMock).toBeCalledTimes(
-      aSetOfExpiredRows.length * 2
-    );
+    await updateExpiredEycaHandler(context);
+    expect(terminateOrchestratorMock).toBeCalledTimes(aSetOfExpiredRows.length);
   });
 
   it("should not instantiate any orchestrator if there are no elements to process", async () => {
-    getExpiredCgnUsersMock.mockImplementationOnce(() => taskEither.of([]));
-    const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
+    getExpiredEycaUsersMock.mockImplementationOnce(() => taskEither.of([]));
+    const updateExpiredEycaHandler = getUpdateExpiredEycaHandler(
       tableServiceMock as any,
-      expiredCgnTableName
+      expiredEycaTableName
     );
-    await updateExpiredCgnHandler(context);
+    await updateExpiredEycaHandler(context);
     expect(mockStartNew).not.toHaveBeenCalled();
   });
 
   it("should not instantiate any orchestrator if there are errors querying table", async () => {
-    getExpiredCgnUsersMock.mockImplementationOnce(() =>
+    getExpiredEycaUsersMock.mockImplementationOnce(() =>
       fromLeft(new Error("Cannot query table"))
     );
-    const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
+    const updateExpiredEycaHandler = getUpdateExpiredEycaHandler(
       tableServiceMock as any,
-      expiredCgnTableName
+      expiredEycaTableName
     );
-    await updateExpiredCgnHandler(context);
+    await updateExpiredEycaHandler(context);
     expect(mockStartNew).not.toHaveBeenCalled();
   });
   it("should not instantiate some orchestrator if there are errors terminating other instances for a certain fiscalCode", async () => {
-    getExpiredCgnUsersMock.mockImplementationOnce(() =>
+    getExpiredEycaUsersMock.mockImplementationOnce(() =>
       taskEither.of(aSetOfExpiredRows)
     );
     terminateOrchestratorMock.mockImplementationOnce(() =>
       fromLeft(new Error("Error"))
     );
-    const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
+    const updateExpiredEycaHandler = getUpdateExpiredEycaHandler(
       tableServiceMock as any,
-      expiredCgnTableName
+      expiredEycaTableName
     );
-    await updateExpiredCgnHandler(context);
+    await updateExpiredEycaHandler(context);
     expect(mockStartNew).toBeCalledTimes(aSetOfExpiredRows.length - 1);
   });
 });

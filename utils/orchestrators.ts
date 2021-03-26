@@ -146,13 +146,11 @@ export const checkUpdateCardIsRunning = (
     )
     .map(_ => false);
 
-export const terminateUpdateCgnOrchestratorTask = (
+export const terminateOrchestratorById = (
+  orchestratorId: string,
   client: DurableOrchestrationClient,
-  fiscalCode: FiscalCode,
-  status: string,
   reason: NonEmptyString
 ) => {
-  const orchestratorId = makeUpdateCgnOrchestratorId(fiscalCode, status);
   const voidTask = taskEither.of<Error, void>(void 0);
   return tryCatch(() => client.getStatus(orchestratorId), toError).chain(
     maybeStatus =>
@@ -176,6 +174,16 @@ export const terminateUpdateCgnOrchestratorTask = (
             )
         )
   );
+};
+
+export const terminateUpdateCgnOrchestratorTask = (
+  client: DurableOrchestrationClient,
+  fiscalCode: FiscalCode,
+  status: string,
+  reason: NonEmptyString
+) => {
+  const orchestratorId = makeUpdateCgnOrchestratorId(fiscalCode, status);
+  return terminateOrchestratorById(orchestratorId, client, reason);
 };
 
 export const trackExceptionAndThrow = (
