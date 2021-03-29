@@ -3,7 +3,7 @@ import { TableService } from "azure-storage";
 import * as date_fns from "date-fns";
 import * as df from "durable-functions";
 import { array, chunksOf } from "fp-ts/lib/Array";
-import { isLeft, toError } from "fp-ts/lib/Either";
+import { Either, isLeft, toError } from "fp-ts/lib/Either";
 import { taskEither, tryCatch } from "fp-ts/lib/TaskEither";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { OrchestratorInput } from "../ExpireEycaOrchestrator/index";
@@ -25,7 +25,9 @@ export const getUpdateExpiredEycaHandler = (
   tableService: TableService,
   eycaExpirationTableName: NonEmptyString,
   logPrefix: string = "UpdateExpiredEycaHandler"
-) => async (context: Context): Promise<unknown> => {
+) => async (
+  context: Context
+): Promise<ReadonlyArray<Either<Error, ReadonlyArray<string>>> | void> => {
   const today = date_fns.format(Date.now(), "yyyy-MM-dd");
 
   const errorOrExpiredEycaUsers = await getExpiredCardUsers(
@@ -95,14 +97,12 @@ export const getUpdateExpiredEycaHandler = (
   );
 
   // tslint:disable-next-line: readonly-array
-  const taskArray = [];
-  const tasksChunks = chunksOf(tasks, 100);
-  for (const tasksChunk of tasksChunks) {
-    taskArray.push(
-      array
-        .sequence(taskEither)(tasksChunk)
-        .run()
-    );
-  }
-  return Promise.all([...taskArray]);
+  return Promise.all(
+    chunksOf(tasks, 100).map(
+      async _ =>
+        await array
+          .sequence(taskEither)(_)
+          .run()
+    )
+  );
 };
