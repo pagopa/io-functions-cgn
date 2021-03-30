@@ -49,10 +49,10 @@ export const getUpdateExpiredEycaHandler = (
   );
 
   const client = df.getClient(context);
-  // trigger an update orchestrator for each user's CGN that expires
+  // trigger an update orchestrator for each user's EYC Card that expires
 
   const tasks = expiredEycaUsers.map(({ fiscalCode }) =>
-    // first we terminate other possible Cgn update orchestrators
+    // first we terminate other possible EYCA activation orchestrators
     terminateOrchestratorById(
       makeEycaOrchestratorId(fiscalCode, StatusEnum.PENDING),
       client,
@@ -90,19 +90,22 @@ export const getUpdateExpiredEycaHandler = (
           properties: {
             id: fiscalCode,
             name: "eyca.expire.error"
-          }
+          },
+          tagOverrides: { samplingEnabled: "false" }
         });
         return err;
       })
   );
 
   // tslint:disable-next-line: readonly-array
-  return Promise.all(
-    chunksOf(tasks, 100).map(
-      async _ =>
-        await array
-          .sequence(taskEither)(_)
-          .run()
-    )
-  );
+  const results = [];
+  const tasksChunks = chunksOf(tasks, 100);
+  for (const tasksChunk of tasksChunks) {
+    results.push(
+      await array
+        .sequence(taskEither)(tasksChunk)
+        .run()
+    );
+  }
+  return results;
 };
