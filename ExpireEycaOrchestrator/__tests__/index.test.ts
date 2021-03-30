@@ -70,26 +70,33 @@ describe("ExpireEycaOrchestrator", () => {
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = handler(contextMockWithDf as any);
 
+    const res1 = orchestrator.next();
+    expect(res1).toMatchObject({ value: { kind: "WRONG" } });
     // Complete the orchestrator execution
-    const res = orchestrator.next();
-    expect(res).toMatchObject({ value: { kind: "WRONG" } });
+    const res = orchestrator.next(res1.value);
+    expect(res).toMatchObject({ value: false });
 
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
       1,
       "RUNNING"
+    );
+    expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
+      2,
+      "ERROR"
     );
   });
 
   it("should retry if EYCA expiration fails", async () => {
     mockCallActivityWithRetry
       // 1 SuccessEycaActivationActivity
-      .mockReturnValueOnce({ kind: "FAILURE" });
+      .mockReturnValueOnce({ kind: "FAILURE", reason: "Reason" });
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = handler(contextMockWithDf as any);
 
     const res1 = orchestrator.next();
     expect(res1.value).toEqual({
-      kind: "FAILURE"
+      kind: "FAILURE",
+      reason: "Reason"
     });
 
     // Complete the orchestrator execution

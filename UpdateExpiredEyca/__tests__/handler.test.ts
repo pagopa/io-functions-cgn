@@ -4,6 +4,7 @@ import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
+import * as aInsights from "../../utils/appinsights";
 import * as tableUtils from "../../utils/card_expiration";
 import * as orchUtils from "../../utils/orchestrators";
 import { getUpdateExpiredEycaHandler } from "../handler";
@@ -30,6 +31,9 @@ const getExpiredEycaUsersMock = jest.fn();
 jest
   .spyOn(tableUtils, "getExpiredCardUsers")
   .mockImplementation(getExpiredEycaUsersMock);
+
+const trackExceptionMock = jest.fn(_ => void 0);
+jest.spyOn(aInsights, "trackException").mockImplementation(trackExceptionMock);
 
 const terminateOrchestratorMock = jest
   .fn()
@@ -85,6 +89,7 @@ describe("UpdateExpiredCgn", () => {
     );
     await updateExpiredEycaHandler(context);
     expect(mockStartNew).not.toHaveBeenCalled();
+    expect(trackExceptionMock).not.toHaveBeenCalled();
   });
   it("should not instantiate some orchestrator if there are errors terminating other instances for a certain fiscalCode", async () => {
     getExpiredEycaUsersMock.mockImplementationOnce(() =>
@@ -99,5 +104,14 @@ describe("UpdateExpiredCgn", () => {
     );
     await updateExpiredEycaHandler(context);
     expect(mockStartNew).toBeCalledTimes(aSetOfExpiredRows.length - 1);
+    expect(trackExceptionMock).toHaveBeenCalledTimes(1);
+    expect(trackExceptionMock).toHaveBeenCalledWith({
+      exception: expect.anything(),
+      properties: {
+        id: "RODFDS82S10H501T",
+        name: "eyca.expire.error"
+      },
+      tagOverrides: { samplingEnabled: "false" }
+    });
   });
 });
