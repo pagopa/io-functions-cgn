@@ -57,6 +57,13 @@ export const getMessage = (card: Card): MessageContent => {
   return assertNever(card);
 };
 
+export const getEycaExpirationMessage = (): MessageContent =>
+  ({
+    subject: "La tua Carta EYCA è scaduta",
+    markdown: `Ti avvisiamo che da oggi non è più possibile utilizzare la tua Carta Giovani Nazionale per acquisti sul circuito EYCA.
+
+La Carta rimane valida per gli acquisti in Italia!`
+  } as MessageContent);
 export const getErrorMessage = (): MessageContent =>
   ({
     subject: "Abbiamo riscontrato dei problemi",

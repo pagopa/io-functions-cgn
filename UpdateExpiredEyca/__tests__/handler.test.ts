@@ -6,16 +6,16 @@ import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import * as aInsights from "../../utils/appinsights";
-import * as expirationUtils from "../../utils/card_expiration";
+import * as tableUtils from "../../utils/card_expiration";
 import * as orchUtils from "../../utils/orchestrators";
-import { getUpdateExpiredCgnHandler } from "../handler";
+import { getUpdateExpiredEycaHandler } from "../handler";
 
 const activationAndExpirationDates = {
   activationDate: cgnActivatedDates.activation_date,
   expirationDate: cgnActivatedDates.expiration_date
 };
 // tslint:disable-next-line: readonly-array
-const aSetOfExpiredRows: expirationUtils.ExpiredCardRowKey[] = [
+const aSetOfExpiredRows: tableUtils.ExpiredCardRowKey[] = [
   {
     fiscalCode: "RODFDS82S10H501T" as FiscalCode,
     ...activationAndExpirationDates
@@ -25,103 +25,102 @@ const aSetOfExpiredRows: expirationUtils.ExpiredCardRowKey[] = [
     ...activationAndExpirationDates
   }
 ];
+
 const aTableServiceFilter = new ExponentialRetryPolicyFilter(5);
 const withFilterMock = jest.fn();
 const tableServiceMock = {
   withFilter: withFilterMock
 };
-const expiredCgnTableName = "aTable" as NonEmptyString;
 
-const getExpiredCgnUsersMock = jest.fn();
+const expiredEycaTableName = "aTable" as NonEmptyString;
+
+const getExpiredEycaUsersMock = jest.fn();
 jest
-  .spyOn(expirationUtils, "getExpiredCardUsers")
-  .mockImplementation(getExpiredCgnUsersMock);
+  .spyOn(tableUtils, "getExpiredCardUsers")
+  .mockImplementation(getExpiredEycaUsersMock);
+
+const trackExceptionMock = jest.fn(_ => void 0);
+jest.spyOn(aInsights, "trackException").mockImplementation(trackExceptionMock);
 
 const terminateOrchestratorMock = jest
   .fn()
   .mockImplementation(() => taskEither.of(void 0));
 jest
-  .spyOn(orchUtils, "terminateUpdateCgnOrchestratorTask")
+  .spyOn(orchUtils, "terminateOrchestratorById")
   .mockImplementation(terminateOrchestratorMock);
-
-const trackExceptionMock = jest.fn(_ => void 0);
-jest.spyOn(aInsights, "trackException").mockImplementation(trackExceptionMock);
 describe("UpdateExpiredCgn", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
   it("should process all fiscalCodes present on table", async () => {
-    getExpiredCgnUsersMock.mockImplementationOnce(() =>
+    getExpiredEycaUsersMock.mockImplementationOnce(() =>
       taskEither.of(aSetOfExpiredRows)
     );
-    const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
+    const updateExpiredEycaHandler = getUpdateExpiredEycaHandler(
       tableServiceMock as any,
-      expiredCgnTableName
+      expiredEycaTableName
     );
-    await updateExpiredCgnHandler(context);
+    await updateExpiredEycaHandler(context);
     expect(withFilterMock).toHaveBeenCalledWith(aTableServiceFilter);
     expect(mockStartNew).toBeCalledTimes(aSetOfExpiredRows.length);
   });
 
-  it("should terminate other orchestrators running for activation and revocation", async () => {
-    getExpiredCgnUsersMock.mockImplementationOnce(() =>
+  it("should terminate other orchestrators running for activation", async () => {
+    getExpiredEycaUsersMock.mockImplementationOnce(() =>
       taskEither.of(aSetOfExpiredRows)
     );
-    const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
+    const updateExpiredEycaHandler = getUpdateExpiredEycaHandler(
       tableServiceMock as any,
-      expiredCgnTableName
+      expiredEycaTableName
     );
-    await updateExpiredCgnHandler(context);
+    await updateExpiredEycaHandler(context);
     expect(withFilterMock).toHaveBeenCalledWith(aTableServiceFilter);
-    expect(terminateOrchestratorMock).toBeCalledTimes(
-      aSetOfExpiredRows.length * 2
-    );
+    expect(terminateOrchestratorMock).toBeCalledTimes(aSetOfExpiredRows.length);
   });
 
   it("should not instantiate any orchestrator if there are no elements to process", async () => {
-    getExpiredCgnUsersMock.mockImplementationOnce(() => taskEither.of([]));
-    const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
+    getExpiredEycaUsersMock.mockImplementationOnce(() => taskEither.of([]));
+    const updateExpiredEycaHandler = getUpdateExpiredEycaHandler(
       tableServiceMock as any,
-      expiredCgnTableName
+      expiredEycaTableName
     );
-    await updateExpiredCgnHandler(context);
+    await updateExpiredEycaHandler(context);
     expect(withFilterMock).toHaveBeenCalledWith(aTableServiceFilter);
     expect(mockStartNew).not.toHaveBeenCalled();
   });
 
   it("should not instantiate any orchestrator if there are errors querying table", async () => {
-    getExpiredCgnUsersMock.mockImplementationOnce(() =>
+    getExpiredEycaUsersMock.mockImplementationOnce(() =>
       fromLeft(new Error("Cannot query table"))
     );
-    const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
+    const updateExpiredEycaHandler = getUpdateExpiredEycaHandler(
       tableServiceMock as any,
-      expiredCgnTableName
+      expiredEycaTableName
     );
-    await updateExpiredCgnHandler(context);
+    await updateExpiredEycaHandler(context);
     expect(withFilterMock).toHaveBeenCalledWith(aTableServiceFilter);
     expect(mockStartNew).not.toHaveBeenCalled();
-    expect(trackExceptionMock).toHaveBeenCalledTimes(1);
     expect(trackExceptionMock).toHaveBeenCalledWith({
       exception: expect.anything(),
       properties: {
         id: expect.anything(),
-        name: "cgn.expiration.error"
+        name: "eyca.expiration.error"
       },
       tagOverrides: { samplingEnabled: "false" }
     });
   });
   it("should not instantiate some orchestrator if there are errors terminating other instances for a certain fiscalCode", async () => {
-    getExpiredCgnUsersMock.mockImplementationOnce(() =>
+    getExpiredEycaUsersMock.mockImplementationOnce(() =>
       taskEither.of(aSetOfExpiredRows)
     );
     terminateOrchestratorMock.mockImplementationOnce(() =>
       fromLeft(new Error("Error"))
     );
-    const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
+    const updateExpiredEycaHandler = getUpdateExpiredEycaHandler(
       tableServiceMock as any,
-      expiredCgnTableName
+      expiredEycaTableName
     );
-    await updateExpiredCgnHandler(context);
+    await updateExpiredEycaHandler(context);
     expect(withFilterMock).toHaveBeenCalledWith(aTableServiceFilter);
     expect(mockStartNew).toBeCalledTimes(aSetOfExpiredRows.length - 1);
     expect(trackExceptionMock).toHaveBeenCalledTimes(1);
@@ -129,7 +128,7 @@ describe("UpdateExpiredCgn", () => {
       exception: expect.anything(),
       properties: {
         id: "RODFDS82S10H501T",
-        name: "cgn.expiration.error"
+        name: "eyca.expiration.error"
       },
       tagOverrides: { samplingEnabled: "false" }
     });

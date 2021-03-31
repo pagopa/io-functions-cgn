@@ -1,5 +1,5 @@
 ﻿import { Context } from "@azure/functions";
-import { TableService } from "azure-storage";
+import { ExponentialRetryPolicyFilter, TableService } from "azure-storage";
 import * as date_fns from "date-fns";
 import * as df from "durable-functions";
 import { array, chunksOf } from "fp-ts/lib/Array";
@@ -11,11 +11,11 @@ import { StatusEnum as CardExpiredStatusEnum } from "../generated/definitions/Ca
 import { StatusEnum as CardRevokedStatusEnum } from "../generated/definitions/CardRevoked";
 import { OrchestratorInput } from "../UpdateCgnOrchestrator/handler";
 import { initTelemetryClient, trackException } from "../utils/appinsights";
+import { getExpiredCardUsers } from "../utils/card_expiration";
 import {
   makeUpdateCgnOrchestratorId,
   terminateUpdateCgnOrchestratorTask
 } from "../utils/orchestrators";
-import { getExpiredCgnUsers } from "./table";
 
 const finish = () => Promise.resolve(void 0);
 
@@ -29,8 +29,9 @@ export const getUpdateExpiredCgnHandler = (
 ) => async (context: Context): Promise<unknown> => {
   const today = date_fns.format(Date.now(), "yyyy-MM-dd");
 
-  const errorOrExpiredCgnUsers = await getExpiredCgnUsers(
-    tableService,
+  const errorOrExpiredCgnUsers = await getExpiredCardUsers(
+    // using custom Exponential backoff retry policy for expired card's query operation
+    tableService.withFilter(new ExponentialRetryPolicyFilter(5)),
     cgnExpirationTableName,
     today
   ).run();
@@ -39,6 +40,14 @@ export const getUpdateExpiredCgnHandler = (
     context.log.verbose(
       `${logPrefix}|ERROR=${errorOrExpiredCgnUsers.value.message}`
     );
+    trackException({
+      exception: errorOrExpiredCgnUsers.value,
+      properties: {
+        id: `${today}.cgn.expiration`,
+        name: "cgn.expiration.error"
+      },
+      tagOverrides: { samplingEnabled: "false" }
+    });
     return finish();
   }
 
@@ -106,22 +115,23 @@ export const getUpdateExpiredCgnHandler = (
             exception: err,
             properties: {
               id: fiscalCode,
-              name: "cgn.expire.error"
-            }
+              name: "cgn.expiration.error"
+            },
+            tagOverrides: { samplingEnabled: "false" }
           });
           return err;
         })
   );
 
   // tslint:disable-next-line: readonly-array
-  const taskArray = [];
+  const results = [];
   const tasksChunks = chunksOf(tasks, 100);
   for (const tasksChunk of tasksChunks) {
-    taskArray.push(
-      array
+    results.push(
+      await array
         .sequence(taskEither)(tasksChunk)
         .run()
     );
   }
-  return Promise.all([...taskArray]);
+  return results;
 };

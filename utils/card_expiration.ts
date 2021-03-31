@@ -1,8 +1,8 @@
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { TableService } from "azure-storage";
 import { toError } from "fp-ts/lib/Either";
 import { taskEither, tryCatch } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import {
   getPagedQuery,
@@ -12,18 +12,18 @@ import {
   TableEntry
 } from "../utils/table_storage";
 
-const ExpiredCgnRowKey = t.interface({
+const ExpiredCardRowKey = t.interface({
   activationDate: Timestamp,
   expirationDate: Timestamp,
   fiscalCode: FiscalCode
 });
 
-export type ExpiredCgnRowKey = t.TypeOf<typeof ExpiredCgnRowKey>;
+export type ExpiredCardRowKey = t.TypeOf<typeof ExpiredCardRowKey>;
 
 /**
  * Do something with the user hash extracted from the table entry
  */
-const withExpiredCgnRowFromEntry = (f: (s: ExpiredCgnRowKey) => void) => (
+const withExpiredCardRowFromEntry = (f: (s: ExpiredCardRowKey) => void) => (
   e: TableEntry
 ): void =>
   f({
@@ -37,24 +37,24 @@ const withExpiredCgnRowFromEntry = (f: (s: ExpiredCgnRowKey) => void) => (
  */
 export async function queryUsers(
   pagedQuery: PagedQuery
-): Promise<ReadonlySet<ExpiredCgnRowKey>> {
-  const entries = new Set<ExpiredCgnRowKey>();
-  const addToSet = withExpiredCgnRowFromEntry(s => entries.add(s));
+): Promise<ReadonlySet<ExpiredCardRowKey>> {
+  const entries = new Set<ExpiredCardRowKey>();
+  const addToSet = withExpiredCardRowFromEntry(s => entries.add(s));
   for await (const page of iterateOnPages(pagedQuery)) {
     page.forEach(addToSet);
   }
   return entries;
 }
 
-export const getExpiredCgnUsers = (
+export const getExpiredCardUsers = (
   tableService: TableService,
-  expiredCgnTableName: string,
+  expiredCardTableName: string,
   refDate: string
 ) =>
   // get a function that can query the expired cgns table
   taskEither
     .of<Error, ReturnType<typeof getPagedQuery>>(
-      getPagedQuery(tableService, expiredCgnTableName)
+      getPagedQuery(tableService, expiredCardTableName)
     )
     .map(pagedQuery => pagedQuery(queryFilterForKey(`${refDate}`)))
     .chain(cgnExpirationQuery =>
