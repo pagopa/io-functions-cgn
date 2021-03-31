@@ -124,14 +124,14 @@ export const getUpdateExpiredCgnHandler = (
   );
 
   // tslint:disable-next-line: readonly-array
-  const taskArray = [];
+  const results = [];
   const tasksChunks = chunksOf(tasks, 100);
   for (const tasksChunk of tasksChunks) {
-    taskArray.push(
-      array
+    results.push(
+      await array
         .sequence(taskEither)(tasksChunk)
         .run()
     );
   }
-  return Promise.all([...taskArray]);
+  return results;
 };
