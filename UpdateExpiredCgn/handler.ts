@@ -1,5 +1,5 @@
 ﻿import { Context } from "@azure/functions";
-import { TableService } from "azure-storage";
+import { ExponentialRetryPolicyFilter, TableService } from "azure-storage";
 import * as date_fns from "date-fns";
 import * as df from "durable-functions";
 import { array, chunksOf } from "fp-ts/lib/Array";
@@ -30,7 +30,8 @@ export const getUpdateExpiredCgnHandler = (
   const today = date_fns.format(Date.now(), "yyyy-MM-dd");
 
   const errorOrExpiredCgnUsers = await getExpiredCardUsers(
-    tableService,
+    // using custom Exponential backoff retry policy for expired card's query operation
+    tableService.withFilter(new ExponentialRetryPolicyFilter(5)),
     cgnExpirationTableName,
     today
   ).run();
@@ -39,6 +40,14 @@ export const getUpdateExpiredCgnHandler = (
     context.log.verbose(
       `${logPrefix}|ERROR=${errorOrExpiredCgnUsers.value.message}`
     );
+    trackException({
+      exception: errorOrExpiredCgnUsers.value,
+      properties: {
+        id: `${today}.cgn.expiration`,
+        name: "cgn.expiration.error"
+      },
+      tagOverrides: { samplingEnabled: "false" }
+    });
     return finish();
   }
 
@@ -106,8 +115,9 @@ export const getUpdateExpiredCgnHandler = (
             exception: err,
             properties: {
               id: fiscalCode,
-              name: "cgn.expire.error"
-            }
+              name: "cgn.expiration.error"
+            },
+            tagOverrides: { samplingEnabled: "false" }
           });
           return err;
         })

@@ -1,5 +1,5 @@
 ﻿import { Context } from "@azure/functions";
-import { TableService } from "azure-storage";
+import { ExponentialRetryPolicyFilter, TableService } from "azure-storage";
 import * as date_fns from "date-fns";
 import * as df from "durable-functions";
 import { array, chunksOf } from "fp-ts/lib/Array";
@@ -31,7 +31,8 @@ export const getUpdateExpiredEycaHandler = (
   const today = date_fns.format(Date.now(), "yyyy-MM-dd");
 
   const errorOrExpiredEycaUsers = await getExpiredCardUsers(
-    tableService,
+    // using custom Exponential backoff retry policy for expired card's query operation
+    tableService.withFilter(new ExponentialRetryPolicyFilter(5)),
     eycaExpirationTableName,
     today
   ).run();
@@ -40,6 +41,14 @@ export const getUpdateExpiredEycaHandler = (
     context.log.verbose(
       `${logPrefix}|ERROR=${errorOrExpiredEycaUsers.value.message}`
     );
+    trackException({
+      exception: errorOrExpiredEycaUsers.value,
+      properties: {
+        id: `${today}.eyca.expiration`,
+        name: "eyca.expiration.error"
+      },
+      tagOverrides: { samplingEnabled: "false" }
+    });
     return finish();
   }
 
@@ -89,7 +98,7 @@ export const getUpdateExpiredEycaHandler = (
           exception: err,
           properties: {
             id: fiscalCode,
-            name: "eyca.expire.error"
+            name: "eyca.expiration.error"
           },
           tagOverrides: { samplingEnabled: "false" }
         });

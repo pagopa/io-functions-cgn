@@ -1,4 +1,5 @@
 /* tslint:disable: no-any */
+import { ExponentialRetryPolicyFilter } from "azure-storage";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
@@ -24,7 +25,13 @@ const aSetOfExpiredRows: tableUtils.ExpiredCardRowKey[] = [
     ...activationAndExpirationDates
   }
 ];
-const tableServiceMock = jest.fn();
+
+const aTableServiceFilter = new ExponentialRetryPolicyFilter(5);
+const withFilterMock = jest.fn();
+const tableServiceMock = {
+  withFilter: withFilterMock
+};
+
 const expiredEycaTableName = "aTable" as NonEmptyString;
 
 const getExpiredEycaUsersMock = jest.fn();
@@ -54,6 +61,7 @@ describe("UpdateExpiredCgn", () => {
       expiredEycaTableName
     );
     await updateExpiredEycaHandler(context);
+    expect(withFilterMock).toHaveBeenCalledWith(aTableServiceFilter);
     expect(mockStartNew).toBeCalledTimes(aSetOfExpiredRows.length);
   });
 
@@ -66,6 +74,7 @@ describe("UpdateExpiredCgn", () => {
       expiredEycaTableName
     );
     await updateExpiredEycaHandler(context);
+    expect(withFilterMock).toHaveBeenCalledWith(aTableServiceFilter);
     expect(terminateOrchestratorMock).toBeCalledTimes(aSetOfExpiredRows.length);
   });
 
@@ -76,6 +85,7 @@ describe("UpdateExpiredCgn", () => {
       expiredEycaTableName
     );
     await updateExpiredEycaHandler(context);
+    expect(withFilterMock).toHaveBeenCalledWith(aTableServiceFilter);
     expect(mockStartNew).not.toHaveBeenCalled();
   });
 
@@ -88,8 +98,16 @@ describe("UpdateExpiredCgn", () => {
       expiredEycaTableName
     );
     await updateExpiredEycaHandler(context);
+    expect(withFilterMock).toHaveBeenCalledWith(aTableServiceFilter);
     expect(mockStartNew).not.toHaveBeenCalled();
-    expect(trackExceptionMock).not.toHaveBeenCalled();
+    expect(trackExceptionMock).toHaveBeenCalledWith({
+      exception: expect.anything(),
+      properties: {
+        id: expect.anything(),
+        name: "eyca.expiration.error"
+      },
+      tagOverrides: { samplingEnabled: "false" }
+    });
   });
   it("should not instantiate some orchestrator if there are errors terminating other instances for a certain fiscalCode", async () => {
     getExpiredEycaUsersMock.mockImplementationOnce(() =>
@@ -103,13 +121,14 @@ describe("UpdateExpiredCgn", () => {
       expiredEycaTableName
     );
     await updateExpiredEycaHandler(context);
+    expect(withFilterMock).toHaveBeenCalledWith(aTableServiceFilter);
     expect(mockStartNew).toBeCalledTimes(aSetOfExpiredRows.length - 1);
     expect(trackExceptionMock).toHaveBeenCalledTimes(1);
     expect(trackExceptionMock).toHaveBeenCalledWith({
       exception: expect.anything(),
       properties: {
         id: "RODFDS82S10H501T",
-        name: "eyca.expire.error"
+        name: "eyca.expiration.error"
       },
       tagOverrides: { samplingEnabled: "false" }
     });

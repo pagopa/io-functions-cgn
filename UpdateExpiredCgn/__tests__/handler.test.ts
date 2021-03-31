@@ -1,9 +1,11 @@
 /* tslint:disable: no-any */
+import { ExponentialRetryPolicyFilter } from "azure-storage";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
+import * as aInsights from "../../utils/appinsights";
 import * as expirationUtils from "../../utils/card_expiration";
 import * as orchUtils from "../../utils/orchestrators";
 import { getUpdateExpiredCgnHandler } from "../handler";
@@ -23,7 +25,11 @@ const aSetOfExpiredRows: expirationUtils.ExpiredCardRowKey[] = [
     ...activationAndExpirationDates
   }
 ];
-const tableServiceMock = jest.fn();
+const aTableServiceFilter = new ExponentialRetryPolicyFilter(5);
+const withFilterMock = jest.fn();
+const tableServiceMock = {
+  withFilter: withFilterMock
+};
 const expiredCgnTableName = "aTable" as NonEmptyString;
 
 const getExpiredCgnUsersMock = jest.fn();
@@ -37,6 +43,9 @@ const terminateOrchestratorMock = jest
 jest
   .spyOn(orchUtils, "terminateUpdateCgnOrchestratorTask")
   .mockImplementation(terminateOrchestratorMock);
+
+const trackExceptionMock = jest.fn(_ => void 0);
+jest.spyOn(aInsights, "trackException").mockImplementation(trackExceptionMock);
 describe("UpdateExpiredCgn", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -50,6 +59,7 @@ describe("UpdateExpiredCgn", () => {
       expiredCgnTableName
     );
     await updateExpiredCgnHandler(context);
+    expect(withFilterMock).toHaveBeenCalledWith(aTableServiceFilter);
     expect(mockStartNew).toBeCalledTimes(aSetOfExpiredRows.length);
   });
 
@@ -62,6 +72,7 @@ describe("UpdateExpiredCgn", () => {
       expiredCgnTableName
     );
     await updateExpiredCgnHandler(context);
+    expect(withFilterMock).toHaveBeenCalledWith(aTableServiceFilter);
     expect(terminateOrchestratorMock).toBeCalledTimes(
       aSetOfExpiredRows.length * 2
     );
@@ -74,6 +85,7 @@ describe("UpdateExpiredCgn", () => {
       expiredCgnTableName
     );
     await updateExpiredCgnHandler(context);
+    expect(withFilterMock).toHaveBeenCalledWith(aTableServiceFilter);
     expect(mockStartNew).not.toHaveBeenCalled();
   });
 
@@ -86,7 +98,17 @@ describe("UpdateExpiredCgn", () => {
       expiredCgnTableName
     );
     await updateExpiredCgnHandler(context);
+    expect(withFilterMock).toHaveBeenCalledWith(aTableServiceFilter);
     expect(mockStartNew).not.toHaveBeenCalled();
+    expect(trackExceptionMock).toHaveBeenCalledTimes(1);
+    expect(trackExceptionMock).toHaveBeenCalledWith({
+      exception: expect.anything(),
+      properties: {
+        id: expect.anything(),
+        name: "cgn.expiration.error"
+      },
+      tagOverrides: { samplingEnabled: "false" }
+    });
   });
   it("should not instantiate some orchestrator if there are errors terminating other instances for a certain fiscalCode", async () => {
     getExpiredCgnUsersMock.mockImplementationOnce(() =>
@@ -100,6 +122,16 @@ describe("UpdateExpiredCgn", () => {
       expiredCgnTableName
     );
     await updateExpiredCgnHandler(context);
+    expect(withFilterMock).toHaveBeenCalledWith(aTableServiceFilter);
     expect(mockStartNew).toBeCalledTimes(aSetOfExpiredRows.length - 1);
+    expect(trackExceptionMock).toHaveBeenCalledTimes(1);
+    expect(trackExceptionMock).toHaveBeenCalledWith({
+      exception: expect.anything(),
+      properties: {
+        id: "RODFDS82S10H501T",
+        name: "cgn.expiration.error"
+      },
+      tagOverrides: { samplingEnabled: "false" }
+    });
   });
 });
