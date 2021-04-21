@@ -48,3 +48,5 @@ Those are all Environment variables needed by the application:
 | OTP_TTL_IN_SECONDS                       | The number of seconds through an OTP is still valid                               | number |
 | REDIS_URL                                | The Redis instance URL                                                            | string |
 | REDIS_TLS_ENABLED                        | `OPTIONAL` Enable TLS on Redis connection. It accepts `true` or `false`. If undefined it will be considered `true`.        | string |
+
+
