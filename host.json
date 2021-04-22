@@ -10,6 +10,7 @@
       "routePrefix": ""
     },
     "durableTask": {
+      "localRpcEndpointEnabled": false,
       "hubName": "%SLOT_TASK_HUBNAME%",
       "storageProvider": {
         "connectionStringName": "AzureWebJobsStorage"
