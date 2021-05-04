@@ -5,7 +5,7 @@ import { Context } from "@azure/functions";
 import { secureExpressApp } from "io-functions-commons/dist/src/utils/express";
 import { AzureContextTransport } from "io-functions-commons/dist/src/utils/logging";
 import { setAppContext } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
-import createAzureFunctionHandler from "io-functions-express/dist/src/createAzureFunctionsHandler";
+import createAzureFunctionHandler from "@pagopa/express-azure-functions/dist/src/createAzureFunctionsHandler";
 
 import {
   USER_EYCA_CARD_COLLECTION_NAME,
