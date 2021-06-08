@@ -31,9 +31,10 @@ export const getDeleteCgnExpirationActivityHandler = (
   return fromEither(ActivityInput.decode(input))
     .mapLeft(errs => fail(errorsToError(errs), "Cannot decode Activity Input"))
     .chain(activityInput =>
-      deleteCgnExpirationTask(
-        activityInput.fiscalCode
-      ).bimap(err => fail(err, "Cannot delete CGN expiration tuple"), success)
+      deleteCgnExpirationTask(activityInput.fiscalCode).bimap(
+        err => fail(err, "Cannot delete CGN expiration tuple"),
+        success
+      )
     )
     .fold<ActivityResult>(identity, identity)
     .run();

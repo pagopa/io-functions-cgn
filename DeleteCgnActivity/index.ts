@@ -1,5 +1,4 @@
-﻿import { createBlobService } from "azure-storage";
-import { UserCgnModel, USER_CGN_COLLECTION_NAME } from "../models/user_cgn";
+import { USER_CGN_COLLECTION_NAME, UserCgnModel } from "../models/user_cgn";
 import { getConfigOrThrow } from "../utils/config";
 import { cosmosdbClient } from "../utils/cosmosdb";
 import { getDeleteCgnActivityHandler } from "./handler";

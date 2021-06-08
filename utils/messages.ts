@@ -6,6 +6,7 @@ import { Card } from "../generated/definitions/Card";
 import { CardActivated } from "../generated/definitions/CardActivated";
 import { CardExpired } from "../generated/definitions/CardExpired";
 import { CardPending } from "../generated/definitions/CardPending";
+import { CardPendingDelete } from "../generated/definitions/CardPendingDelete";
 import { CardRevoked } from "../generated/definitions/CardRevoked";
 import { assertNever } from "./types";
 
@@ -50,7 +51,7 @@ export const getMessage = (card: Card): MessageContent => {
   if (CardExpired.is(card)) {
     return MESSAGES.CardExpired();
   }
-  if (CardPending.is(card)) {
+  if (CardPending.is(card) || CardPendingDelete.is(card)) {
     throw new Error("Unexpected Card status");
   }
 

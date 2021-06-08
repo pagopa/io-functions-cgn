@@ -1,9 +1,9 @@
 import { Container } from "@azure/cosmos";
-import { Card } from "../generated/definitions/Card";
 import { RetrievedVersionedModel } from "io-functions-commons/dist/src/utils/cosmosdb_model_versioned";
 import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
 import * as t from "io-ts";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { Card } from "../generated/definitions/Card";
 import { UserCardVersionedDeletable } from "./user_card_versionend_deletable";
 
 export const USER_CGN_COLLECTION_NAME = "user-cgns";

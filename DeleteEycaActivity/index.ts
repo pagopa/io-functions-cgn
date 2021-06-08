@@ -1,8 +1,10 @@
-﻿import { UserEycaCardModel, USER_EYCA_CARD_COLLECTION_NAME } from "../models/user_eyca_card";
+import {
+  USER_EYCA_CARD_COLLECTION_NAME,
+  UserEycaCardModel
+} from "../models/user_eyca_card";
 import { getConfigOrThrow } from "../utils/config";
 import { cosmosdbClient } from "../utils/cosmosdb";
 import { getDeleteEycaActivityHandler } from "./handler";
-
 const config = getConfigOrThrow();
 
 const userCgnsContainer = cosmosdbClient

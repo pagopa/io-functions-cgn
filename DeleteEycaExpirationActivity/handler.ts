@@ -31,9 +31,10 @@ export const getDeleteEycaExpirationActivityHandler = (
   return fromEither(ActivityInput.decode(input))
     .mapLeft(errs => fail(errorsToError(errs), "Cannot decode Activity Input"))
     .chain(activityInput =>
-      deleteEycaExpirationTask(
-        activityInput.fiscalCode
-      ).bimap(err => fail(err, "Cannot delete EYCA expiration tuple"), success)
+      deleteEycaExpirationTask(activityInput.fiscalCode).bimap(
+        err => fail(err, "Cannot delete EYCA expiration tuple"),
+        success
+      )
     )
     .fold<ActivityResult>(identity, identity)
     .run();
