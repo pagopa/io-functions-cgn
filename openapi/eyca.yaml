@@ -158,7 +158,53 @@ paths:
           description: Service unavailable.
           schema:
             $ref: "#/definitions/CommonEycaResponse"
-  
+  "/delete_card":
+    get:
+      summary: Perform EYCA Card delete
+      operationId: deleteCard
+      description: |
+        Perform EYCA Card delete
+      parameters:
+        - in: query
+          name: session_id
+          type: string
+          required: true
+          minLength: 1
+        - $ref: "#/parameters/CcdbNumberParam"
+        - $ref: "#/parameters/JsonType"
+      responses:
+        "200":
+          description: Response details.
+          schema:
+            $ref: "#/definitions/CardOperationResponse"
+        "400":
+          description: Bad Request.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "401":
+          description: Unauthorized.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse" 
+        "403":
+          description: Forbidden.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "404":
+          description: No Account found.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "409":
+          description: Conflict.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "429":
+          description: Too many requests.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/CommonEycaResponse"
     
 consumes:
   - application/json

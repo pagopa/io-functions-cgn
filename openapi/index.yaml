@@ -344,6 +344,15 @@ definitions:
               - EXPIRED
         required:
           - status
+  CardPendingDelete:
+    type: object
+    properties:
+      status:
+        type: string
+        x-extensible-enum:
+          - PENDING_DELETE
+    required:
+      - status
   Card:
     x-one-of: true
     allOf:
@@ -351,6 +360,7 @@ definitions:
       - $ref: "#/definitions/CardActivated"
       - $ref: "#/definitions/CardRevoked"
       - $ref: "#/definitions/CardExpired"
+      - $ref: "#/definitions/CardPendingDelete"
     x-example: 
       status: ACTIVATED
       activation_date: "2021-10-13T00:00:00.000Z"
