@@ -5,14 +5,9 @@ import { context } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import { Card } from "../../generated/definitions/Card";
 import {
-  CardPending,
-  StatusEnum
-} from "../../generated/definitions/CardPending";
-import {
   CardRevoked,
   StatusEnum as RevokedStatusEnum
 } from "../../generated/definitions/CardRevoked";
-import { UserCgn, UserCgnModel } from "../../models/user_cgn";
 import { ActivityInput, getDeleteCgnActivityHandler } from "../handler";
 
 const now = new Date();
