@@ -12,3 +12,4 @@ export const cosmosdbClient = new CosmosClient({
   endpoint: cosmosDbUri,
   key: masterKey
 });
+
