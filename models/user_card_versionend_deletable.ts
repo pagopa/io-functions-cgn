@@ -31,6 +31,7 @@ export abstract class UserCardVersionedDeletable<T, TN extends Readonly<T>, TR e
           toError
         ).map(_ => _.item.id);
       }
+      
 
     protected findAll = (
     fiscalCode: FiscalCode,
