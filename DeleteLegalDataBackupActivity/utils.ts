@@ -1,14 +1,13 @@
 import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { BlobService } from "azure-storage";
-import * as t from "io-ts";
 import { TaskEither, taskify } from "fp-ts/lib/TaskEither";
+import * as t from "io-ts";
 
 export const BlobCreationFailure = t.interface({
   kind: t.literal("BLOB_FAILURE"),
   reason: t.string
 });
 export type BlobCreationFailure = t.TypeOf<typeof BlobCreationFailure>;
-
 
 /**
  * Saves data into a dedicated blob
@@ -21,7 +20,7 @@ export type BlobCreationFailure = t.TypeOf<typeof BlobCreationFailure>;
  */
 export const saveDataToBlob = <T>(
   blobService: BlobService,
-  containerName: NonEmptyString, 
+  containerName: NonEmptyString,
   folder: NonEmptyString,
   blobName: NonEmptyString,
   data: T

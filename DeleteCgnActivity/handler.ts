@@ -57,8 +57,7 @@ export const getDeleteCgnActivityHandler = (
             userCgnModel.deleteVersion(element.fiscalCode, element.id)
           )
         )
-        .mapLeft(_ => fail(_, "Cannot delete cgn version"))
-        .map(() => cards)
+        .bimap(_ => fail(_, "Cannot delete cgn version"), () => cards)
     )
     .fold<DeleteCgnActivityResult>(identity, cards => ({
       cards,

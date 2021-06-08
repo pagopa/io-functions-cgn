@@ -25,6 +25,7 @@ export const DeleteEycaActivityResultSuccess = t.intersection([
   CommonActivityResultSuccess,
   t.interface({
     cards: t.readonlyArray(RetrievedUserEycaCard)
+    
   })
 ]);
 
