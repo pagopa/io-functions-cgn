@@ -1,12 +1,10 @@
 import { Container } from "@azure/cosmos";
-import {
-  CosmosdbModelVersioned,
-  RetrievedVersionedModel
-} from "io-functions-commons/dist/src/utils/cosmosdb_model_versioned";
+import { Card } from "../generated/definitions/Card";
+import { RetrievedVersionedModel } from "io-functions-commons/dist/src/utils/cosmosdb_model_versioned";
 import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
 import * as t from "io-ts";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { Card } from "../generated/definitions/Card";
+import { UserCardVersionedDeletable } from "./user_card_versionend_deletable";
 
 export const USER_CGN_COLLECTION_NAME = "user-cgns";
 export const USER_CGN_MODEL_PK_FIELD = "fiscalCode" as const;
@@ -32,7 +30,7 @@ export const RetrievedUserCgn = wrapWithKind(
 
 export type RetrievedUserCgn = t.TypeOf<typeof RetrievedUserCgn>;
 
-export class UserCgnModel extends CosmosdbModelVersioned<
+export class UserCgnModel extends UserCardVersionedDeletable<
   UserCgn,
   NewUserCgn,
   RetrievedUserCgn,
@@ -46,5 +44,9 @@ export class UserCgnModel extends CosmosdbModelVersioned<
    */
   constructor(container: Container) {
     super(container, NewUserCgn, RetrievedUserCgn, USER_CGN_MODEL_PK_FIELD);
+  }
+  
+  public findAll = ( fiscalCode: FiscalCode ) => {
+    return super.findAll(fiscalCode, USER_CGN_COLLECTION_NAME, USER_CGN_MODEL_PK_FIELD);
   }
 }

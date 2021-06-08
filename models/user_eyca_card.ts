@@ -1,12 +1,10 @@
 import { Container } from "@azure/cosmos";
-import {
-  CosmosdbModelVersioned,
-  RetrievedVersionedModel
-} from "io-functions-commons/dist/src/utils/cosmosdb_model_versioned";
+import { RetrievedVersionedModel } from "io-functions-commons/dist/src/utils/cosmosdb_model_versioned";
 import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
 import * as t from "io-ts";
 import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { EycaCard } from "../generated/definitions/EycaCard";
+import { UserCardVersionedDeletable } from "./user_card_versionend_deletable";
 
 export const USER_EYCA_CARD_COLLECTION_NAME = "user-eyca-cards";
 export const USER_EYCA_CARD_MODEL_PK_FIELD = "fiscalCode" as const;
@@ -33,7 +31,7 @@ export const RetrievedUserEycaCard = wrapWithKind(
 
 export type RetrievedUserEycaCard = t.TypeOf<typeof RetrievedUserEycaCard>;
 
-export class UserEycaCardModel extends CosmosdbModelVersioned<
+export class UserEycaCardModel extends UserCardVersionedDeletable<
   UserEycaCard,
   NewUserEycaCard,
   RetrievedUserEycaCard,
@@ -52,5 +50,9 @@ export class UserEycaCardModel extends CosmosdbModelVersioned<
       RetrievedUserEycaCard,
       USER_EYCA_CARD_MODEL_PK_FIELD
     );
+  }
+
+  public findAll = ( fiscalCode: FiscalCode ) => {
+    return super.findAll(fiscalCode, USER_EYCA_CARD_COLLECTION_NAME, USER_EYCA_CARD_MODEL_PK_FIELD);
   }
 }
