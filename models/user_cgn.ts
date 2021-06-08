@@ -45,8 +45,12 @@ export class UserCgnModel extends UserCardVersionedDeletable<
   constructor(container: Container) {
     super(container, NewUserCgn, RetrievedUserCgn, USER_CGN_MODEL_PK_FIELD);
   }
-  
-  public findAll = ( fiscalCode: FiscalCode ) => {
-    return super.findAll(fiscalCode, USER_CGN_COLLECTION_NAME, USER_CGN_MODEL_PK_FIELD);
-  }
+
+  public findAll = (fiscalCode: FiscalCode) => {
+    return super.findAll(
+      fiscalCode,
+      USER_CGN_COLLECTION_NAME,
+      USER_CGN_MODEL_PK_FIELD
+    );
+  };
 }

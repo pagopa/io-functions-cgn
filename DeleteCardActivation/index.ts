@@ -48,10 +48,7 @@ secureExpressApp(app);
 // Add express route
 app.post(
   "/api/v1/cgn/:fiscalcode/delete",
-  DeleteCardActivation(
-    userEycaCardModel,
-    userCgnModel
-  )
+  DeleteCardActivation(userEycaCardModel, userCgnModel)
 );
 
 const azureFunctionHandler = createAzureFunctionHandler(app);

@@ -1,10 +1,9 @@
 import * as express from "express";
 
 import { Context } from "@azure/functions";
-import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import * as df from "durable-functions";
 import { DurableOrchestrationStatus } from "durable-functions/lib/src/classes";
-import { fromOption, toError } from "fp-ts/lib/Either";
+import { toError } from "fp-ts/lib/Either";
 import { isLeft } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
 import { fromNullable } from "fp-ts/lib/Option";
@@ -36,16 +35,19 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { CardActivated } from "../generated/definitions/CardActivated";
-import { CardPendingDelete, StatusEnum as CardPendingDeleteStatusEnum  } from "../generated/definitions/CardPendingDelete";
 import {
   CardPending,
   StatusEnum as PendingStatusEnum
 } from "../generated/definitions/CardPending";
+import {
+  CardPendingDelete,
+  StatusEnum as CardPendingDeleteStatusEnum
+} from "../generated/definitions/CardPendingDelete";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
 import { UserEycaCardModel } from "../models/user_eyca_card";
 import { OrchestratorInput } from "../StartEycaActivationOrchestrator";
-import { extractEycaExpirationDate, isEycaEligible } from "../utils/cgn_checks";
+import { extractEycaExpirationDate } from "../utils/cgn_checks";
 import { makeEycaOrchestratorId } from "../utils/orchestrators";
 import { checkUpdateCardIsRunning } from "../utils/orchestrators";
 
@@ -87,18 +89,22 @@ const mapOrchestratorStatus = (
 const hasCgn = (
   fiscalCode: FiscalCode,
   userCgnModel: UserCgnModel
-): TaskEither<IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized, true > => 
-userCgnModel.findLastVersionByModelId([fiscalCode])
-.mapLeft<IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized>(
-  () => ResponseErrorInternal("Cannot find any CGN for that CF")
-)
-.chain(userCgn =>
-  fromPredicate(
-    CardActivated.is,
-    () => ResponseErrorForbiddenNotAuthorized
-  )(userCgn)
-)
-.map(_ => true);
+): TaskEither<
+  IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
+  true
+> =>
+  userCgnModel
+    .findLastVersionByModelId([fiscalCode])
+    .mapLeft<IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized>(
+      () => ResponseErrorInternal("Cannot find any CGN for that CF")
+    )
+    .chain(userCgn =>
+      fromPredicate(
+        CardActivated.is,
+        () => ResponseErrorForbiddenNotAuthorized
+      )(userCgn)
+    )
+    .map(_ => true);
 
 export function DeleteCardActivationHandler(
   userEycaCardModel: UserEycaCardModel,
@@ -108,16 +114,13 @@ export function DeleteCardActivationHandler(
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
 
-    //TODO: check
+    // TODO: check
     const orchestratorId = makeEycaOrchestratorId(
       fiscalCode,
       CardPendingDeleteStatusEnum.PENDING_DELETE
     ) as NonEmptyString;
 
-    const hasCgnOrError = await hasCgn(
-      fiscalCode,
-      userCgnModel
-    ).run();
+    const hasCgnOrError = await hasCgn(fiscalCode, userCgnModel).run();
     if (isLeft(hasCgnOrError)) {
       return hasCgnOrError.value;
     }
@@ -244,10 +247,7 @@ export function DeleteCardActivation(
   userEycaCardModel: UserEycaCardModel,
   userCgnModel: UserCgnModel
 ): express.RequestHandler {
-  const handler = DeleteCardActivationHandler(
-    userEycaCardModel,
-    userCgnModel
-  );
+  const handler = DeleteCardActivationHandler(userEycaCardModel, userCgnModel);
 
   const middlewaresWrap = withRequestMiddlewares(
     ContextMiddleware(),

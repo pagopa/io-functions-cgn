@@ -52,7 +52,11 @@ export class UserEycaCardModel extends UserCardVersionedDeletable<
     );
   }
 
-  public findAll = ( fiscalCode: FiscalCode ) => {
-    return super.findAll(fiscalCode, USER_EYCA_CARD_COLLECTION_NAME, USER_EYCA_CARD_MODEL_PK_FIELD);
-  }
+  public findAll = (fiscalCode: FiscalCode) => {
+    return super.findAll(
+      fiscalCode,
+      USER_EYCA_CARD_COLLECTION_NAME,
+      USER_EYCA_CARD_MODEL_PK_FIELD
+    );
+  };
 }

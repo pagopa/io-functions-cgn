@@ -26,12 +26,15 @@ export const getDeleteEycaRemoteActivityHandler = (
   const fail = failure(context, logPrefix);
   return fromEither(ActivityInput.decode(input))
     .mapLeft(errs => fail(errorsToError(errs), "Cannot decode Activity Input"))
-    .chain((input) => deleteCard(redisClient,
-      eycaClient,
-      eycaApiUsername,
-      eycaApiPassword,
-      input.cardNumber)
-      .mapLeft(fail)
-    ).fold<ActivityResult>(identity, () => success())
+    .chain(_ =>
+      deleteCard(
+        redisClient,
+        eycaClient,
+        eycaApiUsername,
+        eycaApiPassword,
+        _.cardNumber
+      ).mapLeft(fail)
+    )
+    .fold<ActivityResult>(identity, () => success())
     .run();
 };

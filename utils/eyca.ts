@@ -145,37 +145,35 @@ export const preIssueCard = (
         )
   );
 
-  export const deleteCard = (
-    redisClient: RedisClient,
-    eycaClient: ReturnType<EycaAPIClient>,
-    username: NonEmptyString,
-    password: NonEmptyString,
-    ccdbNumber: CcdbNumber
-  ) =>
-    retrieveCcdbSessionId(redisClient, eycaClient, username, password).chain(
-      sessionId =>
-        tryCatch(
-          () =>
-            eycaClient.deleteCard({
-              ccdb_number: ccdbNumber,
-              session_id: sessionId,
-              type: "json"
-            }),
-          toError
+export const deleteCard = (
+  redisClient: RedisClient,
+  eycaClient: ReturnType<EycaAPIClient>,
+  username: NonEmptyString,
+  password: NonEmptyString,
+  ccdbNumber: CcdbNumber
+) =>
+  retrieveCcdbSessionId(redisClient, eycaClient, username, password).chain(
+    sessionId =>
+      tryCatch(
+        () =>
+          eycaClient.deleteCard({
+            ccdb_number: ccdbNumber,
+            session_id: sessionId,
+            type: "json"
+          }),
+        toError
+      )
+        .mapLeft(
+          err => new Error(`Cannot call EYCA deleteCard API ${err.message}`)
         )
-          .mapLeft(
-            err => new Error(`Cannot call EYCA deleteCard API ${err.message}`)
-          )
-          .chain(_ => fromEither(_).mapLeft(errorsToError))
-          .chain<NonEmptyString>(res =>
-            res.status !== 200 || ErrorResponse.is(res.value.api_response)
-              ? fromLeft(
-                  new Error(
-                    `Error on EYCA deleteCard API|STATUS=${res.status}, DETAIL=${res.value.api_response.text}`
-                  )
+        .chain(_ => fromEither(_).mapLeft(errorsToError))
+        .chain<NonEmptyString>(res =>
+          res.status !== 200 || ErrorResponse.is(res.value.api_response)
+            ? fromLeft(
+                new Error(
+                  `Error on EYCA deleteCard API|STATUS=${res.status}, DETAIL=${res.value.api_response.text}`
                 )
-              : taskEither.of(res.value.api_response.text)
-          )
-    );
-  
-  
+              )
+            : taskEither.of(res.value.api_response.text)
+        )
+  );
