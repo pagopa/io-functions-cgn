@@ -11,7 +11,7 @@ import { Timestamp } from "../generated/definitions/Timestamp";
 import { UserEycaCardModel } from "../models/user_eyca_card";
 import { ActivityResult, failure, success } from "../utils/activity";
 import { errorsToError } from "../utils/conversions";
-import { preIssueCard, updateCard } from "./eyca";
+import { preIssueCard, updateCard } from "../utils/eyca";
 
 export const ActivityInput = t.interface({
   activationDate: Timestamp,
