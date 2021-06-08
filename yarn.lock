@@ -669,12 +669,12 @@
   resolved "https://registry.yarnpkg.com/@pagopa/express-azure-functions/-/express-azure-functions-2.0.0.tgz#eb52a0b997d931c1509372e2a9bea22a8ca85c17"
   integrity sha512-IFZqtk0e2sfkMZIxYqPORzxcKRkbIrVJesR6eMLNwzh1rA4bl2uh9ZHk1m55LNq4ZmaxREDu+1JcGlIaZQgKNQ==
 
-"@pagopa/openapi-codegen-ts@^9.0.0":
-  version "9.0.0"
-  resolved "https://registry.npmjs.org/@pagopa/openapi-codegen-ts/-/openapi-codegen-ts-9.0.0.tgz"
-  integrity sha512-EMF65VTJUJOECkFdcQQKNstWdiAmqqLZmZOtvbdNRE5GN+GXtU3ZHPEvQvPaeopI0GZx7oNapmceUP0FahXMLg==
+"@pagopa/openapi-codegen-ts@^9.2.0":
+  version "9.2.0"
+  resolved "https://registry.yarnpkg.com/@pagopa/openapi-codegen-ts/-/openapi-codegen-ts-9.2.0.tgz#032936e3d0b5673bbd2013e120e3a7b029facefd"
+  integrity sha512-B7w8/lSap5cEs7TBpBhlHCSMzqEFkr5oU6KLj6pXwSvO38F/l3Ts7ArphtpmjUEj6LOS6Zj+hRhB3CAumR7MNQ==
   dependencies:
-    "@pagopa/ts-commons" "^9.1.0"
+    "@pagopa/ts-commons" "^9.2.0"
     fs-extra "^6.0.0"
     nunjucks "^3.2.2"
     prettier "^1.12.1"
@@ -683,7 +683,7 @@
     write-yaml-file "^4.1.3"
     yargs "^11.1.0"
 
-"@pagopa/ts-commons@^9.1.0":
+"@pagopa/ts-commons@^9.1.0", "@pagopa/ts-commons@^9.2.0":
   version "9.4.0"
   resolved "https://registry.npmjs.org/@pagopa/ts-commons/-/ts-commons-9.4.0.tgz"
   integrity sha512-eLuyLQPQsQArCHTfcLhtES8dan6GaJ99AfqbyZS8VsyZxuOZ0lyCZkFQBdd9QlmGUHXiEpLVjVEz+uXcGSnLUg==
