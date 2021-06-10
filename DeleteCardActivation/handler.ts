@@ -183,12 +183,12 @@ export function DeleteCardActivationHandler(
                 fromNullable(maybeStatus).foldL(
                   // if orchestrator does not exists we assume that it expires its storage in TaskHub
                   // after 30 days so we can try to start a new activation process
-                  () => taskEither.of(userEycaCard),
+                  () => taskEither.of(void 0),
                   _ =>
                     // if orchestrator is running we return an Accepted Response
                     // otherwise we assume the orchestrator is in error or
                     // it has been canceled so we can try to start a new activation process
-                    mapOrchestratorStatus(_).map(() => userEycaCard)
+                    mapOrchestratorStatus(_).map(() => void 0)
                 )
               )
       )
