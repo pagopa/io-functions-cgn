@@ -6,7 +6,8 @@ import { DurableOrchestrationStatus } from "durable-functions/lib/src/classes";
 import { fromOption, toError } from "fp-ts/lib/Either";
 import { isLeft } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
-import { fromNullable } from "fp-ts/lib/Option";
+import { fromNullable, none, some } from "fp-ts/lib/Option";
+import { Option } from "fp-ts/lib/Option";
 import {
   fromEither,
   fromLeft,
@@ -34,14 +35,9 @@ import {
   ResponseSuccessRedirectToResource
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import {
-  CardActivated,
-  StatusEnum as CardActivatedStatusEnum
-} from "../generated/definitions/CardActivated";
-import {
-  CardExpired,
-  StatusEnum as CardExpiredStatusEnum
-} from "../generated/definitions/CardExpired";
+import { OrchestratorInput } from "../DeleteCgnOrchestrator/handler";
+import { CardActivated } from "../generated/definitions/CardActivated";
+import { CardExpired } from "../generated/definitions/CardExpired";
 import {
   CardPending,
   StatusEnum as CardPendingStatusEnum
@@ -50,24 +46,17 @@ import {
   CardPendingDelete,
   StatusEnum as CardPendingDeleteStatusEnum
 } from "../generated/definitions/CardPendingDelete";
-import {
-  CardRevoked,
-  StatusEnum as CardRevokedStatusEnum
-} from "../generated/definitions/CardRevoked";
-import { EycaCardActivated } from "../generated/definitions/EycaCardActivated";
-import { EycaCardExpired } from "../generated/definitions/EycaCardExpired";
-import { EycaCardRevoked } from "../generated/definitions/EycaCardRevoked";
+import { CardRevoked } from "../generated/definitions/CardRevoked";
+import { CcdbNumber } from "../generated/definitions/CcdbNumber";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
 import {
   RetrievedUserEycaCard,
   UserEycaCardModel
 } from "../models/user_eyca_card";
-import { OrchestratorInput } from "../StartEycaActivationOrchestrator";
-import { extractEycaExpirationDate } from "../utils/cgn_checks";
 import {
-  makeDeleteCgnOrchestratorId,
-  makeEycaOrchestratorId
+  makeEycaOrchestratorId,
+  makeUpdateCgnOrchestratorId
 } from "../utils/orchestrators";
 import { checkUpdateCardIsRunning } from "../utils/orchestrators";
 
@@ -118,7 +107,7 @@ const hasCgn = (
     )
     .chain(userCgn =>
       fromPredicate(
-        CardActivated.is || CardExpired.is,
+        CardActivated.is || CardExpired.is || CardPending.is,
         // TODO: check predicate
         () => ResponseErrorForbiddenNotAuthorized
       )(userCgn)
@@ -138,7 +127,7 @@ export function DeleteCardActivationHandler(
       return hasCgnOrError.value;
     }
 
-    const orchestratorId = makeDeleteCgnOrchestratorId(
+    const orchestratorId = makeUpdateCgnOrchestratorId(
       fiscalCode,
       CardPendingDeleteStatusEnum.PENDING_DELETE
     ) as NonEmptyString;
@@ -156,18 +145,19 @@ export function DeleteCardActivationHandler(
         fromEither(fromOption(ResponseErrorForbiddenNotAuthorized)(_))
       )
       .chain(userEycaCard =>
-        fromPredicate(CardRevoked.is, () =>
-          ResponseErrorInternal("Cannot delete revoked Card")
+        fromPredicate(
+          (eycaCard: RetrievedUserEycaCard) => !CardRevoked.is(eycaCard),
+          () => ResponseErrorInternal("Cannot delete revoked Card")
         )(userEycaCard)
       )
-      .chain(userEycaCard =>
+      .chain<Option<CcdbNumber>>(userEycaCard =>
         [
           CardPendingDeleteStatusEnum.PENDING_DELETE.toString(),
           CardPendingStatusEnum.PENDING.toString()
-        ].includes(userEycaCard.status)
+        ].includes(userEycaCard.card.status)
           ? fromLeft(
               ResponseErrorConflict(
-                `Cannot delete an EYCA card that is ${userEycaCard.status}`
+                `Cannot delete an EYCA card that is ${userEycaCard.card.status}`
               )
             )
           : // if EYCA card is in PENDING status, try to get orchestrator status
@@ -191,8 +181,13 @@ export function DeleteCardActivationHandler(
                     mapOrchestratorStatus(_).map(() => void 0)
                 )
               )
+              .map(() =>
+                !CardPending.is(userEycaCard.card)
+                  ? some(userEycaCard.card.card_number)
+                  : none
+              )
       )
-      .chain(userEycaCard =>
+      .chain(maybeCardNumber =>
         // now we check if exists another update process for the same EYCA
         checkUpdateCardIsRunning(
           client,
@@ -217,6 +212,7 @@ export function DeleteCardActivationHandler(
                   "DeleteCgnOrchestrator",
                   orchestratorId,
                   OrchestratorInput.encode({
+                    eycaCardNumber: maybeCardNumber.toUndefined(),
                     fiscalCode
                   })
                 ),
