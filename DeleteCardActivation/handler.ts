@@ -1,10 +1,8 @@
 import * as express from "express";
-
 import { Context } from "@azure/functions";
 import * as df from "durable-functions";
 import { DurableOrchestrationStatus } from "durable-functions/lib/src/classes";
 import { fromOption, toError } from "fp-ts/lib/Either";
-import { isLeft } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
 import { fromNullable, none, some } from "fp-ts/lib/Option";
 import { Option } from "fp-ts/lib/Option";
@@ -28,7 +26,6 @@ import {
   IResponseErrorInternal,
   IResponseSuccessAccepted,
   IResponseSuccessRedirectToResource,
-  ResponseErrorConflict,
   ResponseErrorForbiddenNotAuthorized,
   ResponseErrorInternal,
   ResponseSuccessAccepted,
@@ -38,15 +35,10 @@ import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { OrchestratorInput } from "../DeleteCgnOrchestrator/handler";
 import { CardActivated } from "../generated/definitions/CardActivated";
 import { CardExpired } from "../generated/definitions/CardExpired";
+import { CardPending } from "../generated/definitions/CardPending";
 import {
-  CardPending,
-  StatusEnum as CardPendingStatusEnum
-} from "../generated/definitions/CardPending";
-import {
-  CardPendingDelete,
-  StatusEnum as CardPendingDeleteStatusEnum
+  CardPendingDelete
 } from "../generated/definitions/CardPendingDelete";
-import { CardRevoked } from "../generated/definitions/CardRevoked";
 import { CcdbNumber } from "../generated/definitions/CcdbNumber";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
@@ -54,11 +46,10 @@ import {
   RetrievedUserEycaCard,
   UserEycaCardModel
 } from "../models/user_eyca_card";
-import {
-  makeEycaOrchestratorId,
-  makeUpdateCgnOrchestratorId
-} from "../utils/orchestrators";
+import { makeUpdateCgnOrchestratorId } from "../utils/orchestrators";
 import { checkUpdateCardIsRunning } from "../utils/orchestrators";
+import { EycaCardRevoked } from "../generated/definitions/EycaCardRevoked";
+import { EycaCardPendingDelete } from "../generated/definitions/EycaCardPendingDelete";
 
 type ErrorTypes =
   | IResponseErrorInternal
@@ -105,14 +96,51 @@ const hasCgn = (
     .mapLeft<IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized>(
       () => ResponseErrorInternal("Cannot find any CGN for that CF")
     )
+    .chain(maybeUserCgn =>
+      fromEither(fromOption(ResponseErrorForbiddenNotAuthorized)(maybeUserCgn))
+    )
     .chain(userCgn =>
       fromPredicate(
         CardActivated.is || CardExpired.is || CardPending.is,
-        // TODO: check predicate
         () => ResponseErrorForbiddenNotAuthorized
       )(userCgn)
     )
     .map(_ => true);
+
+const getEycaCcdbNumber = (
+  fiscalCode: FiscalCode,
+  userEycaCardModel: UserEycaCardModel
+): TaskEither<
+  IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
+  Option<CcdbNumber>
+> =>
+  userEycaCardModel
+    .findLastVersionByModelId([fiscalCode])
+    .mapLeft<IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized>(
+      () => ResponseErrorInternal("Cannot find any EYCA for that CF")
+    )
+    .chain<RetrievedUserEycaCard>(maybeEycaCard =>
+      fromEither(
+        fromOption(ResponseErrorInternal("Cannot retriew EYCA card"))(
+          maybeEycaCard
+        )
+      )
+    )
+    .chain(eycaCard =>
+      fromPredicate(
+        (eycaCard: RetrievedUserEycaCard) =>
+          CardPending.is(eycaCard) ||
+          EycaCardRevoked.is(eycaCard) ||
+          EycaCardPendingDelete.is(eycaCard),
+        () =>
+          ResponseErrorInternal(
+            `Cannot delete an EYCA card that is ${eycaCard.card.status}`
+          )
+      )(eycaCard)
+    )
+    .map(eycaCard =>
+      !CardPending.is(eycaCard.card) ? some(eycaCard.card.card_number) : none
+    );
 
 export function DeleteCardActivationHandler(
   userEycaCardModel: UserEycaCardModel,
@@ -121,11 +149,6 @@ export function DeleteCardActivationHandler(
 ): IDeleteCardActivationHandler {
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
-
-    const hasCgnOrError = await hasCgn(fiscalCode, userCgnModel).run();
-    if (isLeft(hasCgnOrError)) {
-      return hasCgnOrError.value;
-    }
 
     const orchestratorId = makeUpdateCgnOrchestratorId(
       fiscalCode,
@@ -136,65 +159,37 @@ export function DeleteCardActivationHandler(
       status: CardPendingDeleteStatusEnum.PENDING_DELETE
     };
 
-    return userEycaCardModel
-      .findLastVersionByModelId([fiscalCode])
-      .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
-        ResponseErrorInternal("Cannot query EYCA data")
+    return hasCgn(fiscalCode, userCgnModel)
+      .chain<Option<CcdbNumber>>(() =>
+        getEycaCcdbNumber(fiscalCode, userEycaCardModel)
       )
-      .chain(_ =>
-        fromEither(fromOption(ResponseErrorForbiddenNotAuthorized)(_))
-      )
-      .chain(userEycaCard =>
-        fromPredicate(
-          (eycaCard: RetrievedUserEycaCard) => !CardRevoked.is(eycaCard),
-          () => ResponseErrorInternal("Cannot delete revoked Card")
-        )(userEycaCard)
-      )
-      .chain<Option<CcdbNumber>>(userEycaCard =>
-        [
-          CardPendingDeleteStatusEnum.PENDING_DELETE.toString(),
-          CardPendingStatusEnum.PENDING.toString()
-        ].includes(userEycaCard.card.status)
-          ? fromLeft(
-              ResponseErrorConflict(
-                `Cannot delete an EYCA card that is ${userEycaCard.card.status}`
-              )
+      .chain(maybeCcdbNumber =>
+        // if EYCA card is in PENDING status, try to get orchestrator status
+        // in order to discriminate if there's an error or not
+        tryCatch(() => client.getStatus(orchestratorId), toError)
+          .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
+            ResponseErrorInternal("Cannot retrieve activation status")
+          )
+          .chain(maybeStatus =>
+            // client getStatus could respond with undefined if
+            // an orchestrator instance does not exists
+            // see https://docs.microsoft.com/it-it/azure/azure-functions/durable/durable-functions-instance-management?tabs=javascript#query-instances
+            fromNullable(maybeStatus).foldL(
+              // if orchestrator does not exists we assume that it expires its storage in TaskHub
+              // after 30 days so we can try to start a new activation process
+              () => taskEither.of(void 0),
+              _ =>
+                // if orchestrator is running we return an Accepted Response
+                // otherwise we assume the orchestrator is in error or
+                // it has been canceled so we can try to start a new activation process
+                mapOrchestratorStatus(_).map(() => void 0)
             )
-          : // if EYCA card is in PENDING status, try to get orchestrator status
-            // in order to discriminate if there's an error or not
-            tryCatch(() => client.getStatus(orchestratorId), toError)
-              .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
-                ResponseErrorInternal("Cannot retrieve activation status")
-              )
-              .chain(maybeStatus =>
-                // client getStatus could respond with undefined if
-                // an orchestrator instance does not exists
-                // see https://docs.microsoft.com/it-it/azure/azure-functions/durable/durable-functions-instance-management?tabs=javascript#query-instances
-                fromNullable(maybeStatus).foldL(
-                  // if orchestrator does not exists we assume that it expires its storage in TaskHub
-                  // after 30 days so we can try to start a new activation process
-                  () => taskEither.of(void 0),
-                  _ =>
-                    // if orchestrator is running we return an Accepted Response
-                    // otherwise we assume the orchestrator is in error or
-                    // it has been canceled so we can try to start a new activation process
-                    mapOrchestratorStatus(_).map(() => void 0)
-                )
-              )
-              .map(() =>
-                !CardPending.is(userEycaCard.card)
-                  ? some(userEycaCard.card.card_number)
-                  : none
-              )
-      )
-      .chain(maybeCardNumber =>
-        // now we check if exists another update process for the same EYCA
-        checkUpdateCardIsRunning(
-          client,
-          fiscalCode,
-          card,
-          makeEycaOrchestratorId // TODO: check
-        ).foldTaskEither<
+          )
+          .map(() => maybeCcdbNumber);
+      })
+      .chain(maybeCcdbNumber =>
+        // now we check if exists another update process for the same CGN
+        checkUpdateCardIsRunning(client, fiscalCode, card).foldTaskEither<
           ErrorTypes,
           | IResponseSuccessAccepted
           | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
@@ -205,34 +200,44 @@ export function DeleteCardActivationHandler(
               : fromLeft(response),
           () =>
             // We can generate an internal CGN identifier and insert a new CGN in a PENDING status
-            tryCatch(
-              () =>
-                // Starting a new activation process with proper input
-                client.startNew(
-                  "DeleteCgnOrchestrator",
-                  orchestratorId,
-                  OrchestratorInput.encode({
-                    eycaCardNumber: maybeCardNumber.toUndefined(),
-                    fiscalCode
-                  })
-                ),
-              toError
-            )
-              .mapLeft(err => {
-                context.log.error(
-                  `${logPrefix}|Cannot start StartEycaActivationOrchestrator|ERROR=${err.message}`
-                );
-                return ResponseErrorInternal(
-                  "Cannot start StartEycaActivationOrchestrator"
-                );
+            userCgnModel
+              .upsert({
+                card: { status: CardPendingDeleteStatusEnum.PENDING_DELETE },
+                fiscalCode,
+                kind: "IDeleteCGNCard"
               })
+              .mapLeft(e =>
+                ResponseErrorInternal(`Cannot insert a new CGN|${e.kind}`)
+              )
+              .chain(() =>
+                tryCatch(
+                  () =>
+                    // Starting a new activation process with proper input
+                    client.startNew(
+                      "DeleteCgnOrchestrator",
+                      orchestratorId,
+                      OrchestratorInput.encode({
+                        fiscalCode,
+                        eycaCardNumber: maybeCcdbNumber.toUndefined()
+                      })
+                    ),
+                  toError
+                ).mapLeft(err => {
+                  context.log.error(
+                    `${logPrefix}|Cannot start DeleteCgnOrchestrator|ERROR=${err.message}`
+                  );
+                  return ResponseErrorInternal(
+                    "Cannot start DeleteCgnOrchestrator"
+                  );
+                })
+              )
               .map(() => {
                 const instanceId: InstanceId = {
                   id: orchestratorId
                 };
                 return ResponseSuccessRedirectToResource(
                   instanceId,
-                  `/api/v1/cgn/${fiscalCode}/eyca/activation`,
+                  `/api/v1/cgn/${fiscalCode}/delete`,
                   instanceId
                 );
               })

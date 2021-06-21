@@ -24,6 +24,7 @@ paths:
         Get the CGN status details by the provided fiscal code. 
         In case of success the response could be one of:
           - CardPending
+          - CardPendingDelete
           - CardActivated
           - CardRevoked
           - CardExpired
@@ -93,6 +94,7 @@ paths:
         Get the EYCA status details by the provided fiscal code. 
         In case of success the response could be one of:
           - CardPending
+          - EycaCardPendingDelete
           - EycaCardActivated
           - EycaCardRevoked
           - EycaCardExpired
@@ -345,22 +347,24 @@ definitions:
         required:
           - status
   CardPendingDelete:
-    type: object
-    properties:
-      status:
-        type: string
-        x-extensible-enum:
-          - PENDING_DELETE
-    required:
-      - status
+    allOf:
+      - $ref: "#/definitions/CommonCard"
+      - type: object
+        properties:
+          status:
+            type: string
+            x-extensible-enum:
+              - PENDING_DELETE
+        required:
+          - status
   Card:
     x-one-of: true
     allOf:
       - $ref: "#/definitions/CardPending"
+      - $ref: "#/definitions/CardPendingDelete"
       - $ref: "#/definitions/CardActivated"
       - $ref: "#/definitions/CardRevoked"
       - $ref: "#/definitions/CardExpired"
-      - $ref: "#/definitions/CardPendingDelete"
     x-example: 
       status: ACTIVATED
       activation_date: "2021-10-13T00:00:00.000Z"
@@ -399,10 +403,20 @@ definitions:
             $ref: "#/definitions/CcdbNumber"
         required:
           - card_number
+  EycaCardPendingDelete:
+    allOf:
+      - $ref: "#/definitions/CardPendingDelete"
+      - type: object
+        properties:
+          card_number:
+            $ref: "#/definitions/CcdbNumber"
+        required:
+          - card_number
   EycaCard:
     x-one-of: true
     allOf:
       - $ref: "#/definitions/CardPending"
+      - $ref: "#/definitions/EycaCardPendingDelete"
       - $ref: "#/definitions/EycaCardActivated"
       - $ref: "#/definitions/EycaCardRevoked"
       - $ref: "#/definitions/EycaCardExpired"

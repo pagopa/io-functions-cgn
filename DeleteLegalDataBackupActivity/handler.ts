@@ -9,6 +9,8 @@ import { errorsToError } from "../utils/conversions";
 import { deleteCardExpiration } from "../utils/table_storage";
 import { saveDataToBlob } from "./utils";
 
+// `message-status/${item.id}.json`
+
 export const ActivityInput = t.interface({
   backupFolder: NonEmptyString,
   fiscalCode: FiscalCode
@@ -26,20 +28,14 @@ export const getDeleteLegalDataBackupActivityHandler = (
 ) => (context: Context, input: unknown): Promise<ActivityResult> => {
   const fail = failure(context, logPrefix);
 
-
-  
-  
   return fromEither(ActivityInput.decode(input))
     .mapLeft(errs => fail(errorsToError(errs), "Cannot decode Activity Input"))
     .chain(activityInput =>
-      saveDataToBlob(cardsDataBackupBlobService,
+      saveDataToBlob(
+        cardsDataBackupBlobService,
         cardsDataBackupContainerName,
         activityInput.backupFolder,
-        
-        )
-      .
-      deleteCgnExpirationTask(
-        activityInput.fiscalCode
+        "${fiscalCode}.json"
       ).bimap(err => fail(err, "Cannot delete CGN expiration tuple"), success)
     )
     .fold<ActivityResult>(identity, identity)
