@@ -1,9 +1,7 @@
 /* tslint:disable: no-any */
-import * as date_fns from "date-fns";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
-import { now } from "../../__mocks__/mock";
 import * as tableUtils from "../../utils/table_storage";
 import {
   ActivityInput,
