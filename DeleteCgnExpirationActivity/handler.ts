@@ -14,10 +14,6 @@ export const ActivityInput = t.interface({
 
 export type ActivityInput = t.TypeOf<typeof ActivityInput>;
 
-/*
- * have to read the expire data first and then have to return this data for bakcup
- */
-
 export const getDeleteCgnExpirationActivityHandler = (
   tableService: TableService,
   cgnExpirationTableName: NonEmptyString,
