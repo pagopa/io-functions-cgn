@@ -23,7 +23,7 @@ describe("DeleteEycaRemoteActivity", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
-  it("should return failure if an error occurs during UserCgn retrieve", async () => {
+  it("should return failure caused by wrong input", async () => {
     const deleteEycaRemoteActivityHandler = getDeleteEycaRemoteActivityHandler(
       {} as any,
       {} as any,
@@ -55,7 +55,7 @@ describe("DeleteEycaRemoteActivity", () => {
     }
   });
 
-  it("should return failure if an error occurs during deleteCard", async () => {
+  it("should return success if a delete of Eyca Card succeded", async () => {
     const deleteEycaRemoteActivityHandler = getDeleteEycaRemoteActivityHandler(
       {} as any,
       {} as any,
