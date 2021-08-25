@@ -25,7 +25,7 @@ const anActivityInput: ActivityInput = {
   fiscalCode: aFiscalCode
 };
 
-describe("StoreCgnExpirationActivity", () => {
+describe("StoreEycaExpirationActivity", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
