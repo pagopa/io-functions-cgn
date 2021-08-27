@@ -1,4 +1,5 @@
 import { Context } from "@azure/functions";
+import { ResponseErrorConflict } from "@pagopa/ts-commons/lib/responses";
 import * as df from "durable-functions";
 import { DurableOrchestrationStatus } from "durable-functions/lib/src/classes";
 import * as express from "express";
@@ -37,17 +38,13 @@ import { OrchestratorInput } from "../DeleteCgnOrchestrator/handler";
 import { Card } from "../generated/definitions/Card";
 import { CardActivated } from "../generated/definitions/CardActivated";
 import { CardExpired } from "../generated/definitions/CardExpired";
-import { CardPending } from "../generated/definitions/CardPending";
 import { StatusEnum as CardPendingDeleteStatusEnum } from "../generated/definitions/CardPendingDelete";
 import { CcdbNumber } from "../generated/definitions/CcdbNumber";
-import { EycaCardPendingDelete } from "../generated/definitions/EycaCardPendingDelete";
-import { EycaCardRevoked } from "../generated/definitions/EycaCardRevoked";
+import { EycaCardActivated } from "../generated/definitions/EycaCardActivated";
+import { EycaCardExpired } from "../generated/definitions/EycaCardExpired";
 import { InstanceId } from "../generated/definitions/InstanceId";
-import { UserCgnModel } from "../models/user_cgn";
-import {
-  RetrievedUserEycaCard,
-  UserEycaCardModel
-} from "../models/user_eyca_card";
+import { RetrievedUserCgn, UserCgnModel } from "../models/user_cgn";
+import { UserEycaCardModel } from "../models/user_eyca_card";
 import { makeUpdateCgnOrchestratorId } from "../utils/orchestrators";
 import { checkUpdateCardIsRunning } from "../utils/orchestrators";
 
@@ -80,24 +77,11 @@ const mapOrchestratorStatus = (
   }
 };
 
-export const UserCardsData = t.intersection([
-  t.interface({
-    userCgn: Card
-  }),
-  t.partial({
-    eycaCardNumber: CcdbNumber
-  })
-]);
-export type UserCardsData = t.TypeOf<typeof UserCardsData>;
-
 /**
  * Check if a citizen has an active CGN Card
  * @param fiscalCode: the citizen's fiscalCode
  */
-const readLastCgn = (
-  fiscalCode: FiscalCode,
-  userCgnModel: UserCgnModel
-): TaskEither<ErrorTypes | IResponseSuccessAccepted, Card> =>
+const readLastCgn = (fiscalCode: FiscalCode, userCgnModel: UserCgnModel) =>
   userCgnModel
     .findLastVersionByModelId([fiscalCode])
     .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
@@ -108,11 +92,10 @@ const readLastCgn = (
     )
     .chain(userCgn =>
       fromPredicate(
-        CardActivated.is || CardExpired.is || CardPending.is,
+        CardActivated.is || CardExpired.is,
         () => ResponseErrorForbiddenNotAuthorized
-      )(userCgn)
+      )(userCgn.card).map(_ => userCgn)
     );
-//.map(_ => true);
 
 const getEycaCcdbNumber = (
   fiscalCode: FiscalCode,
@@ -120,30 +103,21 @@ const getEycaCcdbNumber = (
 ): TaskEither<ErrorTypes | IResponseSuccessAccepted, Option<CcdbNumber>> =>
   userEycaCardModel
     .findLastVersionByModelId([fiscalCode])
-    .mapLeft<ErrorTypes | IResponseSuccessAccepted>(
-      () => ResponseErrorInternal("Cannot find any EYCA for that CF") // TODO: return none
-    )
-    .chain<RetrievedUserEycaCard>(maybeEycaCard =>
-      fromEither(
-        fromOption(ResponseErrorInternal("Cannot retriew EYCA card"))(
-          maybeEycaCard
-        )
-      )
+    .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
+      ResponseErrorInternal("Cannot find any EYCA for that CF")
     )
     .chain(maybeEycaCard =>
-      fromPredicate(
-        (eycaCard: RetrievedUserEycaCard) =>
-          CardPending.is(eycaCard) ||
-          EycaCardRevoked.is(eycaCard) ||
-          EycaCardPendingDelete.is(eycaCard),
-        () =>
-          ResponseErrorInternal(
-            `Cannot delete an EYCA card that is ${maybeEycaCard.card.status}`
-          )
-      )(maybeEycaCard)
-    )
-    .map(eycaCard =>
-      !CardPending.is(eycaCard.card) ? some(eycaCard.card.card_number) : none
+      maybeEycaCard.foldL(
+        () => taskEither.of(none),
+        eycaCard =>
+          EycaCardActivated.is(eycaCard) || EycaCardExpired.is(eycaCard)
+            ? taskEither.of(some(eycaCard.card_number))
+            : fromLeft(
+                ResponseErrorConflict(
+                  `Cannot delete an EYCA card that is ${eycaCard.card.status}`
+                )
+              )
+      )
     );
 
 export function DeleteCardActivationHandler(
@@ -161,8 +135,8 @@ export function DeleteCardActivationHandler(
 
     return readLastCgn(fiscalCode, userCgnModel)
       .chain(userCgnCard =>
-        getEycaCcdbNumber(fiscalCode, userEycaCardModel).map(maybeCcdbNumber =>
-          UserCardsData.encode({
+        getEycaCcdbNumber(fiscalCode, userEycaCardModel).map(
+          maybeCcdbNumber => ({
             eycaCardNumber: maybeCcdbNumber.toUndefined(),
             userCgn: userCgnCard
           })
@@ -180,10 +154,10 @@ export function DeleteCardActivationHandler(
             )
           )
       )
-      .chain(userCardsData =>
+      .chain(({ userCgn, eycaCardNumber }) =>
         // now we check if exists another update process for the same CGN
         checkUpdateCardIsRunning(client, fiscalCode, {
-          ...userCardsData.userCgn,
+          ...userCgn.card,
           status: CardPendingDeleteStatusEnum.PENDING_DELETE
         } as Card).foldTaskEither<
           ErrorTypes,
@@ -198,12 +172,13 @@ export function DeleteCardActivationHandler(
             // We can generate an internal CGN identifier and insert a new CGN in a PENDING status
             userCgnModel
               .upsert({
+                ...userCgn,
                 card: {
-                  ...userCardsData.userCgn,
+                  ...userCgn.card,
                   status: CardPendingDeleteStatusEnum.PENDING_DELETE
                 } as Card,
                 fiscalCode,
-                kind: "IDeleteCGNCard"
+                kind: "INewUserCgn"
               })
               .mapLeft(e =>
                 ResponseErrorInternal(
@@ -218,7 +193,7 @@ export function DeleteCardActivationHandler(
                       "DeleteCgnOrchestrator",
                       orchestratorId,
                       OrchestratorInput.encode({
-                        eycaCardNumber: userCardsData.eycaCardNumber,
+                        eycaCardNumber,
                         fiscalCode
                       })
                     ),
