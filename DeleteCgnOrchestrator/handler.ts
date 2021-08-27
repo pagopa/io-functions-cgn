@@ -2,8 +2,7 @@
 
 import { addSeconds } from "date-fns";
 import * as t from "io-ts";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
-
+import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import {
   ActivityInput as DeleteCgnActivityInput,
   DeleteCgnActivityResult
@@ -13,6 +12,7 @@ import { DeleteEycaActivityResult } from "../DeleteEycaActivity/handler";
 import { ActivityInput as DeleteEycaActivityInput } from "../DeleteEycaActivity/handler";
 import { ActivityInput as DeleteEycaExpirationActivityInput } from "../DeleteEycaExpirationActivity/handler";
 import { ActivityInput as DeleteEycaRemoteActivityInput } from "../DeleteEycaRemoteActivity/handler";
+import { ActivityInput as DeleteLegalDataBackupActivityInput } from "../DeleteLegalDataBackupActivity/handler";
 import { CcdbNumber } from "../generated/definitions/CcdbNumber";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { ActivityResult } from "../utils/activity";
@@ -64,6 +64,11 @@ export const DeleteCgnOrchestratorHandler = function*(
     "ai.operation.parentId": fiscalCode
   };
 
+  // tslint:disable-next-line: no-let
+  let eycaDataToBackup;
+  // tslint:disable-next-line: no-let
+  let cgnDataToBackup;
+
   try {
     try {
       if (eycaCardNumber !== undefined) {
@@ -80,13 +85,13 @@ export const DeleteCgnOrchestratorHandler = function*(
         ).getOrElseL(e =>
           trackExAndThrowWithError(
             e,
-            "cgn.delete.exception.decode.deleteEycaRemoteOutput"
+            "cgn.delete.exception.decode.eycaRemoteOutput"
           )
         );
         if (decodedDeleteEycaRemoteResult.kind !== "SUCCESS") {
           trackExAndThrowWithError(
             new Error("Cannot delete EYCard on EYCA Remote System"),
-            "cgn.delete.exception.failure.deleteEycaRemoteActivityOutput"
+            "cgn.delete.exception.failure.eycaRemoteActivityOutput"
           );
         }
 
@@ -101,13 +106,13 @@ export const DeleteCgnOrchestratorHandler = function*(
         ).getOrElseL(e =>
           trackExAndThrowWithError(
             e,
-            "cgn.delete.exception.decode.deleteEycaExpirationOutput"
+            "cgn.delete.exception.decode.eycaExpirationOutput"
           )
         );
         if (decodedDeleteEycaExpirationResult.kind !== "SUCCESS") {
           trackExAndThrowWithError(
             new Error("Cannot delete EYCard Expiration data"),
-            "cgn.delete.exception.failure.deleteEycaExpirationActivityOutput"
+            "cgn.delete.exception.failure.eycaExpirationActivityOutput"
           );
         }
 
@@ -120,16 +125,15 @@ export const DeleteCgnOrchestratorHandler = function*(
         const decodedDeleteEycaResult = DeleteEycaActivityResult.decode(
           deleteEycaResult
         ).getOrElseL(e =>
-          trackExAndThrowWithError(
-            e,
-            "cgn.delete.exception.decode.deleteEycaOutput"
-          )
+          trackExAndThrowWithError(e, "cgn.delete.exception.decode.eycaOutput")
         );
         if (decodedDeleteEycaResult.kind !== "SUCCESS") {
           trackExAndThrowWithError(
             new Error("Cannot delete EYCard"),
-            "cgn.delete.exception.failure.deleteEycaActivityOutput"
+            "cgn.delete.exception.failure.eycaActivityOutput"
           );
+        } else {
+          eycaDataToBackup = decodedDeleteEycaResult.cards;
         }
       }
 
@@ -144,13 +148,13 @@ export const DeleteCgnOrchestratorHandler = function*(
       ).getOrElseL(e =>
         trackExAndThrowWithError(
           e,
-          "cgn.delete.exception.decode.deleteCgnExpirationOutput"
+          "cgn.delete.exception.decode.cgnExpirationOutput"
         )
       );
       if (decodedDeleteCgnExpirationResult.kind !== "SUCCESS") {
         trackExAndThrowWithError(
           new Error("Cannot delete CGN expiration data"),
-          "cgn.delete.exception.failure.deleteCgnExpirationActivityOutput"
+          "cgn.delete.exception.failure.cgnExpirationActivityOutput"
         );
       }
 
@@ -163,18 +167,43 @@ export const DeleteCgnOrchestratorHandler = function*(
       const decodedDeleteCgnResult = DeleteCgnActivityResult.decode(
         deleteCgnResult
       ).getOrElseL(e =>
-        trackExAndThrowWithError(
-          e,
-          "cgn.delete.exception.decode.deleteCgnOutput"
-        )
+        trackExAndThrowWithError(e, "cgn.delete.exception.decode.cgnOutput")
       );
       if (decodedDeleteCgnResult.kind !== "SUCCESS") {
         trackExAndThrowWithError(
           new Error("Cannot delete CGN"),
-          "cgn.delete.exception.failure.deleteCgnActivityOutput"
+          "cgn.delete.exception.failure.cgnActivityOutput"
         );
       } else {
-        decodedDeleteCgnResult.cards;
+        cgnDataToBackup = decodedDeleteCgnResult.cards;
+
+        // Backup all data for legal issue
+        const legatDataToBackup: DeleteLegalDataBackupActivityInput = {
+          backupFolder: "" as NonEmptyString,
+          cgnCards: cgnDataToBackup,
+          eycaCards: eycaDataToBackup,
+          fiscalCode
+        };
+
+        const legalDataBackupResult = yield context.df.callActivityWithRetry(
+          "DeleteLegalDataBackupActivity",
+          internalRetryOptions,
+          legatDataToBackup
+        );
+        const decodedLegalDataBackupResult = ActivityResult.decode(
+          legalDataBackupResult
+        ).getOrElseL(e =>
+          trackExAndThrowWithError(
+            e,
+            "cgn.delete.exception.decode.legalDataBackupUpdate"
+          )
+        );
+        if (decodedLegalDataBackupResult.kind !== "SUCCESS") {
+          trackExAndThrowWithError(
+            new Error("Cannot backup deleted data for legal issue"),
+            "cgn.delete.exception.failure.deleteLegalDataBackupActivityOutput"
+          );
+        }
       }
 
       // tslint:disable-next-line: no-useless-catch
