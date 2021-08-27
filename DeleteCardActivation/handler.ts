@@ -120,8 +120,8 @@ const getEycaCcdbNumber = (
 ): TaskEither<ErrorTypes | IResponseSuccessAccepted, Option<CcdbNumber>> =>
   userEycaCardModel
     .findLastVersionByModelId([fiscalCode])
-    .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
-      ResponseErrorInternal("Cannot find any EYCA for that CF")
+    .mapLeft<ErrorTypes | IResponseSuccessAccepted>(
+      () => ResponseErrorInternal("Cannot find any EYCA for that CF") // TODO: return none
     )
     .chain<RetrievedUserEycaCard>(maybeEycaCard =>
       fromEither(
@@ -159,7 +159,7 @@ export function DeleteCardActivationHandler(
       CardPendingDeleteStatusEnum.PENDING_DELETE
     ) as NonEmptyString;
 
-    readLastCgn(fiscalCode, userCgnModel)
+    return readLastCgn(fiscalCode, userCgnModel)
       .chain(userCgnCard =>
         getEycaCcdbNumber(fiscalCode, userEycaCardModel).map(maybeCcdbNumber =>
           UserCardsData.encode({
