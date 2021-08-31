@@ -3,7 +3,7 @@
   "description": "",
   "author": "IO team",
   "repository": "https://github.com/pagoPA/io-functions-template",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "license": "MIT",
   "scripts": {
     "prebuild": "shx rm -rf dist && yarn generate",
