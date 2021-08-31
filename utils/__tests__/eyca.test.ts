@@ -4,8 +4,8 @@ import { right } from "fp-ts/lib/Either";
 import { none, some } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { CcdbNumber } from "../../generated/eyca-api/CcdbNumber";
-import { preIssueCard, updateCard } from "../../utils/eyca";
-import * as redis from "../../utils/redis_storage";
+import { preIssueCard, updateCard } from "../eyca";
+import * as redis from "../redis_storage";
 
 const anEycaApiUsername = "USERNAME" as NonEmptyString;
 const anEycaApiPassword = "PASSWORD" as NonEmptyString;
