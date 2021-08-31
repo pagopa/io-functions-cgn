@@ -21,7 +21,6 @@ import {
   withRequestMiddlewares,
   wrapRequestHandler
 } from "io-functions-commons/dist/src/utils/request_middleware";
-import * as t from "io-ts";
 import {
   IResponseErrorConflict,
   IResponseErrorForbiddenNotAuthorized,
@@ -43,7 +42,7 @@ import { CcdbNumber } from "../generated/definitions/CcdbNumber";
 import { EycaCardActivated } from "../generated/definitions/EycaCardActivated";
 import { EycaCardExpired } from "../generated/definitions/EycaCardExpired";
 import { InstanceId } from "../generated/definitions/InstanceId";
-import { RetrievedUserCgn, UserCgnModel } from "../models/user_cgn";
+import { UserCgnModel } from "../models/user_cgn";
 import { UserEycaCardModel } from "../models/user_eyca_card";
 import { makeUpdateCgnOrchestratorId } from "../utils/orchestrators";
 import { checkUpdateCardIsRunning } from "../utils/orchestrators";

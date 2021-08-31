@@ -37,6 +37,7 @@ export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 const NOTIFICATION_DELAY_SECONDS = 10;
 
+// tslint:disable-next-line: no-big-function
 export const DeleteCgnOrchestratorHandler = function*(
   context: IOrchestrationFunctionContext,
   logPrefix: string = "DeleteCgnOrchestrator"
@@ -179,7 +180,7 @@ export const DeleteCgnOrchestratorHandler = function*(
 
         // Backup all data for legal issue
         const legatDataToBackup: DeleteLegalDataBackupActivityInput = {
-          backupFolder: "" as NonEmptyString,
+          backupFolder: "cgn" as NonEmptyString,
           cgnCards: cgnDataToBackup,
           eycaCards: eycaDataToBackup,
           fiscalCode
@@ -221,13 +222,12 @@ export const DeleteCgnOrchestratorHandler = function*(
         tagOverrides
       });
       if (!context.df.isReplaying) {
-        const content = getErrorMessage();
         yield context.df.callActivityWithRetry(
           "SendMessageActivity",
           internalRetryOptions,
           SendMessageActivityInput.encode({
             checkProfile: false,
-            content,
+            content: getErrorMessage(),
             fiscalCode
           })
         );
