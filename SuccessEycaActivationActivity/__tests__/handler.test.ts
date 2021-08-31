@@ -14,7 +14,7 @@ import {
 import { EycaCardActivated } from "../../generated/definitions/EycaCardActivated";
 import { CcdbNumber } from "../../generated/eyca-api/CcdbNumber";
 import { UserEycaCard } from "../../models/user_eyca_card";
-import * as eyca from "../eyca";
+import * as eyca from "../../utils/eyca";
 import {
   ActivityInput,
   getSuccessEycaActivationActivityHandler
