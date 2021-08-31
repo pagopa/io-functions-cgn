@@ -87,8 +87,7 @@ export function UpsertCgnStatusHandler(
             ResponseErrorNotFound("Not Found", "User's CGN status not found")
           )(maybeUserCgn)
         ).map(_ =>
-          _.card.status !== PendingStatusEnum.PENDING &&
-          _.card.status !== PendingDeleteStatusEnum.PENDING_DELETE
+          _.card.status !== PendingStatusEnum.PENDING
             ? {
                 ...card,
                 activation_date: _.card.activation_date,
