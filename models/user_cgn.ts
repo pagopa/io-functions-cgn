@@ -23,6 +23,10 @@ export const NewUserCgn = wrapWithKind(UserCgn, "INewUserCgn" as const);
 
 export type NewUserCgn = t.TypeOf<typeof NewUserCgn>;
 
+export const DeleteUserCgn = wrapWithKind(UserCgn, "IDeleteUserCgn" as const);
+
+export type DeleteUserCgn = t.TypeOf<typeof DeleteUserCgn>;
+
 export const RetrievedUserCgn = wrapWithKind(
   t.intersection([UserCgn, RetrievedVersionedModel]),
   "IRetrievedUserCgn" as const
