@@ -1,20 +1,20 @@
 /* tslint:disable: no-any */
+import { BlobService } from "azure-storage";
 import * as date_fns from "date-fns";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
+import { CosmosResource } from "io-functions-commons/dist/src/utils/cosmosdb_model";
+import { NonNegativeInteger } from "italia-ts-commons/lib/numbers";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import * as blobUtils from "../utils";
+import { context } from "../../__mocks__/durable-functions";
 import { now } from "../../__mocks__/mock";
-import { BlobService } from "azure-storage";
+import { StatusEnum as ActivatedStatusEnum } from "../../generated/definitions/CardActivated";
+import { RetrievedUserCgn } from "../../models/user_cgn";
 import {
   ActivityInput,
   getDeleteLegalDataBackupActivityHandler
 } from "../handler";
-import { context } from "../../__mocks__/durable-functions";
+import * as blobUtils from "../utils";
 import { BlobCreationFailure } from "../utils";
-import { StatusEnum as ActivatedStatusEnum } from "../../generated/definitions/CardActivated";
-import { RetrievedUserCgn } from "../../models/user_cgn";
-import { CosmosResource } from "io-functions-commons/dist/src/utils/cosmosdb_model";
-import { NonNegativeInteger } from "italia-ts-commons/lib/numbers";
 
 // MessageContentBlobService
 const messageContentBlobService = ({} as unknown) as BlobService;
@@ -31,15 +31,15 @@ const aCosmosResourceMetadata: Omit<CosmosResource, "id"> = {
 
 const anActivatedCgn: RetrievedUserCgn = {
   ...aCosmosResourceMetadata,
-  id: "123" as NonEmptyString,
-  version: 0 as NonNegativeInteger,
-  fiscalCode: aFiscalCode,
   card: {
     activation_date: now,
     expiration_date: date_fns.addDays(now, 10),
     status: ActivatedStatusEnum.ACTIVATED
   },
-  kind: "IRetrievedUserCgn"
+  fiscalCode: aFiscalCode,
+  id: "123" as NonEmptyString,
+  kind: "IRetrievedUserCgn",
+  version: 0 as NonNegativeInteger
 };
 const anArrayOfCardResults: ReadonlyArray<RetrievedUserCgn> = [anActivatedCgn];
 

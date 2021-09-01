@@ -8,7 +8,8 @@ const cardsDataBackupBlobService = createBlobService(
   config.CgnCardsDataBackupStorageConnection
 );
 
-const cardsDataBackupContainerName = config.CGN_CARDS_DATA_BACKUP_CONTAINER_NAME;
+const cardsDataBackupContainerName =
+  config.CGN_CARDS_DATA_BACKUP_CONTAINER_NAME;
 
 const deleteLegalDataBackupActivityHandler = getDeleteLegalDataBackupActivityHandler(
   cardsDataBackupBlobService,
