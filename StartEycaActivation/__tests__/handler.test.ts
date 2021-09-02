@@ -3,7 +3,7 @@ import { addYears } from "date-fns";
 import { left, right } from "fp-ts/lib/Either";
 import { none, some } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { mockGetStatus, mockStartNew } from "../../__mocks__/durable-functions";
 import {
   CardActivated,
@@ -16,7 +16,7 @@ import { UserEycaCard } from "../../models/user_eyca_card";
 import * as checks from "../../utils/cgn_checks";
 import * as orchUtils from "../../utils/orchestrators";
 
-import { ResponseSuccessAccepted } from "italia-ts-commons/lib/responses";
+import { ResponseSuccessAccepted } from "@pagopa/ts-commons/lib/responses";
 import { CcdbNumber } from "../../generated/definitions/CcdbNumber";
 import * as cgn_checks from "../../utils/cgn_checks";
 import { DEFAULT_EYCA_UPPER_BOUND_AGE } from "../../utils/config";

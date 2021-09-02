@@ -1,7 +1,7 @@
 import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import * as date_fns from "date-fns";
 import { isLeft, isRight } from "fp-ts/lib/Either";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import {
   DEFAULT_CGN_UPPER_BOUND_AGE,
   DEFAULT_EYCA_UPPER_BOUND_AGE

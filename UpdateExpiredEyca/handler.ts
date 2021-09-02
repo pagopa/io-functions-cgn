@@ -5,7 +5,7 @@ import * as df from "durable-functions";
 import { array, chunksOf } from "fp-ts/lib/Array";
 import { Either, isLeft, toError } from "fp-ts/lib/Either";
 import { taskEither, tryCatch } from "fp-ts/lib/TaskEither";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { OrchestratorInput } from "../ExpireEycaOrchestrator/index";
 import { StatusEnum as CardExpiredStatusEnum } from "../generated/definitions/CardExpired";
 import { StatusEnum } from "../generated/definitions/CardPending";

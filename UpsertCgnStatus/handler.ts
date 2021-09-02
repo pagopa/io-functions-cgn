@@ -22,8 +22,8 @@ import {
   ResponseErrorInternal,
   ResponseErrorNotFound,
   ResponseSuccessRedirectToResource
-} from "italia-ts-commons/lib/responses";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+} from "@pagopa/ts-commons/lib/responses";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { StatusEnum as PendingStatusEnum } from "../generated/definitions/CardPending";
 
 import { StatusEnum } from "../generated/definitions/CardRevoked";

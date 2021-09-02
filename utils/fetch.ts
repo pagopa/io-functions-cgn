@@ -1,11 +1,11 @@
-import { agent } from "italia-ts-commons";
+import { agent } from "@pagopa/ts-commons";
 import {
   AbortableFetch,
   setFetchTimeout,
   toFetch
-} from "italia-ts-commons/lib/fetch";
-import { Millisecond } from "italia-ts-commons/lib/units";
-import { UrlFromString } from "italia-ts-commons/lib/url";
+} from "@pagopa/ts-commons/lib/fetch";
+import { Millisecond } from "@pagopa/ts-commons/lib/units";
+import { UrlFromString } from "@pagopa/ts-commons/lib/url";
 
 export const getProtocol = (endpoint: string) =>
   UrlFromString.decode(endpoint)

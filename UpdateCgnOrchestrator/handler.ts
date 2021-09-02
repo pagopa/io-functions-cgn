@@ -2,7 +2,7 @@
 
 import { addSeconds } from "date-fns";
 import * as t from "io-ts";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CardRevoked";
 
 import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";

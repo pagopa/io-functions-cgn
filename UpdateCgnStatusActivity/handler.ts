@@ -3,7 +3,7 @@ import { fromOption, toError } from "fp-ts/lib/Either";
 import { identity } from "fp-ts/lib/function";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { Card } from "../generated/definitions/Card";
 import { UserCgnModel } from "../models/user_cgn";
 import { ActivityResult, failure, success } from "../utils/activity";

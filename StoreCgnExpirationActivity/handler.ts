@@ -3,7 +3,7 @@ import { TableService } from "azure-storage";
 import { identity } from "fp-ts/lib/function";
 import { fromEither } from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { ActivityResult, failure, success } from "../utils/activity";
 import { errorsToError } from "../utils/conversions";

@@ -8,7 +8,7 @@ import {
 import { Either, isLeft, left, right } from "fp-ts/lib/Either";
 import { fromNullable } from "fp-ts/lib/Option";
 import { TaskEither, taskify } from "fp-ts/lib/TaskEither";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { Timestamp } from "../generated/definitions/Timestamp";
 
 import * as date_fns from "date-fns";

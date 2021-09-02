@@ -2,10 +2,10 @@ import { Container } from "@azure/cosmos";
 import {
   CosmosdbModelVersioned,
   RetrievedVersionedModel
-} from "io-functions-commons/dist/src/utils/cosmosdb_model_versioned";
-import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
+} from "@pagopa/io-functions-commons/dist/src/utils/cosmosdb_model_versioned";
+import { wrapWithKind } from "@pagopa/io-functions-commons/dist/src/utils/types";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import * as t from "io-ts";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { EycaCard } from "../generated/definitions/EycaCard";
 
 export const USER_EYCA_CARD_COLLECTION_NAME = "user-eyca-cards";

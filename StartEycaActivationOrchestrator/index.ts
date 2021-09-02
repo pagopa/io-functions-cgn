@@ -4,7 +4,7 @@ import { ExceptionTelemetry } from "applicationinsights/out/Declarations/Contrac
 import * as df from "durable-functions";
 import { constVoid } from "fp-ts/lib/function";
 import * as t from "io-ts";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 
 import { ActivityInput as StoreEycaExpirationActivityInput } from "../StoreEycaExpirationActivity/handler";
 import { ActivityInput as SuccessEycaActivationActivityInput } from "../SuccessEycaActivationActivity/handler";

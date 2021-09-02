@@ -2,8 +2,8 @@
 import * as df from "durable-functions";
 import { isLeft, isRight } from "fp-ts/lib/Either";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
+import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { getClient, mockGetStatus } from "../../__mocks__/durable-functions";
 import { StatusEnum } from "../../generated/definitions/CardPending";
 import * as orchUtils from "../orchestrators";

@@ -1,8 +1,8 @@
 /* tslint:disable: no-any */
+import { toCosmosErrorResponse } from "@pagopa/io-functions-commons/dist/src/utils/cosmosdb_model";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { none, some } from "fp-ts/lib/Option";
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { toCosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import * as TE from "fp-ts/lib/TaskEither";
 import { context } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import { StatusEnum as ActivatedStatusEnum } from "../../generated/definitions/CardActivated";
@@ -52,7 +52,7 @@ describe("ExpireEycaActivity", () => {
   });
   it("should return failure if an error occurs during User Eyca Card retrieve", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      fromLeft(toCosmosErrorResponse(new Error("query error")))
+      TE.left(toCosmosErrorResponse(new Error("query error")))
     );
     const expireEycaActivityHandler = getExpireEycaActivityHandler(
       userCgnModelMock as any
@@ -67,9 +67,7 @@ describe("ExpireEycaActivity", () => {
   });
 
   it("should return failure if no User Eyca Card was found", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(none));
     const expireEycaActivityHandler = getExpireEycaActivityHandler(
       userCgnModelMock as any
     );
@@ -84,7 +82,7 @@ describe("ExpireEycaActivity", () => {
 
   it("should return failure if User Eyca Card is not Active", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(aUserCardPending))
+      TE.of(some(aUserCardPending))
     );
     const expireEycaActivityHandler = getExpireEycaActivityHandler(
       userCgnModelMock as any
@@ -97,12 +95,13 @@ describe("ExpireEycaActivity", () => {
       );
     }
   });
+
   it("should return failure if userCgn' s update fails", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(anActivatedUserEycaCard))
+      TE.of(some(anActivatedUserEycaCard))
     );
     updateMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Cannot update User EYCA Card"))
+      TE.left(new Error("Cannot update User EYCA Card"))
     );
     const expireEycaActivityHandler = getExpireEycaActivityHandler(
       userCgnModelMock as any
@@ -116,10 +115,10 @@ describe("ExpireEycaActivity", () => {
 
   it("should return success if userCgn' s update success", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(anActivatedUserEycaCard))
+      TE.of(some(anActivatedUserEycaCard))
     );
     updateMock.mockImplementationOnce(() =>
-      taskEither.of({
+      TE.of({
         ...anActivatedUserEycaCard,
         card: { ...anActivatedEycaCard, status: ExpiredStatusEnum.EXPIRED }
       })

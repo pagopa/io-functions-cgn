@@ -1,5 +1,5 @@
 import { RetryOptions } from "durable-functions";
-import { IntegerFromString } from "italia-ts-commons/lib/numbers";
+import { IntegerFromString } from "@pagopa/ts-commons/lib/numbers";
 
 const RETRY_OPTIONS_FIRST_RETRY_INTERVAL_MS = IntegerFromString.decode(
   process.env.RETRY_OPTIONS_FIRST_RETRY_INTERVAL_MS

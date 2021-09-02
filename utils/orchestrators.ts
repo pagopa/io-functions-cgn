@@ -1,17 +1,8 @@
 import * as df from "durable-functions";
 import { IOrchestrationFunctionContext } from "durable-functions/lib/src/classes";
 import { DurableOrchestrationClient } from "durable-functions/lib/src/durableorchestrationclient";
-import { array } from "fp-ts/lib/Array";
 
-import { toError } from "fp-ts/lib/Either";
-import { fromNullable, fromPredicate } from "fp-ts/lib/Option";
-import {
-  fromLeft,
-  taskEither,
-  TaskEither,
-  tryCatch
-} from "fp-ts/lib/TaskEither";
-import { readableReport } from "italia-ts-commons/lib/reporters";
+import { readableReport } from "@pagopa/ts-commons/lib/reporters";
 import {
   IResponseErrorConflict,
   IResponseErrorInternal,
@@ -19,16 +10,20 @@ import {
   ResponseErrorConflict,
   ResponseErrorInternal,
   ResponseSuccessAccepted
-} from "italia-ts-commons/lib/responses";
+} from "@pagopa/ts-commons/lib/responses";
+import { toError } from "fp-ts/lib/Either";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import { PromiseType } from "@pagopa/ts-commons/lib/types";
 import {
   EventTelemetry,
   ExceptionTelemetry
 } from "applicationinsights/out/Declarations/Contracts";
-import { constVoid } from "fp-ts/lib/function";
+import { array } from "fp-ts";
+import { constVoid, pipe } from "fp-ts/lib/function";
 import * as t from "io-ts";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { PromiseType } from "italia-ts-commons/lib/types";
 import { Card } from "../generated/definitions/Card";
 import { StatusEnum as CardActivatedStatusEnum } from "../generated/definitions/CardActivated";
 import { StatusEnum as CardExpiredStatusEnum } from "../generated/definitions/CardExpired";
@@ -58,7 +53,7 @@ export const makeEycaOrchestratorId = (
 export const getOrchestratorStatus = (
   client: DurableOrchestrationClient,
   orchestratorId: string
-) => tryCatch(() => client.getStatus(orchestratorId), toError);
+) => TE.tryCatch(() => client.getStatus(orchestratorId), toError);
 
 /**
  * Returns the status of the orchestrator augmented with an isRunning attribute
@@ -66,18 +61,21 @@ export const getOrchestratorStatus = (
 export const isOrchestratorRunning = (
   client: DurableOrchestrationClient,
   orchestratorId: string
-): TaskEither<
+): TE.TaskEither<
   Error,
   PromiseType<ReturnType<typeof client["getStatus"]>> & {
     isRunning: boolean;
   }
 > =>
-  getOrchestratorStatus(client, orchestratorId).map(status => ({
-    ...status,
-    isRunning:
-      status.runtimeStatus === df.OrchestrationRuntimeStatus.Running ||
-      status.runtimeStatus === df.OrchestrationRuntimeStatus.Pending
-  }));
+  pipe(
+    getOrchestratorStatus(client, orchestratorId),
+    TE.map(status => ({
+      ...status,
+      isRunning:
+        status.runtimeStatus === df.OrchestrationRuntimeStatus.Running ||
+        status.runtimeStatus === df.OrchestrationRuntimeStatus.Pending
+    }))
+  );
 
 const cgnStatuses: ReadonlyArray<string> = [
   CardRevokedStatusEnum.REVOKED.toString(),
@@ -101,78 +99,85 @@ export const checkUpdateCardIsRunning = (
     fiscalCode: FiscalCode,
     cardStatus: string
   ) => string = makeUpdateCgnOrchestratorId
-): TaskEither<CheckUpdateCardIsRunningErrorTypes, false> =>
-  isOrchestratorRunning(client, getOrchestratorId(fiscalCode, card.status))
-    .foldTaskEither<CheckUpdateCardIsRunningErrorTypes, false>(
-      err =>
-        fromLeft(
-          ResponseErrorInternal(
-            `Error checking UpdateCardOrchestrator: ${err.message}`
-          )
-        ),
-      ({ isRunning }) =>
-        isRunning ? fromLeft(ResponseSuccessAccepted()) : taskEither.of(false)
-    )
-    .chain(_ =>
-      taskEither.of(cgnStatuses.filter(el => el !== card.status.toString()))
-    )
-    .chain(otherStatuses =>
+): TE.TaskEither<CheckUpdateCardIsRunningErrorTypes, false> =>
+  pipe(
+    getOrchestratorId(fiscalCode, card.status),
+    orchestratorId => isOrchestratorRunning(client, orchestratorId),
+    TE.mapLeft(err =>
+      ResponseErrorInternal(
+        `Error checking UpdateCardOrchestrator: ${err.message}`
+      )
+    ),
+    TE.chainW(({ isRunning }) =>
+      isRunning ? TE.left(ResponseSuccessAccepted("", undefined)) : TE.of(false)
+    ),
+    TE.chainW(() =>
+      TE.of(cgnStatuses.filter(el => el !== card.status.toString()))
+    ),
+    TE.chainW(otherStatuses =>
       // check over other possible CGN' s statuses if there is other concurrent
       // orchestrators running. This check allows only one update's orchestrator
       // is running at once for each fiscalCode
-      array.sequence(taskEither)(
+      array.sequence(TE.ApplicativePar)(
         otherStatuses.map(status =>
-          isOrchestratorRunning(
-            client,
-            getOrchestratorId(fiscalCode, status)
-          ).foldTaskEither<CheckUpdateCardIsRunningErrorTypes, false>(
-            err =>
-              fromLeft(
-                ResponseErrorInternal(
-                  `Error checking UpdateCgnOrchestrator: ${err.message}`
-                )
-              ),
-            ({ isRunning }) =>
+          pipe(
+            getOrchestratorId(fiscalCode, status),
+            orchId => isOrchestratorRunning(client, orchId),
+            TE.mapLeft(err =>
+              ResponseErrorInternal(
+                `Error checking UpdateCgnOrchestrator: ${err.message}`
+              )
+            ),
+            TE.chainW(({ isRunning }) =>
               isRunning
-                ? fromLeft(
+                ? TE.left(
                     ResponseErrorConflict(
                       `Another Update Cgn orchestrator is running for status ${status}`
                     )
                   )
-                : taskEither.of(false)
+                : TE.of(false)
+            )
           )
         )
       )
-    )
-    .map(_ => false);
+    ),
+    TE.map(() => false as const)
+  );
 
 export const terminateOrchestratorById = (
   orchestratorId: string,
   client: DurableOrchestrationClient,
   reason: NonEmptyString
 ) => {
-  const voidTask = taskEither.of<Error, void>(void 0);
-  return tryCatch(() => client.getStatus(orchestratorId), toError).chain(
-    maybeStatus =>
-      fromNullable(maybeStatus)
-        .chain(
-          fromPredicate(
-            _ =>
-              _.runtimeStatus === df.OrchestrationRuntimeStatus.Running ||
-              _.runtimeStatus === df.OrchestrationRuntimeStatus.Pending
+  const voidTask = TE.of<Error, void>(void 0);
+  return pipe(
+    TE.tryCatch(() => client.getStatus(orchestratorId), toError),
+    TE.chain(maybeStatus =>
+      pipe(
+        O.fromNullable(maybeStatus),
+        O.chain(
+          O.fromPredicate(
+            orchestrationStatus =>
+              orchestrationStatus.runtimeStatus ===
+                df.OrchestrationRuntimeStatus.Running ||
+              orchestrationStatus.runtimeStatus ===
+                df.OrchestrationRuntimeStatus.Pending
           )
-        )
-        .foldL(
+        ),
+        O.fold(
           () => voidTask,
           () =>
-            tryCatch(
-              () => client.terminate(orchestratorId, reason),
-              toError
-            ).foldTaskEither(
-              () => voidTask,
-              () => voidTask
+            pipe(
+              TE.tryCatch(
+                () => client.terminate(orchestratorId, reason),
+                toError
+              ),
+              TE.chain(() => voidTask),
+              TE.orElse(() => voidTask)
             )
         )
+      )
+    )
   );
 };
 

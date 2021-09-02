@@ -6,8 +6,8 @@ import { toCosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmo
 import {
   ResponseErrorInternal,
   ResponseSuccessAccepted
-} from "italia-ts-commons/lib/responses";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+} from "@pagopa/ts-commons/lib/responses";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { mockStartNew } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
