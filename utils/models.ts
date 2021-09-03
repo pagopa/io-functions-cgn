@@ -23,10 +23,9 @@ export const retrieveUserCgn = (
     TE.chainW(maybeUserCgn =>
       pipe(
         maybeUserCgn,
-        E.fromOption(() =>
+        TE.fromOption(() =>
           ResponseErrorNotFound("Not Found", "User's CGN status not found")
-        ),
-        TE.fromEither
+        )
       )
     )
   );
@@ -43,10 +42,9 @@ export const retrieveUserEycaCard = (
     TE.chainW(maybeUserEycaCard =>
       pipe(
         maybeUserEycaCard,
-        E.fromOption(() =>
+        TE.fromOption(() =>
           ResponseErrorNotFound("Not Found", "User's EYCA Card not found")
-        ),
-        TE.fromEither
+        )
       )
     )
   );

@@ -48,10 +48,9 @@ export const getSuccessEycaActivationActivityHandler = (
         TE.chain(maybeEycaCard =>
           pipe(
             maybeEycaCard,
-            E.fromOption(() =>
+            TE.fromOption(() =>
               fail(new Error("No EYCA card found for the provided fiscalCode"))
-            ),
-            TE.fromEither
+            )
           )
         ),
         TE.chain(eycaCard =>

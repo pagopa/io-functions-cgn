@@ -102,8 +102,7 @@ const getEycaEligibleTask = (
         TE.chainW(maybeUserCgn =>
           pipe(
             maybeUserCgn,
-            E.fromOption(() => ResponseErrorForbiddenNotAuthorized),
-            TE.fromEither,
+            TE.fromOption(() => ResponseErrorForbiddenNotAuthorized),
             TE.chainW(userCgn =>
               TE.fromPredicate(
                 CardActivated.is,

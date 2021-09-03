@@ -65,8 +65,7 @@ export function GetEycaActivationHandler(
                   // now try to map orchestrator status
                   pipe(
                     getActivationStatus(orchestrationStatus),
-                    E.fromOption(() => new Error("Cannot recognize status")),
-                    TE.fromEither,
+                    TE.fromOption(() => new Error("Cannot recognize status")),
                     TE.map(_ => ({
                       created_at: orchestrationStatus.createdTime,
                       last_updated_at: orchestrationStatus.lastUpdatedTime,

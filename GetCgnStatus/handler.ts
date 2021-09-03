@@ -44,10 +44,9 @@ export function GetCgnStatusHandler(
       TE.chainW(maybeUserCgn =>
         pipe(
           maybeUserCgn,
-          E.fromOption(() =>
+          TE.fromOption(() =>
             ResponseErrorNotFound("Not Found", "User's CGN status not found")
-          ),
-          TE.fromEither
+          )
         )
       ),
       TE.map(userCgn => ResponseSuccessJson(userCgn.card)),

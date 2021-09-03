@@ -53,8 +53,7 @@ export function GetGenerateOtpHandler(
       TE.chainW(maybeUserCgn =>
         pipe(
           maybeUserCgn,
-          E.fromOption(() => ResponseErrorForbiddenNotAuthorized),
-          TE.fromEither
+          TE.fromOption(() => ResponseErrorForbiddenNotAuthorized)
         )
       ),
       TE.chainW(

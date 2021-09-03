@@ -82,10 +82,9 @@ export function UpsertCgnStatusHandler(
       TE.chainW(({ card, maybeUserCgn }) =>
         pipe(
           maybeUserCgn,
-          E.fromOption(() =>
+          TE.fromOption(() =>
             ResponseErrorNotFound("Not Found", "User's CGN status not found")
           ),
-          TE.fromEither,
           TE.map(_ =>
             _.card.status !== PendingStatusEnum.PENDING
               ? {

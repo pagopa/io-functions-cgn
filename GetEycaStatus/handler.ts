@@ -74,13 +74,12 @@ export function GetEycaStatusHandler(
       TE.chainW(maybeUserEycaCard =>
         pipe(
           maybeUserEycaCard,
-          E.fromOption(() =>
+          TE.fromOption(() =>
             ResponseErrorNotFound(
               "Not Found",
               "User's EYCA Card status not found"
             )
           ),
-          TE.fromEither,
           TE.chain(card => TE.of(card)),
           TE.orElse(notFoundError =>
             pipe(
@@ -93,8 +92,7 @@ export function GetEycaStatusHandler(
               TE.chainW(maybeUserCgn =>
                 pipe(
                   maybeUserCgn,
-                  E.fromOption(() => notFoundError),
-                  TE.fromEither
+                  TE.fromOption(() => notFoundError)
                 )
               ),
               TE.chainW(

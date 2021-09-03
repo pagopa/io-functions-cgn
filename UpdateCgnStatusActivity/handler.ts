@@ -37,10 +37,9 @@ export const getUpdateCgnStatusActivityHandler = (
         TE.chain(maybeUserCgn =>
           pipe(
             maybeUserCgn,
-            E.fromOption(() =>
+            TE.fromOption(() =>
               fail(new Error("No userCgn found for the provided fiscalCode"))
-            ),
-            TE.fromEither
+            )
           )
         ),
         TE.map(userCgn => ({

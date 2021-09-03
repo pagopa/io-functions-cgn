@@ -105,13 +105,12 @@ export function GetCgnActivationHandler(
                   // now try to map orchestrator status
                   pipe(
                     getActivationStatus(orchestrationStatus),
-                    E.fromOption(() =>
+                    TE.fromOption(() =>
                       ResponseErrorNotFound(
                         "Not Found",
                         "User's CGN status not found"
                       )
                     ),
-                    TE.fromEither,
                     TE.map(_ => ({
                       activationDetail: {
                         created_at: orchestrationStatus.createdTime,
