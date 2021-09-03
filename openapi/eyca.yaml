@@ -193,7 +193,7 @@ definitions:
     type: string
     format: DateFromString
     description: A date field in short format.
-    x-import: italia-ts-commons/lib/dates
+    x-import: "@pagopa/ts-commons/lib/dates"
     example: "2018-10-13"
 
   CcdbNumber:

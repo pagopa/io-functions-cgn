@@ -1,7 +1,7 @@
 import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
-import * as date_fns from "date-fns";
-import { isLeft, isRight } from "fp-ts/lib/Either";
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
+import * as date_fns from "date-fns";
+import * as E from "fp-ts/lib/Either";
 import {
   DEFAULT_CGN_UPPER_BOUND_AGE,
   DEFAULT_EYCA_UPPER_BOUND_AGE
@@ -22,19 +22,18 @@ describe("checkCgnRequirements", () => {
     const result = await checkCgnRequirements(
       aWrongFiscalCode,
       DEFAULT_CGN_UPPER_BOUND_AGE
-    ).run();
-    expect(isLeft(result)).toBeTruthy();
+    )();
+    expect(E.isLeft(result)).toBeTruthy();
   });
 
   it("should return true if the given fiscalCode is eligible for CGN", async () => {
     const result = await checkCgnRequirements(
       anElibibleFiscalCode,
       DEFAULT_CGN_UPPER_BOUND_AGE
-    ).run();
-    const isRightResult = isRight(result);
-    expect(isRightResult).toBeTruthy();
-    if (isRightResult) {
-      expect(result.value).toEqual(true);
+    )();
+    expect(E.isRight(result)).toBeTruthy();
+    if (E.isRight(result)) {
+      expect(result.right).toEqual(true);
     }
   });
 
@@ -42,11 +41,10 @@ describe("checkCgnRequirements", () => {
     const result = await checkCgnRequirements(
       anUnElibibleFiscalCode,
       DEFAULT_CGN_UPPER_BOUND_AGE
-    ).run();
-    const isRightResult = isRight(result);
-    expect(isRightResult).toBeTruthy();
-    if (isRightResult) {
-      expect(result.value).toEqual(false);
+    )();
+    expect(E.isRight(result)).toBeTruthy();
+    if (E.isRight(result)) {
+      expect(result.right).toEqual(false);
     }
   });
 
@@ -54,11 +52,11 @@ describe("checkCgnRequirements", () => {
     const result = await checkCgnRequirements(
       anUnElibibleFiscalCode,
       90 as NonNegativeInteger
-    ).run();
-    const isRightResult = isRight(result);
-    expect(isRightResult).toBeTruthy();
-    if (isRightResult) {
-      expect(result.value).toEqual(true);
+    )();
+
+    expect(E.isRight(result)).toBeTruthy();
+    if (E.isRight(result)) {
+      expect(result.right).toEqual(true);
     }
   });
 });
@@ -67,18 +65,18 @@ describe("extractCgnExpirationDate", () => {
     const result = await extractCgnExpirationDate(
       aWrongFiscalCode,
       DEFAULT_CGN_UPPER_BOUND_AGE
-    ).run();
-    expect(isLeft(result)).toBeTruthy();
+    )();
+    expect(E.isLeft(result)).toBeTruthy();
   });
 
   it("should return an expiration Date", async () => {
     const result = await extractCgnExpirationDate(
       anElibibleFiscalCode,
       DEFAULT_CGN_UPPER_BOUND_AGE
-    ).run();
-    expect(isRight(result)).toBeTruthy();
-    if (isRight(result)) {
-      expect(date_fns.format(result.value, "yyyy-MM-dd")).toEqual("2031-11-20");
+    )();
+    expect(E.isRight(result)).toBeTruthy();
+    if (E.isRight(result)) {
+      expect(date_fns.format(result.right, "yyyy-MM-dd")).toEqual("2031-11-20");
     }
   });
 });
@@ -89,7 +87,7 @@ describe("isEycaEligible", () => {
       aWrongFiscalCode,
       DEFAULT_EYCA_UPPER_BOUND_AGE
     );
-    expect(isLeft(result)).toBeTruthy();
+    expect(E.isLeft(result)).toBeTruthy();
   });
 
   it("should return false if user is not eligible for EYCA", async () => {
@@ -97,9 +95,9 @@ describe("isEycaEligible", () => {
       anUnElibibleFiscalCode,
       DEFAULT_EYCA_UPPER_BOUND_AGE
     );
-    expect(isRight(result)).toBeTruthy();
-    if (isRight(result)) {
-      expect(result.value).toEqual(false);
+    expect(E.isRight(result)).toBeTruthy();
+    if (E.isRight(result)) {
+      expect(result.right).toEqual(false);
     }
   });
 
@@ -108,9 +106,9 @@ describe("isEycaEligible", () => {
       anEycaElibibleFiscalCode,
       DEFAULT_EYCA_UPPER_BOUND_AGE
     );
-    expect(isRight(result)).toBeTruthy();
-    if (isRight(result)) {
-      expect(result.value).toEqual(true);
+    expect(E.isRight(result)).toBeTruthy();
+    if (E.isRight(result)) {
+      expect(result.right).toEqual(true);
     }
   });
 
@@ -119,9 +117,9 @@ describe("isEycaEligible", () => {
       anUnElibibleFiscalCode,
       90 as NonNegativeInteger
     );
-    expect(isRight(result)).toBeTruthy();
-    if (isRight(result)) {
-      expect(result.value).toEqual(true);
+    expect(E.isRight(result)).toBeTruthy();
+    if (E.isRight(result)) {
+      expect(result.right).toEqual(true);
     }
   });
 });
@@ -132,7 +130,7 @@ describe("extractEycaExpirationDate", () => {
       aWrongFiscalCode,
       DEFAULT_EYCA_UPPER_BOUND_AGE
     );
-    expect(isLeft(result)).toBeTruthy();
+    expect(E.isLeft(result)).toBeTruthy();
   });
 
   it("should return an expiration Date", async () => {
@@ -140,9 +138,9 @@ describe("extractEycaExpirationDate", () => {
       anEycaElibibleFiscalCode,
       DEFAULT_EYCA_UPPER_BOUND_AGE
     );
-    expect(isRight(result)).toBeTruthy();
-    if (isRight(result)) {
-      expect(date_fns.format(result.value, "yyyy-MM-dd")).toEqual("2033-11-20");
+    expect(E.isRight(result)).toBeTruthy();
+    if (E.isRight(result)) {
+      expect(date_fns.format(result.right, "yyyy-MM-dd")).toEqual("2033-11-20");
     }
   });
 });

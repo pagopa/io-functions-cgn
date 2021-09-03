@@ -25,11 +25,10 @@ import { pipe } from "fp-ts/lib/function";
 import * as TE from "fp-ts/lib/TaskEither";
 
 import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
-import { fromPredicate } from "fp-ts/lib/TaskEither";
 import { CardPending } from "../generated/definitions/CardPending";
 import { EycaCard } from "../generated/definitions/EycaCard";
 import { UserCgnModel } from "../models/user_cgn";
-import { UserEycaCard, UserEycaCardModel } from "../models/user_eyca_card";
+import { UserEycaCardModel } from "../models/user_eyca_card";
 import { isEycaEligible } from "../utils/cgn_checks";
 
 type ErrorTypes =

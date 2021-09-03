@@ -1,6 +1,4 @@
 import {
-  IResponseErrorInternal,
-  IResponseErrorNotFound,
   ResponseErrorInternal,
   ResponseErrorNotFound
 } from "@pagopa/ts-commons/lib/responses";

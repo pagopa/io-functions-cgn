@@ -142,105 +142,119 @@ export function StartEycaActivationHandler(
     const card: CardPending = {
       status: PendingStatusEnum.PENDING
     };
+    return pipe(
+      userEycaCardModel.findLastVersionByModelId([fiscalCode]),
+      TE.mapLeft(() => ResponseErrorInternal("Cannot query EYCA data")),
+      TE.chain(
+        O.fold(
+          () => TE.of(void 0),
+          userEycaCard =>
+            // if an EYCA card is already in a final state we return Conflict
+            !CardPending.is(userEycaCard.card)
+              ? TE.left<
+                  | IResponseErrorConflict
+                  | IResponseErrorInternal
+                  | IResponseSuccessAccepted<undefined>,
+                  void
+                >(
+                  ResponseErrorConflict(
+                    `Cannot activate an EYCA card that is already ${userEycaCard.card.status}`
+                  )
+                )
+              : // if EYCA card is in PENDING status, try to get orchestrator status
+                // in order to discriminate if there's an error or not
+                pipe(
+                  TE.tryCatch(
+                    () => client.getStatus(orchestratorId),
+                    E.toError
+                  ),
+                  TE.mapLeft(() =>
+                    ResponseErrorInternal("Cannot retrieve activation status")
+                  ),
+                  TE.chainW(maybeStatus =>
+                    // client getStatus could respond with undefined if
+                    // an orchestrator instance does not exists
+                    // see https://docs.microsoft.com/it-it/azure/azure-functions/durable/durable-functions-instance-management?tabs=javascript#query-instances
 
-    return userEycaCardModel
-      .findLastVersionByModelId([fiscalCode])
-      .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
-        ResponseErrorInternal("Cannot query EYCA data")
-      )
-      .chain(maybeUserEycaCard =>
-        maybeUserEycaCard.fold(taskEither.of(void 0), userEycaCard =>
-          // if an EYCA card is already in a final state we return Conflict
-          !CardPending.is(userEycaCard.card)
-            ? fromLeft(
-                ResponseErrorConflict(
-                  `Cannot activate an EYCA card that is already ${userEycaCard.card.status}`
-                )
-              )
-            : // if EYCA card is in PENDING status, try to get orchestrator status
-              // in order to discriminate if there's an error or not
-              tryCatch(() => client.getStatus(orchestratorId), toError)
-                .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
-                  ResponseErrorInternal("Cannot retrieve activation status")
-                )
-                .chain(maybeStatus =>
-                  // client getStatus could respond with undefined if
-                  // an orchestrator instance does not exists
-                  // see https://docs.microsoft.com/it-it/azure/azure-functions/durable/durable-functions-instance-management?tabs=javascript#query-instances
-                  fromNullable(maybeStatus).foldL(
-                    // if orchestrator does not exists we assume that it expires its storage in TaskHub
-                    // after 30 days so we can try to start a new activation process
-                    () => taskEither.of(void 0),
-                    _ =>
-                      // if orchestrator is running we return an Accepted Response
-                      // otherwise we assume the orchestrator is in error or
-                      // it has been canceled so we can try to start a new activation process
-                      mapOrchestratorStatus(_).map(() => void 0)
+                    pipe(
+                      maybeStatus,
+                      O.fromNullable,
+                      O.fold(
+                        // if orchestrator does not exists we assume that it expires its storage in TaskHub
+                        // after 30 days so we can try to start a new activation process
+                        () => TE.of(void 0),
+                        _ =>
+                          // if orchestrator is running we return an Accepted Response
+                          // otherwise we assume the orchestrator is in error or
+                          // it has been canceled so we can try to start a new activation process
+                          pipe(
+                            mapOrchestratorStatus(_),
+                            TE.map(() => void 0)
+                          )
+                      )
+                    )
                   )
                 )
         )
-      )
-      .chain(() =>
-        // now we check if exists another update process for the same EYCA
-        checkUpdateCardIsRunning(
-          client,
-          fiscalCode,
-          card,
-          makeEycaOrchestratorId
-        ).foldTaskEither<
-          ErrorTypes,
-          | IResponseSuccessAccepted
-          | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
-        >(
-          response =>
-            response.kind === "IResponseSuccessAccepted"
-              ? taskEither.of(response)
-              : fromLeft(response),
-          () =>
-            // We can generate an internal CGN identifier and insert a new CGN in a PENDING status
-            userEycaCardModel
-              .upsert({
+      ),
+      TE.chain(() =>
+        // now we check if exists another update process for the same EYCA Card
+        pipe(
+          checkUpdateCardIsRunning(
+            client,
+            fiscalCode,
+            card,
+            makeEycaOrchestratorId
+          ),
+          TE.chainW(() =>
+            // We can insert a new EYCA Card in a PENDING status
+            pipe(
+              userEycaCardModel.upsert({
                 card: { status: PendingStatusEnum.PENDING },
                 fiscalCode,
                 kind: "INewUserEycaCard"
-              })
-              .mapLeft(e =>
+              }),
+              TE.mapLeft(e =>
                 ResponseErrorInternal(`Cannot insert a new EYCA card|${e.kind}`)
-              )
-              .chain(() =>
-                fromEither(
-                  extractEycaExpirationDate(fiscalCode, eycaUpperBoundAge)
-                )
-                  .mapLeft(() =>
+              ),
+              TE.chain(() =>
+                pipe(
+                  extractEycaExpirationDate(fiscalCode, eycaUpperBoundAge),
+                  TE.fromEither,
+                  TE.mapLeft(() =>
                     ResponseErrorInternal(
                       `Error extracting Expiration Date from Fiscal Code`
                     )
+                  ),
+                  TE.chain(expirationDate =>
+                    pipe(
+                      TE.tryCatch(
+                        () =>
+                          // Starting a new activation process with proper input
+                          client.startNew(
+                            "StartEycaActivationOrchestrator",
+                            orchestratorId,
+                            OrchestratorInput.encode({
+                              activationDate: new Date(),
+                              expirationDate,
+                              fiscalCode
+                            })
+                          ),
+                        E.toError
+                      ),
+                      TE.mapLeft(err => {
+                        context.log.error(
+                          `${logPrefix}|Cannot start StartEycaActivationOrchestrator|ERROR=${err.message}`
+                        );
+                        return ResponseErrorInternal(
+                          "Cannot start StartEycaActivationOrchestrator"
+                        );
+                      })
+                    )
                   )
-                  .chain(expirationDate =>
-                    tryCatch(
-                      () =>
-                        // Starting a new activation process with proper input
-                        client.startNew(
-                          "StartEycaActivationOrchestrator",
-                          orchestratorId,
-                          OrchestratorInput.encode({
-                            activationDate: new Date(),
-                            expirationDate,
-                            fiscalCode
-                          })
-                        ),
-                      toError
-                    ).mapLeft(err => {
-                      context.log.error(
-                        `${logPrefix}|Cannot start StartEycaActivationOrchestrator|ERROR=${err.message}`
-                      );
-                      return ResponseErrorInternal(
-                        "Cannot start StartEycaActivationOrchestrator"
-                      );
-                    })
-                  )
-              )
-              .map(() => {
+                )
+              ),
+              TE.map(() => {
                 const instanceId: InstanceId = {
                   id: orchestratorId
                 };
@@ -250,10 +264,17 @@ export function StartEycaActivationHandler(
                   instanceId
                 );
               })
+            )
+          ),
+          TE.orElseW(response =>
+            response.kind === "IResponseSuccessAccepted"
+              ? TE.of(response)
+              : TE.left(response)
+          )
         )
-      )
-      .fold<ReturnTypes>(identity, identity)
-      .run();
+      ),
+      TE.toUnion
+    )();
   };
 }
 

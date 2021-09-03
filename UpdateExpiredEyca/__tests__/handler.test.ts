@@ -1,8 +1,8 @@
 /* tslint:disable: no-any */
-import { ExponentialRetryPolicyFilter } from "azure-storage";
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import { ExponentialRetryPolicyFilter } from "azure-storage";
+import * as TE from "fp-ts/lib/TaskEither";
 import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import * as aInsights from "../../utils/appinsights";
@@ -44,7 +44,7 @@ jest.spyOn(aInsights, "trackException").mockImplementation(trackExceptionMock);
 
 const terminateOrchestratorMock = jest
   .fn()
-  .mockImplementation(() => taskEither.of(void 0));
+  .mockImplementation(() => TE.of(void 0));
 jest
   .spyOn(orchUtils, "terminateOrchestratorById")
   .mockImplementation(terminateOrchestratorMock);
@@ -54,7 +54,7 @@ describe("UpdateExpiredCgn", () => {
   });
   it("should process all fiscalCodes present on table", async () => {
     getExpiredEycaUsersMock.mockImplementationOnce(() =>
-      taskEither.of(aSetOfExpiredRows)
+      TE.of(aSetOfExpiredRows)
     );
     const updateExpiredEycaHandler = getUpdateExpiredEycaHandler(
       tableServiceMock as any,
@@ -67,7 +67,7 @@ describe("UpdateExpiredCgn", () => {
 
   it("should terminate other orchestrators running for activation", async () => {
     getExpiredEycaUsersMock.mockImplementationOnce(() =>
-      taskEither.of(aSetOfExpiredRows)
+      TE.of(aSetOfExpiredRows)
     );
     const updateExpiredEycaHandler = getUpdateExpiredEycaHandler(
       tableServiceMock as any,
@@ -79,7 +79,7 @@ describe("UpdateExpiredCgn", () => {
   });
 
   it("should not instantiate any orchestrator if there are no elements to process", async () => {
-    getExpiredEycaUsersMock.mockImplementationOnce(() => taskEither.of([]));
+    getExpiredEycaUsersMock.mockImplementationOnce(() => TE.of([]));
     const updateExpiredEycaHandler = getUpdateExpiredEycaHandler(
       tableServiceMock as any,
       expiredEycaTableName
@@ -91,7 +91,7 @@ describe("UpdateExpiredCgn", () => {
 
   it("should not instantiate any orchestrator if there are errors querying table", async () => {
     getExpiredEycaUsersMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Cannot query table"))
+      TE.left(new Error("Cannot query table"))
     );
     const updateExpiredEycaHandler = getUpdateExpiredEycaHandler(
       tableServiceMock as any,
@@ -111,10 +111,10 @@ describe("UpdateExpiredCgn", () => {
   });
   it("should not instantiate some orchestrator if there are errors terminating other instances for a certain fiscalCode", async () => {
     getExpiredEycaUsersMock.mockImplementationOnce(() =>
-      taskEither.of(aSetOfExpiredRows)
+      TE.of(aSetOfExpiredRows)
     );
     terminateOrchestratorMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Error"))
+      TE.left(new Error("Error"))
     );
     const updateExpiredEycaHandler = getUpdateExpiredEycaHandler(
       tableServiceMock as any,
