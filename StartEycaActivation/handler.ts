@@ -1,27 +1,13 @@
 import * as express from "express";
 
 import { Context } from "@azure/functions";
-import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
-import * as df from "durable-functions";
-import { DurableOrchestrationStatus } from "durable-functions/lib/src/classes";
-import { fromOption, toError } from "fp-ts/lib/Either";
-import { isLeft } from "fp-ts/lib/Either";
-import { identity } from "fp-ts/lib/function";
-import { fromNullable } from "fp-ts/lib/Option";
-import {
-  fromEither,
-  fromLeft,
-  fromPredicate,
-  TaskEither,
-  taskEither,
-  tryCatch
-} from "fp-ts/lib/TaskEither";
-import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
-import { RequiredParamMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_param";
+import { ContextMiddleware } from "@pagopa/io-functions-commons/dist/src/utils/middlewares/context_middleware";
+import { RequiredParamMiddleware } from "@pagopa/io-functions-commons/dist/src/utils/middlewares/required_param";
 import {
   withRequestMiddlewares,
   wrapRequestHandler
-} from "io-functions-commons/dist/src/utils/request_middleware";
+} from "@pagopa/io-functions-commons/dist/src/utils/request_middleware";
+import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import {
   IResponseErrorConflict,
   IResponseErrorForbiddenNotAuthorized,
@@ -35,6 +21,12 @@ import {
   ResponseSuccessRedirectToResource
 } from "@pagopa/ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import * as df from "durable-functions";
+import { DurableOrchestrationStatus } from "durable-functions/lib/src/classes";
+import * as E from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 import { CardActivated } from "../generated/definitions/CardActivated";
 import {
   CardPending,
@@ -64,14 +56,14 @@ export type IStartCgnActivationHandler = (
 
 const mapOrchestratorStatus = (
   orchestratorStatus: DurableOrchestrationStatus
-): TaskEither<IResponseSuccessAccepted, IResponseErrorInternal> => {
+): TE.TaskEither<IResponseSuccessAccepted, IResponseErrorInternal> => {
   switch (orchestratorStatus.runtimeStatus) {
     case df.OrchestrationRuntimeStatus.Pending:
     case df.OrchestrationRuntimeStatus.Running:
     case df.OrchestrationRuntimeStatus.ContinuedAsNew:
-      return fromLeft(ResponseSuccessAccepted());
+      return TE.left(ResponseSuccessAccepted());
     default:
-      return taskEither.of(
+      return TE.of(
         ResponseErrorInternal("Cannot recognize the orchestrator status")
       );
   }
@@ -87,37 +79,43 @@ const getEycaEligibleTask = (
   fiscalCode: FiscalCode,
   userCgnModel: UserCgnModel,
   eycaUpperBoundAge: NonNegativeInteger
-): TaskEither<
+): TE.TaskEither<
   IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
   true
 > =>
-  fromEither(isEycaEligible(fiscalCode, eycaUpperBoundAge))
-    .mapLeft<IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized>(
-      () => ResponseErrorInternal("Cannot perform EYCA Eligibility Check")
-    )
-    .chain(
-      fromPredicate(
+  pipe(
+    isEycaEligible(fiscalCode, eycaUpperBoundAge),
+    TE.fromEither,
+    TE.mapLeft(() =>
+      ResponseErrorInternal("Cannot perform EYCA Eligibility Check")
+    ),
+    TE.chainW(
+      TE.fromPredicate(
         _ => _ === true,
         () => ResponseErrorForbiddenNotAuthorized
       )
+    ),
+    TE.chainW(() =>
+      pipe(
+        userCgnModel.findLastVersionByModelId([fiscalCode]),
+        TE.mapLeft(() => ResponseErrorInternal("Cannot query CGN data")),
+        TE.chainW(maybeUserCgn =>
+          pipe(
+            maybeUserCgn,
+            E.fromOption(() => ResponseErrorForbiddenNotAuthorized),
+            TE.fromEither,
+            TE.chainW(userCgn =>
+              TE.fromPredicate(
+                CardActivated.is,
+                () => ResponseErrorForbiddenNotAuthorized
+              )(userCgn.card)
+            ),
+            TE.map(_ => true as const)
+          )
+        )
+      )
     )
-    .chain(() =>
-      userCgnModel
-        .findLastVersionByModelId([fiscalCode])
-        .mapLeft<IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized>(
-          () => ResponseErrorInternal("Cannot query CGN data")
-        )
-        .chain(_ =>
-          fromEither(fromOption(ResponseErrorForbiddenNotAuthorized)(_))
-        )
-        .chain(userCgn =>
-          fromPredicate(
-            CardActivated.is,
-            () => ResponseErrorForbiddenNotAuthorized
-          )(userCgn.card)
-        )
-        .map(_ => true)
-    );
+  );
 
 export function StartEycaActivationHandler(
   userEycaCardModel: UserEycaCardModel,
@@ -136,9 +134,9 @@ export function StartEycaActivationHandler(
       fiscalCode,
       userCgnModel,
       eycaUpperBoundAge
-    ).run();
-    if (isLeft(isEycaEligibleOrError)) {
-      return isEycaEligibleOrError.value;
+    )();
+    if (E.isLeft(isEycaEligibleOrError)) {
+      return isEycaEligibleOrError.left;
     }
 
     const card: CardPending = {

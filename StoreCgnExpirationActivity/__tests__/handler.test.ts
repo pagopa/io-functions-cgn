@@ -1,7 +1,7 @@
 /* tslint:disable: no-any */
-import * as date_fns from "date-fns";
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import * as date_fns from "date-fns";
+import * as TE from "fp-ts/lib/TaskEither";
 import { context } from "../../__mocks__/durable-functions";
 import { now } from "../../__mocks__/mock";
 import * as tableUtils from "../../utils/table_storage";
@@ -36,7 +36,7 @@ describe("StoreCgnExpirationActivity", () => {
     );
 
     insertCgnExpirationMock.mockImplementationOnce(_ =>
-      jest.fn(() => fromLeft(new Error("Entity Error")))
+      jest.fn(() => TE.left(new Error("Entity Error")))
     );
     const response = await storeCgnExpirationActivityHandler(
       context,
@@ -52,7 +52,7 @@ describe("StoreCgnExpirationActivity", () => {
     );
 
     insertCgnExpirationMock.mockImplementationOnce(_ =>
-      jest.fn(() => taskEither.of({}))
+      jest.fn(() => TE.of({}))
     );
     const response = await storeCgnExpirationActivityHandler(
       context,
