@@ -43,12 +43,11 @@ export const getExpireEycaActivityHandler = (
         TE.chain(maybeUserEycaCard =>
           pipe(
             maybeUserEycaCard,
-            E.fromOption(() =>
+            TE.fromOption(() =>
               fail(
                 new Error("No User EYCA Card found for the provided fiscalCode")
               )
-            ),
-            TE.fromEither
+            )
           )
         ),
         TE.chain(userEycaCard =>
