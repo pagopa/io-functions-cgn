@@ -141,7 +141,7 @@ export const checkUpdateCardIsRunning = (
         )
       )
     ),
-    TE.map(() => false as const)
+    TE.map(() => false)
   );
 
 export const terminateOrchestratorById = (

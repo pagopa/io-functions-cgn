@@ -20,7 +20,7 @@ import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import * as df from "durable-functions";
 import { DurableOrchestrationClient } from "durable-functions/lib/src/classes";
 import * as E from "fp-ts/lib/Either";
-import { pipe } from "fp-ts/lib/function";
+import { flow, pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
 import {
@@ -90,9 +90,9 @@ export function GetCgnActivationHandler(
           TE.mapLeft(() =>
             ResponseErrorInternal("Cannot retrieve activation status")
           ),
-          TE.chainW(maybeOrchestrationStatus =>
-            pipe(
-              O.fromNullable(maybeOrchestrationStatus),
+          TE.chainW(
+            flow(
+              O.fromNullable,
               O.fold(
                 () =>
                   TE.left(

@@ -61,10 +61,7 @@ export const falsyResponseToError = (
   if (isLeft(response)) {
     return response;
   } else {
-    if (response.right) {
-      return right(true);
-    }
-    return left(error);
+    return response.right ? right(true) : left(error);
   }
 };
 

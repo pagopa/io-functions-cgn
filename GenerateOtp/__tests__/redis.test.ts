@@ -57,8 +57,7 @@ describe("storeOtpAndRelatedFiscalCode", () => {
       TE.bimap(
         _ => expect(_).toBeDefined(),
         () => fail()
-      ),
-      TE.toUnion
+      )
     )();
   });
 
@@ -94,8 +93,7 @@ describe("storeOtpAndRelatedFiscalCode", () => {
       TE.bimap(
         () => fail(),
         _ => expect(_).toEqual(true)
-      ),
-      TE.toUnion
+      )
     )();
   });
 });
@@ -113,8 +111,7 @@ describe("retrieveOtpByFiscalCode", () => {
       TE.bimap(
         _ => expect(_).toBeDefined(),
         () => fail()
-      ),
-      TE.toUnion
+      )
     )();
   });
 
@@ -125,8 +122,7 @@ describe("retrieveOtpByFiscalCode", () => {
       TE.bimap(
         () => fail(),
         _ => expect(O.isNone(_)).toBeTruthy()
-      ),
-      TE.toUnion
+      )
     )();
   });
 
@@ -140,8 +136,7 @@ describe("retrieveOtpByFiscalCode", () => {
       TE.bimap(
         _ => expect(_).toBeDefined(),
         () => fail()
-      ),
-      TE.toUnion
+      )
     )();
   });
 
@@ -153,8 +148,7 @@ describe("retrieveOtpByFiscalCode", () => {
       TE.bimap(
         () => fail(),
         _ => expect(O.isNone(_)).toBeTruthy()
-      ),
-      TE.toUnion
+      )
     )();
   });
 
@@ -171,8 +165,7 @@ describe("retrieveOtpByFiscalCode", () => {
           expect(_.message).toContain("Unexpected token");
         },
         () => fail()
-      ),
-      TE.toUnion
+      )
     )();
   });
 
@@ -186,8 +179,7 @@ describe("retrieveOtpByFiscalCode", () => {
       TE.bimap(
         _ => expect(_).toBeDefined(),
         () => fail()
-      ),
-      TE.toUnion
+      )
     )();
   });
 
@@ -205,8 +197,7 @@ describe("retrieveOtpByFiscalCode", () => {
           () => fail("OTP Cannot be none"),
           value => expect(value).toEqual(anOtp)
         )
-      ),
-      TE.toUnion
+      )
     )();
   });
 });

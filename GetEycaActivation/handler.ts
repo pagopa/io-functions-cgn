@@ -15,7 +15,7 @@ import {
 } from "@pagopa/ts-commons/lib/responses";
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import * as df from "durable-functions";
-import { pipe } from "fp-ts/lib/function";
+import { flow, pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
 import { CardActivated } from "../generated/definitions/CardActivated";
@@ -55,9 +55,9 @@ export function GetEycaActivationHandler(
       TE.chainW(eycaCard =>
         pipe(
           getOrchestratorStatus(client, orchestratorId),
-          TE.chain(maybeOrchestrationStatus =>
-            pipe(
-              O.fromNullable(maybeOrchestrationStatus),
+          TE.chain(
+            flow(
+              O.fromNullable,
               O.fold(
                 () => TE.left(new Error("Orchestrator instance not found")),
                 orchestrationStatus =>

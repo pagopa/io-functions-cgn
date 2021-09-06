@@ -1,7 +1,7 @@
 import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { format } from "date-fns";
 import * as E from "fp-ts/lib/Either";
-import { pipe } from "fp-ts/lib/function";
+import { flow, pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
 import { RedisClient } from "redis";
@@ -38,7 +38,7 @@ const ccdbLogin = (
     TE.mapLeft(
       err => new Error(`Cannot call EYCA authLogin API ${err.message}`)
     ),
-    TE.chain(_ => pipe(_, TE.fromEither, TE.mapLeft(errorsToError))),
+    TE.chain(flow(TE.fromEither, TE.mapLeft(errorsToError))),
     TE.chain(res =>
       res.status !== 200 || ErrorResponse.is(res.value.api_response)
         ? TE.left(
@@ -110,7 +110,7 @@ export const updateCard = (
         TE.mapLeft(
           err => new Error(`Cannot call EYCA updateCard API ${err.message}`)
         ),
-        TE.chain(_ => pipe(_, TE.fromEither, TE.mapLeft(errorsToError))),
+        TE.chain(flow(TE.fromEither, TE.mapLeft(errorsToError))),
         TE.chain(res =>
           res.status !== 200 || ErrorResponse.is(res.value.api_response)
             ? TE.left(
@@ -142,7 +142,7 @@ export const preIssueCard = (
             }),
           E.toError
         ),
-        TE.chain(_ => pipe(_, TE.fromEither, TE.mapLeft(errorsToError))),
+        TE.chain(flow(TE.fromEither, TE.mapLeft(errorsToError))),
         TE.chain(response =>
           response.status !== 200 ||
           ErrorResponse.is(response.value.api_response)

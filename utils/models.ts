@@ -19,12 +19,9 @@ export const retrieveUserCgn = (
     TE.mapLeft(() =>
       ResponseErrorInternal("Error trying to retrieve user's CGN status")
     ),
-    TE.chainW(maybeUserCgn =>
-      pipe(
-        maybeUserCgn,
-        TE.fromOption(() =>
-          ResponseErrorNotFound("Not Found", "User's CGN status not found")
-        )
+    TE.chainW(
+      TE.fromOption(() =>
+        ResponseErrorNotFound("Not Found", "User's CGN status not found")
       )
     )
   );
@@ -38,12 +35,9 @@ export const retrieveUserEycaCard = (
     TE.mapLeft(() =>
       ResponseErrorInternal("Error trying to retrieve user's EYCA Card")
     ),
-    TE.chainW(maybeUserEycaCard =>
-      pipe(
-        maybeUserEycaCard,
-        TE.fromOption(() =>
-          ResponseErrorNotFound("Not Found", "User's EYCA Card not found")
-        )
+    TE.chainW(
+      TE.fromOption(() =>
+        ResponseErrorNotFound("Not Found", "User's EYCA Card not found")
       )
     )
   );
