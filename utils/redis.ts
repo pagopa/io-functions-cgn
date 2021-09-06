@@ -1,4 +1,4 @@
-import { pipe } from "fp-ts/lib/function";
+import { identity, pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/lib/Option";
 import * as redis from "redis";
 import RedisClustr = require("redis-clustr");
@@ -48,9 +48,9 @@ function createClusterRedisClient(
 
 export const REDIS_CLIENT = pipe(
   config.isProduction,
-  O.fromPredicate<boolean>(_ => _),
+  O.fromPredicate<boolean>(identity),
   O.chainNullableK(_ => config.REDIS_CLUSTER_ENABLED),
-  O.chain(O.fromPredicate(_ => _)),
+  O.chain(O.fromPredicate(identity)),
   O.map(() =>
     createClusterRedisClient(
       config.REDIS_URL,

@@ -24,7 +24,7 @@ import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import * as df from "durable-functions";
 import { DurableOrchestrationStatus } from "durable-functions/lib/src/classes";
 import * as E from "fp-ts/lib/Either";
-import { pipe } from "fp-ts/lib/function";
+import { flow, pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
 import { CardActivated } from "../generated/definitions/CardActivated";
@@ -99,9 +99,8 @@ const getEycaEligibleTask = (
       pipe(
         userCgnModel.findLastVersionByModelId([fiscalCode]),
         TE.mapLeft(() => ResponseErrorInternal("Cannot query CGN data")),
-        TE.chainW(maybeUserCgn =>
-          pipe(
-            maybeUserCgn,
+        TE.chainW(
+          flow(
             TE.fromOption(() => ResponseErrorForbiddenNotAuthorized),
             TE.chainW(userCgn =>
               TE.fromPredicate(
@@ -109,7 +108,7 @@ const getEycaEligibleTask = (
                 () => ResponseErrorForbiddenNotAuthorized
               )(userCgn.card)
             ),
-            TE.map(_ => true as const)
+            TE.map(_ => true)
           )
         )
       )
@@ -170,13 +169,11 @@ export function StartEycaActivationHandler(
                   TE.mapLeft(() =>
                     ResponseErrorInternal("Cannot retrieve activation status")
                   ),
-                  TE.chainW(maybeStatus =>
+                  TE.chainW(
                     // client getStatus could respond with undefined if
                     // an orchestrator instance does not exists
                     // see https://docs.microsoft.com/it-it/azure/azure-functions/durable/durable-functions-instance-management?tabs=javascript#query-instances
-
-                    pipe(
-                      maybeStatus,
+                    flow(
                       O.fromNullable,
                       O.fold(
                         // if orchestrator does not exists we assume that it expires its storage in TaskHub

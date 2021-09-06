@@ -39,13 +39,10 @@ export const getExpireEycaActivityHandler = (
             )
           )
         ),
-        TE.chain(maybeUserEycaCard =>
-          pipe(
-            maybeUserEycaCard,
-            TE.fromOption(() =>
-              fail(
-                new Error("No User EYCA Card found for the provided fiscalCode")
-              )
+        TE.chain(
+          TE.fromOption(() =>
+            fail(
+              new Error("No User EYCA Card found for the provided fiscalCode")
             )
           )
         ),
@@ -69,9 +66,9 @@ export const getExpireEycaActivityHandler = (
             )
           )
         ),
-        TE.chain(_ =>
+        TE.chain(userEycaCard =>
           pipe(
-            userEycaCardModel.update(_),
+            userEycaCardModel.update(userEycaCard),
             TE.bimap(
               err => fail(toError(err), "Cannot update User EYCA Card"),
               () => success()

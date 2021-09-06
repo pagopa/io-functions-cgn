@@ -105,8 +105,10 @@ export const extractCgnExpirationDate = (
     TE.chain(
       O.fold(
         () =>
-          TE.left(new Error("Cannot extract birth date from given fiscalCode")),
-        birthDate => TE.of(birthDate)
+          TE.left<Error, Date>(
+            new Error("Cannot extract birth date from given fiscalCode")
+          ),
+        TE.of
       )
     ),
     TE.chain(birthDate => TE.of(addYears(birthDate, cgnUpperBoundAge)))

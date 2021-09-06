@@ -65,10 +65,10 @@ export function GetEycaActivationHandler(
                   pipe(
                     getActivationStatus(orchestrationStatus),
                     TE.fromOption(() => new Error("Cannot recognize status")),
-                    TE.map(_ => ({
+                    TE.map(status => ({
                       created_at: orchestrationStatus.createdTime,
                       last_updated_at: orchestrationStatus.lastUpdatedTime,
-                      status: _
+                      status
                     }))
                   )
               )
@@ -84,7 +84,7 @@ export function GetEycaActivationHandler(
                   ? StatusEnum.COMPLETED
                   : StatusEnum.PENDING
               ),
-              TE.map(_ => ({ status: _ }))
+              TE.map(status => ({ status }))
             )
           )
         )

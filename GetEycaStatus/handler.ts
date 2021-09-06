@@ -20,7 +20,7 @@ import {
   ResponseSuccessJson
 } from "@pagopa/ts-commons/lib/responses";
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
-import { pipe } from "fp-ts/lib/function";
+import { flow, pipe } from "fp-ts/lib/function";
 import * as TE from "fp-ts/lib/TaskEither";
 
 import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
@@ -70,9 +70,8 @@ export function GetEycaStatusHandler(
           )
         )
       ),
-      TE.chainW(maybeUserEycaCard =>
-        pipe(
-          maybeUserEycaCard,
+      TE.chainW(
+        flow(
           TE.fromOption(() =>
             ResponseErrorNotFound(
               "Not Found",

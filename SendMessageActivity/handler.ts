@@ -41,7 +41,8 @@ export const getSendMessageActivityHandler = (
   };
 
   return pipe(
-    ActivityInput.decode(input),
+    input,
+    ActivityInput.decode,
     E.fold(
       async errs =>
         failure(

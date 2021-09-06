@@ -38,13 +38,13 @@ export const initTelemetryClient = (env = process.env) =>
 export const trackEvent = (event: EventTelemetry) => {
   pipe(
     O.fromNullable(initTelemetryClient()),
-    O.map(_ => O.tryCatch(() => _.trackEvent(event)))
+    O.map(client => O.tryCatch(() => client.trackEvent(event)))
   );
 };
 
 export const trackException = (event: ExceptionTelemetry) => {
   pipe(
     O.fromNullable(initTelemetryClient()),
-    O.map(_ => O.tryCatch(() => _.trackException(event)))
+    O.map(client => O.tryCatch(() => client.trackException(event)))
   );
 };

@@ -69,13 +69,13 @@ export function UpsertCgnStatusHandler(
     return pipe(
       cgnStatusUpsertRequest,
       TE.of,
-      TE.chain(_ =>
+      TE.chain(upsertRequest =>
         pipe(
           userCgnModel.findLastVersionByModelId([fiscalCode]),
           TE.bimap(
             () =>
               ResponseErrorInternal("Cannot retrieve CGN infos for this user"),
-            maybeUserCgn => ({ maybeUserCgn, card: toCgnStatus(_) })
+            maybeUserCgn => ({ maybeUserCgn, card: toCgnStatus(upsertRequest) })
           )
         )
       ),
@@ -85,15 +85,15 @@ export function UpsertCgnStatusHandler(
           TE.fromOption(() =>
             ResponseErrorNotFound("Not Found", "User's CGN status not found")
           ),
-          TE.map(_ =>
-            _.card.status !== PendingStatusEnum.PENDING
+          TE.map(userCgn =>
+            userCgn.card.status !== PendingStatusEnum.PENDING
               ? {
                   ...card,
-                  activation_date: _.card.activation_date,
-                  expiration_date: _.card.expiration_date
+                  activation_date: userCgn.card.activation_date,
+                  expiration_date: userCgn.card.expiration_date
                 }
               : {
-                  status: _.card.status
+                  status: userCgn.card.status
                 }
           )
         )

@@ -153,13 +153,8 @@ export const preIssueCard = (
               )
             : TE.of(response.value.api_response.data.card[0].ccdb_number)
         ),
-        TE.chain(responseText =>
-          pipe(
-            responseText,
-            CcdbNumber.decode,
-            TE.fromEither,
-            TE.mapLeft(errorsToError)
-          )
+        TE.chain(
+          flow(CcdbNumber.decode, TE.fromEither, TE.mapLeft(errorsToError))
         )
       )
     )

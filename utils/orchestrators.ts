@@ -22,7 +22,7 @@ import {
   ExceptionTelemetry
 } from "applicationinsights/out/Declarations/Contracts";
 import { array } from "fp-ts";
-import { constVoid, pipe } from "fp-ts/lib/function";
+import { constVoid, flow, pipe } from "fp-ts/lib/function";
 import * as t from "io-ts";
 import { Card } from "../generated/definitions/Card";
 import { StatusEnum as CardActivatedStatusEnum } from "../generated/definitions/CardActivated";
@@ -152,9 +152,9 @@ export const terminateOrchestratorById = (
   const voidTask = TE.of<Error, void>(void 0);
   return pipe(
     TE.tryCatch(() => client.getStatus(orchestratorId), toError),
-    TE.chain(maybeStatus =>
-      pipe(
-        O.fromNullable(maybeStatus),
+    TE.chain(
+      flow(
+        O.fromNullable,
         O.chain(
           O.fromPredicate(
             orchestrationStatus =>
