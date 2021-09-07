@@ -48,9 +48,9 @@ export const getUpdateCgnStatusActivityHandler = (
         }))
       )
     ),
-    TE.chain(_ =>
+    TE.chain(userCgn =>
       pipe(
-        userCgnModel.update(_),
+        userCgnModel.update(userCgn),
         TE.bimap(
           err => fail(E.toError(err), "Cannot update userCgn"),
           () => success()
