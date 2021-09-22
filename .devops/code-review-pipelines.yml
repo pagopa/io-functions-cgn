@@ -49,6 +49,14 @@ stages:
       - job: lint_api     
         steps:
         - template: templates/node-job-setup/template.yaml@pagopaCommons
+        # OpenAPI spec is a versione file, still is created with a generation process from a template
+        # We need to check it either is out-of-sync with the template or it has been manually edited
+        - script: |
+            yarn pregenerate
+          displayName: 'Bundle OpenAPI'
+        - script: |
+            [[ -z $(git status --porcelain) ]] && exit 0 || exit 1
+          displayName: 'Check OpenAPI spec is up-to-date'
         - script: |
             yarn lint-api
           displayName: 'Lint API'

@@ -1,22 +1,22 @@
-swagger: '2.0'
+swagger: "2.0"
 info:
-  version: 0.4.7
+  version: 0.0.0
   title: IO Functions CGN
   contact:
     name: IO team
     url: https://forum.italia.it/c/progetto-io
   x-logo:
     url: https://io.italia.it/assets/img/io-logo-blue.svg
-  description: |
+  description: >
     Documentation of the IO Function API here.
 host: api.cd.italia.it
-basePath: /api/v1
+basePath: "/api/v1"
 schemes:
   - https
 security:
   - ApiKey: []
 paths:
-  /cgn/status/{fiscalcode}:
+  "/cgn/status/{fiscalcode}":
     get:
       summary: Get CGN details Status
       operationId: getCgnStatus
@@ -28,20 +28,20 @@ paths:
           - CardRevoked
           - CardExpired
       parameters:
-        - $ref: '#/parameters/FiscalCode'
+        - $ref: "#/parameters/FiscalCode"
       responses:
-        '200':
+        "200":
           description: CGN details.
           schema:
-            $ref: '#/definitions/Card'
-        '401':
+            $ref: "#/definitions/Card"
+        "401":
           description: Wrong or missing function key.
-        '404':
+        "404":
           description: No CGN found.
-        '500':
+        "500":
           description: Service unavailable.
           schema:
-            $ref: '#/definitions/ProblemJson'
+            $ref: "#/definitions/ProblemJson"
     post:
       operationId: upsertCgnStatus
       summary: |
@@ -50,45 +50,42 @@ paths:
         Upsert the status of a CGN. There are 2 accepted actions:
         -  REVOKE
       parameters:
-        - $ref: '#/parameters/FiscalCode'
+        - $ref: "#/parameters/FiscalCode"
         - in: body
           name: body
           schema:
-            $ref: '#/definitions/CgnStatusUpsertRequest'
+            $ref: "#/definitions/CgnStatusUpsertRequest"
       responses:
-        '201':
+        "201":
           description: Request created.
           schema:
-            $ref: '#/definitions/InstanceId'
+            $ref: "#/definitions/InstanceId"
           headers:
             Location:
               type: string
-              description: >-
+              description: |-
                 Location (URL) of created request resource.
-
-                A GET request to this URL returns the request status and
-                details.
-        '202':
+                A GET request to this URL returns the request status and details.
+        "202":
           description: Processing request.
           schema:
-            $ref: '#/definitions/InstanceId'
-        '401':
+            $ref: "#/definitions/InstanceId"
+        "401":
           description: Wrong or missing function key.
-        '403':
+        "403":
           description: Forbidden.
-        '404':
+        "404":
           description: No CGN found.
-        '409':
-          description: >
-            Cannot revoke the user's cgn because another updateCgn request was
-            found
-
+        "409":
+          description: |
+            Cannot revoke the user's cgn because another updateCgn request was found
             for this user
-        '500':
+        "500":
           description: Service unavailable.
           schema:
-            $ref: '#/definitions/ProblemJson'
-  /cgn/eyca/status/{fiscalcode}:
+            $ref: "#/definitions/ProblemJson"
+
+  "/cgn/eyca/status/{fiscalcode}":
     get:
       summary: Get EYCA details Status
       operationId: getEycaStatus
@@ -100,25 +97,26 @@ paths:
           - EycaCardRevoked
           - EycaCardExpired
       parameters:
-        - $ref: '#/parameters/FiscalCode'
+        - $ref: "#/parameters/FiscalCode"
       responses:
-        '200':
+        "200":
           description: EYCA details.
           schema:
-            $ref: '#/definitions/EycaCard'
-        '401':
+            $ref: "#/definitions/EycaCard"
+        "401":
           description: Wrong or missing function key.
-        '403':
+        "403":
           description: Forbidden.
-        '404':
+        "404":
           description: No EYCA found.
-        '409':
+        "409":
           description: EYCA Card is missing while citizen is eligible to obtain it.
-        '500':
+        "500":
           description: Service unavailable.
           schema:
-            $ref: '#/definitions/ProblemJson'
-  /cgn/{fiscalcode}/eyca/activation:
+            $ref: "#/definitions/ProblemJson"
+  
+  "/cgn/{fiscalcode}/eyca/activation":
     post:
       operationId: startEycaActivation
       summary: |
@@ -126,35 +124,33 @@ paths:
       description: |
         Start an EYCA activation process related to a CGN
       parameters:
-        - $ref: '#/parameters/FiscalCode'
+        - $ref: "#/parameters/FiscalCode"
       responses:
-        '201':
-          description: Request created.
-          schema:
-            $ref: '#/definitions/InstanceId'
-          headers:
-            Location:
-              type: string
-              description: >-
-                Location (URL) of created request resource.
-
-                A GET request to this URL returns the request status and
-                details.
-        '202':
+        "201":
+            description: Request created.
+            schema:
+              $ref: "#/definitions/InstanceId"
+            headers:
+              Location:
+                type: string
+                description: |-
+                  Location (URL) of created request resource.
+                  A GET request to this URL returns the request status and details.
+        "202":
           description: Processing request.
           schema:
-            $ref: '#/definitions/InstanceId'
-        '401':
+            $ref: "#/definitions/InstanceId"
+        "401":
           description: Wrong or missing function key.
-        '403':
+        "403":
           description: Forbidden.
-        '409':
+        "409":
           description: |
             Cannot start a new activation because EYCA card is already activated
-        '500':
+        "500":
           description: Service unavailable.
           schema:
-            $ref: '#/definitions/ProblemJson'
+            $ref: "#/definitions/ProblemJson"
     get:
       operationId: getEycaActivation
       summary: |
@@ -162,21 +158,22 @@ paths:
       description: |
         Get informations about an EYCA activation process
       parameters:
-        - $ref: '#/parameters/FiscalCode'
+        - $ref: "#/parameters/FiscalCode"
       responses:
-        '200':
-          description: Cgn activation details.
-          schema:
-            $ref: '#/definitions/EycaActivationDetail'
-        '401':
+        "200":
+            description: Cgn activation details.
+            schema:
+              $ref: "#/definitions/EycaActivationDetail"
+        "401":
           description: Wrong or missing function key.
-        '404':
+        "404":
           description: No CGN activation process found.
-        '500':
+        "500":
           description: Service unavailable.
           schema:
-            $ref: '#/definitions/ProblemJson'
-  /cgn/{fiscalcode}/activation:
+            $ref: "#/definitions/ProblemJson"
+
+  "/cgn/{fiscalcode}/activation":
     post:
       operationId: startCgnActivation
       summary: |
@@ -184,36 +181,33 @@ paths:
       description: |
         Start an activation process for a CGN
       parameters:
-        - $ref: '#/parameters/FiscalCode'
+        - $ref: "#/parameters/FiscalCode"
       responses:
-        '201':
-          description: Request created.
-          schema:
-            $ref: '#/definitions/InstanceId'
-          headers:
-            Location:
-              type: string
-              description: >-
-                Location (URL) of created request resource.
-
-                A GET request to this URL returns the request status and
-                details.
-        '202':
+        "201":
+            description: Request created.
+            schema:
+              $ref: "#/definitions/InstanceId"
+            headers:
+              Location:
+                type: string
+                description: |-
+                  Location (URL) of created request resource.
+                  A GET request to this URL returns the request status and details.
+        "202":
           description: Processing request.
           schema:
-            $ref: '#/definitions/InstanceId'
-        '401':
+            $ref: "#/definitions/InstanceId"
+        "401":
           description: Wrong or missing function key.
-        '403':
+        "403":
           description: Forbidden.
-        '409':
-          description: >
-            Cannot start a new activation because the user's cgn is already
-            activated
-        '500':
+        "409":
+          description: |
+            Cannot start a new activation because the user's cgn is already activated
+        "500":
           description: Service unavailable.
           schema:
-            $ref: '#/definitions/ProblemJson'
+            $ref: "#/definitions/ProblemJson"
     get:
       operationId: getCgnActivation
       summary: |
@@ -221,21 +215,22 @@ paths:
       description: |
         Get informations about a CGN activation process
       parameters:
-        - $ref: '#/parameters/FiscalCode'
+        - $ref: "#/parameters/FiscalCode"
       responses:
-        '200':
-          description: Cgn activation details.
-          schema:
-            $ref: '#/definitions/CgnActivationDetail'
-        '401':
+        "200":
+            description: Cgn activation details.
+            schema:
+              $ref: "#/definitions/CgnActivationDetail"
+        "401":
           description: Wrong or missing function key.
-        '404':
+        "404":
           description: No CGN activation process found.
-        '500':
+        "500":
           description: Service unavailable.
           schema:
-            $ref: '#/definitions/ProblemJson'
-  /cgn/otp/{fiscalcode}:
+            $ref: "#/definitions/ProblemJson"
+
+  "/cgn/otp/{fiscalcode}":
     post:
       operationId: generateOtp
       summary: |
@@ -244,20 +239,20 @@ paths:
         Generate a new Otp used to discount an online purchase
         through a valid CGN
       parameters:
-        - $ref: '#/parameters/FiscalCode'
+        - $ref: "#/parameters/FiscalCode"
       responses:
-        '200':
-          description: Otp generated.
-          schema:
-            $ref: '#/definitions/Otp'
-        '401':
+        "200":
+            description: Otp generated.
+            schema:
+              $ref: "#/definitions/Otp"
+        "401":
           description: Wrong or missing function key.
-        '403':
+        "403":
           description: Forbidden.
-        '500':
+        "500":
           description: Service unavailable.
           schema:
-            $ref: '#/definitions/ProblemJson'
+            $ref: "#/definitions/ProblemJson"
 consumes:
   - application/json
 produces:
@@ -271,82 +266,35 @@ parameters:
     minLength: 16
     required: true
     description: The fiscal code of the user, all upper case.
-    pattern: >-
-      [A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]
+    pattern: "[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]"
     x-example: SPNDNL80R13C555X
+
 securityDefinitions:
   ApiKey:
     type: apiKey
     name: X-Functions-Key
     in: header
     description: The API key to access this function app.
+
 definitions:
   Timestamp:
-    type: string
-    format: UTCISODateFromString
-    description: A date-time field in ISO-8601 format and UTC timezone.
-    x-import: '@pagopa/ts-commons/lib/dates'
-    example: '2018-10-13T00:00:00.000Z'
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v21.6.0/openapi/definitions.yaml#/Timestamp"
   FiscalCode:
-    type: string
-    description: User's fiscal code.
-    format: FiscalCode
-    x-import: '@pagopa/ts-commons/lib/strings'
-    example: SPNDNL80R13C555X
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v21.6.0/openapi/definitions.yaml#/FiscalCode"
   ProblemJson:
-    type: object
-    properties:
-      type:
-        type: string
-        format: uri
-        description: |-
-          An absolute URI that identifies the problem type. When dereferenced,
-          it SHOULD provide human-readable documentation for the problem type
-          (e.g., using HTML).
-        default: about:blank
-        example: https://example.com/problem/constraint-violation
-      title:
-        type: string
-        description: |-
-          A short, summary of the problem type. Written in english and readable
-          for engineers (usually not suited for non technical stakeholders and
-          not localized); example: Service Unavailable
-      status:
-        type: integer
-        format: int32
-        description: >-
-          The HTTP status code generated by the origin server for this
-          occurrence
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v21.6.0/openapi/definitions.yaml#/ProblemJson"
 
-          of the problem.
-        minimum: 100
-        maximum: 600
-        exclusiveMaximum: true
-        example: 200
-      detail:
-        type: string
-        description: |-
-          A human readable explanation specific to this occurrence of the
-          problem.
-        example: There was an error processing the request
-      instance:
-        type: string
-        format: uri
-        description: >-
-          An absolute URI that identifies the specific occurrence of the
-          problem.
-
-          It may or may not yield further information if dereferenced.
   CommonCard:
     type: object
     properties:
       activation_date:
-        $ref: '#/definitions/Timestamp'
+        $ref: "#/definitions/Timestamp"
       expiration_date:
-        $ref: '#/definitions/Timestamp'
+        $ref: "#/definitions/Timestamp"
     required:
       - activation_date
       - expiration_date
+    
   CardPending:
     type: object
     properties:
@@ -358,7 +306,7 @@ definitions:
       - status
   CardActivated:
     allOf:
-      - $ref: '#/definitions/CommonCard'
+      - $ref: "#/definitions/CommonCard"
       - type: object
         properties:
           status:
@@ -369,7 +317,7 @@ definitions:
           - status
   CardRevoked:
     allOf:
-      - $ref: '#/definitions/CommonCard'
+      - $ref: "#/definitions/CommonCard"
       - type: object
         properties:
           status:
@@ -377,7 +325,7 @@ definitions:
             x-extensible-enum:
               - REVOKED
           revocation_date:
-            $ref: '#/definitions/Timestamp'
+            $ref: "#/definitions/Timestamp"
           revocation_reason:
             type: string
             minLength: 1
@@ -387,7 +335,7 @@ definitions:
           - revocation_reason
   CardExpired:
     allOf:
-      - $ref: '#/definitions/CommonCard'
+      - $ref: "#/definitions/CommonCard"
       - type: object
         properties:
           status:
@@ -399,57 +347,60 @@ definitions:
   Card:
     x-one-of: true
     allOf:
-      - $ref: '#/definitions/CardPending'
-      - $ref: '#/definitions/CardActivated'
-      - $ref: '#/definitions/CardRevoked'
-      - $ref: '#/definitions/CardExpired'
-    x-example:
+      - $ref: "#/definitions/CardPending"
+      - $ref: "#/definitions/CardActivated"
+      - $ref: "#/definitions/CardRevoked"
+      - $ref: "#/definitions/CardExpired"
+    x-example: 
       status: ACTIVATED
-      activation_date: '2021-10-13T00:00:00.000Z'
-      expiration_date: '2030-10-13T00:00:00.000Z'
+      activation_date: "2021-10-13T00:00:00.000Z"
+      expiration_date: "2030-10-13T00:00:00.000Z"
+
   CcdbNumber:
     type: string
     description: The internal CCDB Card number
-    pattern: ^[A-Z][0-9]{3}-[A-Z][0-9]{3}-[A-Z][0-9]{3}-[A-Z][0-9]{3}$
+    pattern: "^[A-Z][0-9]{3}-[A-Z][0-9]{3}-[A-Z][0-9]{3}-[A-Z][0-9]{3}$"
     minLength: 1
+
   EycaCardActivated:
     allOf:
-      - $ref: '#/definitions/CardActivated'
+      - $ref: "#/definitions/CardActivated"
       - type: object
         properties:
           card_number:
-            $ref: '#/definitions/CcdbNumber'
+            $ref: "#/definitions/CcdbNumber"
         required:
           - card_number
   EycaCardExpired:
     allOf:
-      - $ref: '#/definitions/CardExpired'
+      - $ref: "#/definitions/CardExpired"
       - type: object
         properties:
           card_number:
-            $ref: '#/definitions/CcdbNumber'
+            $ref: "#/definitions/CcdbNumber"
         required:
           - card_number
   EycaCardRevoked:
     allOf:
-      - $ref: '#/definitions/CardRevoked'
+      - $ref: "#/definitions/CardRevoked"
       - type: object
         properties:
           card_number:
-            $ref: '#/definitions/CcdbNumber'
+            $ref: "#/definitions/CcdbNumber"
         required:
           - card_number
   EycaCard:
     x-one-of: true
     allOf:
-      - $ref: '#/definitions/CardPending'
-      - $ref: '#/definitions/EycaCardActivated'
-      - $ref: '#/definitions/EycaCardRevoked'
-      - $ref: '#/definitions/EycaCardExpired'
-    x-example:
+      - $ref: "#/definitions/CardPending"
+      - $ref: "#/definitions/EycaCardActivated"
+      - $ref: "#/definitions/EycaCardRevoked"
+      - $ref: "#/definitions/EycaCardExpired"
+    x-example: 
       status: ACTIVATED
-      activation_date: '2021-10-13T00:00:00.000Z'
-      expiration_date: '2030-10-13T00:00:00.000Z'
+      activation_date: "2021-10-13T00:00:00.000Z"
+      expiration_date: "2030-10-13T00:00:00.000Z"
+
   CgnStatusUpsertRequest:
     type: object
     properties:
@@ -476,7 +427,7 @@ definitions:
     type: object
     properties:
       instance_id:
-        $ref: '#/definitions/InstanceId'
+        $ref: "#/definitions/InstanceId"
       status:
         type: string
         x-extensible-enum:
@@ -486,12 +437,13 @@ definitions:
           - ERROR
           - UNKNOWN
       created_at:
-        $ref: '#/definitions/Timestamp'
+        $ref: "#/definitions/Timestamp"
       last_updated_at:
-        $ref: '#/definitions/Timestamp'
+        $ref: "#/definitions/Timestamp"
     required:
       - instance_id
       - status
+
   EycaActivationDetail:
     type: object
     properties:
@@ -504,22 +456,23 @@ definitions:
           - ERROR
           - UNKNOWN
       created_at:
-        $ref: '#/definitions/Timestamp'
+        $ref: "#/definitions/Timestamp"
       last_updated_at:
-        $ref: '#/definitions/Timestamp'
+        $ref: "#/definitions/Timestamp"
     required:
       - status
+
   OtpCode:
     description: The unique otp code that can be use for discounts
     type: string
-    pattern: ^[A-Z0-9]{9,13}$
+    pattern: "^[A-Z0-9]{9,13}$"
   Otp:
     type: object
     properties:
       code:
-        $ref: '#/definitions/OtpCode'
+        $ref: "#/definitions/OtpCode"
       expires_at:
-        $ref: '#/definitions/Timestamp'
+        $ref: "#/definitions/Timestamp"
       ttl:
         type: number
     required:
