@@ -62,7 +62,7 @@ export const getMessage = (card: Card): MessageContent => {
     throw new Error("Unexpected Card status");
   }
 
-  return assertNever(card);
+  return assertNever(card as never);
 };
 
 export const getEycaExpirationMessage = (): MessageContent =>

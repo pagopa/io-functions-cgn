@@ -54,7 +54,7 @@ const eycaApiClient = {
   deleteCard: jest.fn(),
   preIssueCard: preIssueCardMock,
   updateCard: updateCardMock
-};
+} as any;
 
 const getTaskMock = jest
   .fn()

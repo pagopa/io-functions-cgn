@@ -1,5 +1,6 @@
 /* tslint:disable: no-any */
 import { addYears } from "date-fns";
+import * as df from "durable-functions";
 import { some } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { toCosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
@@ -9,6 +10,7 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { mockStartNew } from "../../__mocks__/durable-functions";
+import { getClient } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
   CardActivated,
@@ -26,6 +28,8 @@ import { UserCgn } from "../../models/user_cgn";
 import { DEFAULT_CGN_UPPER_BOUND_AGE } from "../../utils/config";
 import * as orchUtils from "../../utils/orchestrators";
 import { StartCgnActivationHandler } from "../handler";
+
+jest.spyOn(df, "getClient").mockImplementation(getClient as any);
 
 const now = new Date();
 const aFiscalCode = "RODFDS89S10H501T" as FiscalCode;
