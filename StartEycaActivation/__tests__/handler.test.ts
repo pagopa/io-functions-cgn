@@ -80,7 +80,7 @@ jest
 const isEycaEligibleMock = jest.fn().mockImplementation(() => right(true));
 jest.spyOn(checks, "isEycaEligible").mockImplementation(isEycaEligibleMock);
 
-jest.spyOn(df, "getClient").mockImplementation(getClient as any)
+jest.spyOn(df, "getClient").mockImplementation(getClient as any);
 
 const startHandler = (): Promise<ReturnTypes> => {
   const startEycaActivationHandler = StartEycaActivationHandler(
@@ -93,6 +93,8 @@ const startHandler = (): Promise<ReturnTypes> => {
 
 describe("StartEycaActivation", () => {
   beforeEach(() => {
+    (df.getClient as any).mockClear();
+    (df as any).mockStartNew.mockClear();
     jest.clearAllMocks();
   });
 
