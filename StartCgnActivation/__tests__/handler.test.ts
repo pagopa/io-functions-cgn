@@ -82,6 +82,7 @@ jest
 describe("StartCgnActivation", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (df.getClient as any).mockClear();
   });
 
   it("should return an Internal Error if an error occurs during UserCgn retrieve", async () => {
