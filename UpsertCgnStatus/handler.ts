@@ -25,7 +25,6 @@ import {
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { StatusEnum as PendingStatusEnum } from "../generated/definitions/CardPending";
-import { StatusEnum as PendingDeleteStatusEnum } from "../generated/definitions/CardPendingDelete";
 
 import { StatusEnum } from "../generated/definitions/CardRevoked";
 import { CgnStatusUpsertRequest } from "../generated/definitions/CgnStatusUpsertRequest";
