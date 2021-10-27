@@ -78,7 +78,10 @@ jest
   .spyOn(orchUtils, "checkUpdateCardIsRunning")
   .mockImplementation(checkUpdateCardIsRunningMock);
 
-jest.spyOn(df, "getClient").mockImplementation(getClient as any);
+const dfClient = jest.fn(() => ({
+  startNew: mockStartNew
+}));
+jest.spyOn(df, "getClient").mockImplementation(dfClient as any);
 describe("StartCgnActivation", () => {
   beforeEach(() => {
     (df.getClient as any).mockClear();
