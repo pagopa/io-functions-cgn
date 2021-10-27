@@ -9,7 +9,7 @@ import {
   ResponseSuccessAccepted
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { context, mockStartNew } from "../../__mocks__/durable-functions";
+import { context, mockGetStatus, mockStartNew } from "../../__mocks__/durable-functions";
 import { getClient } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
@@ -79,6 +79,7 @@ jest
   .mockImplementation(checkUpdateCardIsRunningMock);
 
 const dfClient = jest.fn(() => ({
+  getStatus: mockGetStatus,
   startNew: mockStartNew
 }));
 jest.spyOn(df, "getClient").mockImplementation(dfClient as any);
