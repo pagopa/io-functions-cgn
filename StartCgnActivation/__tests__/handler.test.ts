@@ -1,6 +1,5 @@
 /* tslint:disable: no-any */
 import { addYears } from "date-fns";
-import * as df from "durable-functions";
 import { some } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { toCosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
@@ -9,12 +8,7 @@ import {
   ResponseSuccessAccepted
 } from "italia-ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import {
-  context,
-  mockGetStatus,
-  mockStartNew
-} from "../../__mocks__/durable-functions";
-import { getClient } from "../../__mocks__/durable-functions";
+import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
   CardActivated,
@@ -82,15 +76,8 @@ jest
   .spyOn(orchUtils, "checkUpdateCardIsRunning")
   .mockImplementation(checkUpdateCardIsRunningMock);
 
-const dfClient = jest.fn(() => ({
-  getStatus: mockGetStatus,
-  startNew: mockStartNew
-}));
-jest.spyOn(df, "getClient").mockImplementation(dfClient as any);
 describe("StartCgnActivation", () => {
   beforeEach(() => {
-    (df.getClient as any).mockClear();
-    (df as any).mockStartNew.mockClear();
     jest.clearAllMocks();
   });
 

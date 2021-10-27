@@ -4,7 +4,7 @@ import { left, right } from "fp-ts/lib/Either";
 import { none, some } from "fp-ts/lib/Option";
 import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
-import { context, getClient, mockGetStatus, mockStartNew } from "../../__mocks__/durable-functions";
+import { mockGetStatus, mockStartNew } from "../../__mocks__/durable-functions";
 import {
   CardActivated,
   StatusEnum as ActivatedStatusEnum
@@ -79,8 +79,6 @@ jest
 
 const isEycaEligibleMock = jest.fn().mockImplementation(() => right(true));
 jest.spyOn(checks, "isEycaEligible").mockImplementation(isEycaEligibleMock);
-
-jest.spyOn(df, "getClient").mockImplementation(getClient as any);
 
 const startHandler = (): Promise<ReturnTypes> => {
   const startEycaActivationHandler = StartEycaActivationHandler(
