@@ -4,10 +4,10 @@ import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import { Card } from "../../generated/definitions/Card";
-import { EycaCardRevoked } from "../../generated/definitions/EycaCardRevoked";
 import { StatusEnum as RevokedStatusEnum } from "../../generated/definitions/CardRevoked";
-import { ActivityInput, getDeleteEycaActivityHandler } from "../handler";
+import { EycaCardRevoked } from "../../generated/definitions/EycaCardRevoked";
 import { CcdbNumber } from "../../generated/eyca-api/CcdbNumber";
+import { ActivityInput, getDeleteEycaActivityHandler } from "../handler";
 
 const now = new Date();
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
@@ -19,9 +19,9 @@ const aRevocationRequest = {
 
 const aUserCardRevoked: EycaCardRevoked = {
   ...cgnActivatedDates,
+  card_number: aUserEycaCardNumber,
   revocation_date: now,
   revocation_reason: aRevocationRequest.reason,
-  card_number: aUserEycaCardNumber,
   status: RevokedStatusEnum.REVOKED
 };
 const anArrayOfCardResults: ReadonlyArray<Card> = [aUserCardRevoked];

@@ -1,6 +1,7 @@
 ﻿import { IOrchestrationFunctionContext } from "durable-functions/lib/src/classes";
 
 import { addSeconds } from "date-fns";
+import { toError } from "fp-ts/lib/Either";
 import * as t from "io-ts";
 import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import {
@@ -244,7 +245,6 @@ export const DeleteCgnOrchestratorHandler = function*(
       addSeconds(context.df.currentUtcDateTime, NOTIFICATION_DELAY_SECONDS)
     );
 
-    // TODO: define "cgn.delete.timer"
     trackEvtIfNotReplaying({
       name: "cgn.delete.timer",
       properties: {
@@ -267,7 +267,7 @@ export const DeleteCgnOrchestratorHandler = function*(
   } catch (err) {
     context.log.error(`${logPrefix}|ERROR|${String(err)}`);
     trackExIfNotReplaying({
-      exception: err,
+      exception: toError(err),
       properties: {
         id: fiscalCode,
         name: "cgn.delete.error"
