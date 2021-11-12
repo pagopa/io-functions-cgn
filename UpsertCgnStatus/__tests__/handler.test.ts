@@ -5,11 +5,9 @@ import {
   ResponseSuccessAccepted
 } from "@pagopa/ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
-import * as df from "durable-functions";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
 import { mockStartNew } from "../../__mocks__/durable-functions";
-import { getClient } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
   CardPending,
@@ -27,7 +25,6 @@ import { UserCgn } from "../../models/user_cgn";
 import * as orchUtils from "../../utils/orchestrators";
 import { UpsertCgnStatusHandler } from "../handler";
 
-jest.spyOn(df, "getClient").mockImplementation(getClient as any);
 const now = new Date();
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const aCgnUpsertStatusRequest: CgnStatusUpsertRequest = {

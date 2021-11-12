@@ -2,20 +2,13 @@
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { ExponentialRetryPolicyFilter } from "azure-storage";
-import * as df from "durable-functions";
 import * as TE from "fp-ts/lib/TaskEither";
-import {
-  context,
-  getClient,
-  mockStartNew
-} from "../../__mocks__/durable-functions";
+import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import * as aInsights from "../../utils/appinsights";
 import * as expirationUtils from "../../utils/card_expiration";
 import * as orchUtils from "../../utils/orchestrators";
 import { getUpdateExpiredCgnHandler } from "../handler";
-
-jest.spyOn(df, "getClient").mockImplementation(getClient as any);
 
 const activationAndExpirationDates = {
   activationDate: cgnActivatedDates.activation_date,
@@ -50,8 +43,6 @@ const terminateOrchestratorMock = jest
 jest
   .spyOn(orchUtils, "terminateUpdateCgnOrchestratorTask")
   .mockImplementation(terminateOrchestratorMock);
-
-jest.spyOn(df, "getClient").mockImplementation(getClient as any);
 
 const trackExceptionMock = jest.fn(_ => void 0);
 jest.spyOn(aInsights, "trackException").mockImplementation(trackExceptionMock);
