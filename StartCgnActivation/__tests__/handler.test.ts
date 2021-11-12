@@ -6,9 +6,11 @@ import {
 } from "@pagopa/ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { addYears } from "date-fns";
+import * as df from "durable-functions";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
 import { mockStartNew } from "../../__mocks__/durable-functions";
+import { getClient } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
   CardActivated,
@@ -26,6 +28,8 @@ import { UserCgn } from "../../models/user_cgn";
 import { DEFAULT_CGN_UPPER_BOUND_AGE } from "../../utils/config";
 import * as orchUtils from "../../utils/orchestrators";
 import { StartCgnActivationHandler } from "../handler";
+
+jest.spyOn(df, "getClient").mockImplementation(getClient as any);
 
 const now = new Date();
 const aFiscalCode = "RODFDS89S10H501T" as FiscalCode;

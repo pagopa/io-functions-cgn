@@ -1,6 +1,11 @@
 import { addYears } from "date-fns";
+import * as df from "durable-functions";
 import * as E from "fp-ts/lib/Either";
-import { context, mockStartNew } from "../../__mocks__/durable-functions";
+import {
+  context,
+  getClient,
+  mockStartNew
+} from "../../__mocks__/durable-functions";
 import { aFiscalCode } from "../../__mocks__/mock";
 import * as cgn_checks from "../../utils/cgn_checks";
 import { DEFAULT_EYCA_UPPER_BOUND_AGE } from "../../utils/config";
@@ -10,6 +15,7 @@ const extractEycaExpirationDateMock = jest
   .spyOn(cgn_checks, "extractEycaExpirationDate")
   .mockImplementation(() => E.right(addYears(new Date(), 5)));
 
+jest.spyOn(df, "getClient").mockImplementation(getClient as any);
 describe("ContinueEycaActivation", () => {
   beforeEach(() => {
     jest.clearAllMocks();

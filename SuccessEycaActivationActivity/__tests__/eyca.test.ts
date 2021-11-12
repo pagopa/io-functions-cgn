@@ -54,7 +54,7 @@ const eycaApiClient = {
   authLogin: authLoginMock,
   preIssueCard: preIssueCardMock,
   updateCard: updateCardMock
-};
+} as any;
 
 const getTaskMock = jest
   .fn()

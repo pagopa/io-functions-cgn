@@ -4,7 +4,11 @@ import { addYears } from "date-fns";
 import * as E from "fp-ts/lib/Either";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
-import { mockGetStatus, mockStartNew } from "../../__mocks__/durable-functions";
+import {
+  getClient,
+  mockGetStatus,
+  mockStartNew
+} from "../../__mocks__/durable-functions";
 import {
   CardActivated,
   StatusEnum as ActivatedStatusEnum
@@ -21,6 +25,8 @@ import { CcdbNumber } from "../../generated/definitions/CcdbNumber";
 import * as cgn_checks from "../../utils/cgn_checks";
 import { DEFAULT_EYCA_UPPER_BOUND_AGE } from "../../utils/config";
 import { ReturnTypes, StartEycaActivationHandler } from "../handler";
+
+import * as df from "durable-functions";
 
 const aFiscalCode = "RODFDS89S10H501T" as FiscalCode;
 const anEycaCardNumber = "A123-A123-A123-A123" as CcdbNumber;
@@ -77,6 +83,8 @@ jest
 
 const isEycaEligibleMock = jest.fn().mockImplementation(() => E.right(true));
 jest.spyOn(checks, "isEycaEligible").mockImplementation(isEycaEligibleMock);
+
+jest.spyOn(df, "getClient").mockImplementation(getClient as any);
 
 const startHandler = (): Promise<ReturnTypes> => {
   const startEycaActivationHandler = StartEycaActivationHandler(
