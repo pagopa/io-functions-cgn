@@ -113,7 +113,7 @@ const getEycaCcdbNumber = (
             ? taskEither.of(some(eycaCard.card_number))
             : fromLeft(
                 ResponseErrorConflict(
-                  `Cannot delete an EYCA card that is ${eycaCard.card.status}`
+                  `Cannot delete an EYCA card that it doesn't match status with cgn card`
                 )
               )
       )
