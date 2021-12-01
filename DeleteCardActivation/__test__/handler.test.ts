@@ -16,10 +16,6 @@ import {
   StatusEnum as ActivatedStatusEnum
 } from "../../generated/definitions/CardActivated";
 import {
-  CardPending,
-  StatusEnum
-} from "../../generated/definitions/CardPending";
-import {
   CardRevoked,
   StatusEnum as RevokedStatusEnum
 } from "../../generated/definitions/CardRevoked";
@@ -34,7 +30,6 @@ import { DeleteCardActivationHandler } from "../handler";
 
 const now = new Date();
 const aFiscalCode = "RODFDS89S10H501T" as FiscalCode;
-const anOldFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const aUserEycaCardNumber = "X321-Y321-Z321-W321" as CcdbNumber;
 
 const aRevocationRequest = {
@@ -52,10 +47,6 @@ const aUserCardActivated: CardActivated = {
   activation_date: new Date(),
   expiration_date: addYears(new Date(), 2),
   status: ActivatedStatusEnum.ACTIVATED
-};
-
-const aUserCardPending: CardPending = {
-  status: StatusEnum.PENDING
 };
 
 const aRevokedUserCgn: UserCgn = {
