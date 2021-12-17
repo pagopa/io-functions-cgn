@@ -4,10 +4,9 @@ import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import * as df from "durable-functions";
 import * as t from "io-ts";
 
-import { ActivityInput as ExpireEycaActivityInput } from "../ExpireEycaActivity/handler";
-
 import * as E from "fp-ts/lib/Either";
 import { pipe } from "fp-ts/lib/function";
+import { ActivityInput as ExpireEycaActivityInput } from "../ExpireEycaActivity/handler";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { ActivityResult } from "../utils/activity";
 import { getEycaExpirationMessage } from "../utils/messages";

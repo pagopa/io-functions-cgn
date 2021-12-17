@@ -68,9 +68,11 @@ const terminateOrchestratorTask = (
     TE.orElse(() => TE.of(activationDetail))
   );
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function GetCgnActivationHandler(
   userCgnModel: UserCgnModel
 ): IGetCgnActivationHandler {
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
     const orchestratorId = makeUpdateCgnOrchestratorId(
@@ -159,6 +161,7 @@ export function GetCgnActivationHandler(
   };
 }
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function GetCgnActivation(
   userCgnModel: UserCgnModel
 ): express.RequestHandler {

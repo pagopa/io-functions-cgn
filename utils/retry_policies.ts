@@ -27,5 +27,5 @@ export const internalRetryOptions: RetryOptions = new RetryOptions(
   RETRY_OPTIONS_FIRST_RETRY_INTERVAL_MS,
   INTERNAL_RETRY_OPTIONS_MAX_ATTEMPTS
 );
-// tslint:disable-next-line: no-object-mutation
+// eslint-disable-next-line functional/immutable-data
 internalRetryOptions.backoffCoefficient = RETRY_OPTIONS_BACKOFF_COEFFICIENT;

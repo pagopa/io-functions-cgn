@@ -5,7 +5,7 @@ import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import * as E from "fp-ts/lib/Either";
 import { pipe } from "fp-ts/lib/function";
 
-export const makeNewMessage = (content: MessageContent) =>
+export const makeNewMessage = (content: MessageContent): NewMessage =>
   pipe(
     NewMessage.decode({
       content

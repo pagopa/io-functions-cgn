@@ -3,13 +3,13 @@
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { ExceptionTelemetry } from "applicationinsights/out/Declarations/Contracts";
 import * as df from "durable-functions";
-import { constVoid, pipe } from "fp-ts/lib/function";
+import { constVoid, Lazy, pipe } from "fp-ts/lib/function";
 import * as t from "io-ts";
 
+import * as E from "fp-ts/lib/Either";
 import { ActivityInput as StoreEycaExpirationActivityInput } from "../StoreEycaExpirationActivity/handler";
 import { ActivityInput as SuccessEycaActivationActivityInput } from "../SuccessEycaActivationActivity/handler";
 
-import * as E from "fp-ts/lib/Either";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { ActivityResult } from "../utils/activity";
 import { trackException } from "../utils/appinsights";
@@ -35,7 +35,9 @@ export const handler = function*(
     context.df.setCustomStatus("RUNNING");
   }
 
-  const trackExceptionIfNotReplaying = (evt: ExceptionTelemetry) =>
+  const trackExceptionIfNotReplaying = (
+    evt: ExceptionTelemetry
+  ): void | Lazy<void> =>
     context.df.isReplaying ? constVoid : trackException(evt);
 
   const input = context.df.getInput();
@@ -105,6 +107,7 @@ export const handler = function*(
     const decodedSuccessEycaActivationActivity = pipe(
       successEycaActivationActivityResult,
       ActivityResult.decode,
+      // eslint-disable-next-line sonarjs/no-identical-functions
       E.getOrElseW(_ =>
         trackExAndThrowWithErrorStatus(
           _,

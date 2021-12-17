@@ -39,9 +39,11 @@ type IGetEycaActivationHandler = (
   fiscalCode: FiscalCode
 ) => Promise<ResponseTypes>;
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function GetEycaActivationHandler(
   userEycaCardModel: UserEycaCardModel
 ): IGetEycaActivationHandler {
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
     const orchestratorId = makeEycaOrchestratorId(
@@ -95,6 +97,7 @@ export function GetEycaActivationHandler(
   };
 }
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function GetEycaActivation(
   userEycaCardModel: UserEycaCardModel
 ): express.RequestHandler {

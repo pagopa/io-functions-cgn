@@ -1,13 +1,12 @@
-﻿import { IOrchestrationFunctionContext } from "durable-functions/lib/src/classes";
-
+/* eslint-disable max-lines-per-function */
+import { IOrchestrationFunctionContext } from "durable-functions/lib/src/classes";
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { addSeconds } from "date-fns";
 import * as t from "io-ts";
-import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CardRevoked";
-
 import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import * as E from "fp-ts/lib/Either";
 import { pipe } from "fp-ts/lib/function";
+import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CardRevoked";
 import { ActivityInput as EnqueueEycaActivationActivityInput } from "../EnqueueEycaActivationActivity/handler";
 import { Card } from "../generated/definitions/Card";
 import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CardActivated";
@@ -34,7 +33,6 @@ export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 const NOTIFICATION_DELAY_SECONDS = 10;
 
-// tslint:disable-next-line: no-big-function
 export const UpdateCgnOrchestratorHandler = function*(
   context: IOrchestrationFunctionContext,
   eycaUpperBoundAge: NonNegativeInteger,
@@ -119,7 +117,6 @@ export const UpdateCgnOrchestratorHandler = function*(
           "cgn.update.exception.failure.activityOutput"
         );
       }
-      // tslint:disable-next-line: no-useless-catch
     } catch (err) {
       if (newStatusCard.status === ActivatedStatusEnum.ACTIVATED) {
         // CGN Activation is failed so we try to send error message if sync flow is stopped

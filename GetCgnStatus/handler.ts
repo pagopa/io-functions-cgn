@@ -31,11 +31,13 @@ type IGetCgnStatusHandler = (
   fiscalCode: FiscalCode
 ) => Promise<ResponseTypes>;
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function GetCgnStatusHandler(
   userCgnModel: UserCgnModel
 ): IGetCgnStatusHandler {
-  return async (_, fiscalCode) => {
-    return pipe(
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  return async (_, fiscalCode) =>
+    pipe(
       userCgnModel.findLastVersionByModelId([fiscalCode]),
       TE.mapLeft(() =>
         ResponseErrorInternal("Error trying to retrieve user's CGN status")
@@ -51,9 +53,9 @@ export function GetCgnStatusHandler(
       TE.map(userCgn => ResponseSuccessJson(userCgn.card)),
       TE.toUnion
     )();
-  };
 }
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function GetCgnStatus(
   userCgnModel: UserCgnModel
 ): express.RequestHandler {

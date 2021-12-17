@@ -1,5 +1,5 @@
+/* eslint-disable sort-keys */
 import * as express from "express";
-
 import { Context } from "@azure/functions";
 import { ContextMiddleware } from "@pagopa/io-functions-commons/dist/src/utils/middlewares/context_middleware";
 import { RequiredBodyPayloadMiddleware } from "@pagopa/io-functions-commons/dist/src/utils/middlewares/required_body_payload";
@@ -48,110 +48,111 @@ type IUpsertCgnStatusHandler = (
   cgnStatusUpsertRequest: CgnStatusUpsertRequest
 ) => Promise<ReturnTypes>;
 
-const toCgnStatus = (cgnStatusUpsertRequest: CgnStatusUpsertRequest) => {
-  return {
-    revocation_date: new Date(),
-    revocation_reason: cgnStatusUpsertRequest.revocation_reason,
-    status: StatusEnum.REVOKED
-  };
-};
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+const toCgnStatus = (cgnStatusUpsertRequest: CgnStatusUpsertRequest) => ({
+  revocation_date: new Date(),
+  revocation_reason: cgnStatusUpsertRequest.revocation_reason,
+  status: StatusEnum.REVOKED
+});
 
-export function UpsertCgnStatusHandler(
+export const UpsertCgnStatusHandler = (
   userCgnModel: UserCgnModel,
   logPrefix: string = "UpsertCgnStatusHandler"
-): IUpsertCgnStatusHandler {
-  return async (context, fiscalCode, cgnStatusUpsertRequest) => {
-    const client = df.getClient(context);
-    const orchestratorId = makeUpdateCgnOrchestratorId(
-      fiscalCode,
-      StatusEnum.REVOKED
-    ) as NonEmptyString;
-    return pipe(
-      cgnStatusUpsertRequest,
-      TE.of,
-      TE.chain(upsertRequest =>
-        pipe(
-          userCgnModel.findLastVersionByModelId([fiscalCode]),
-          TE.bimap(
-            () =>
-              ResponseErrorInternal("Cannot retrieve CGN infos for this user"),
-            maybeUserCgn => ({ maybeUserCgn, card: toCgnStatus(upsertRequest) })
-          )
+): IUpsertCgnStatusHandler => async (
+  context,
+  fiscalCode,
+  cgnStatusUpsertRequest
+): Promise<ReturnTypes> => {
+  const client = df.getClient(context);
+  const orchestratorId = makeUpdateCgnOrchestratorId(
+    fiscalCode,
+    StatusEnum.REVOKED
+  ) as NonEmptyString;
+  return pipe(
+    cgnStatusUpsertRequest,
+    TE.of,
+    TE.chain(upsertRequest =>
+      pipe(
+        userCgnModel.findLastVersionByModelId([fiscalCode]),
+        TE.bimap(
+          () =>
+            ResponseErrorInternal("Cannot retrieve CGN infos for this user"),
+          maybeUserCgn => ({ maybeUserCgn, card: toCgnStatus(upsertRequest) })
         )
-      ),
-      TE.chainW(({ card, maybeUserCgn }) =>
-        pipe(
-          maybeUserCgn,
-          TE.fromOption(() =>
-            ResponseErrorNotFound("Not Found", "User's CGN status not found")
-          ),
-          TE.map(userCgn =>
-            userCgn.card.status !== PendingStatusEnum.PENDING
-              ? {
-                  ...card,
-                  activation_date: userCgn.card.activation_date,
-                  expiration_date: userCgn.card.expiration_date
-                }
-              : {
-                  status: userCgn.card.status
-                }
-          )
+      )
+    ),
+    TE.chainW(({ card, maybeUserCgn }) =>
+      pipe(
+        maybeUserCgn,
+        TE.fromOption(() =>
+          ResponseErrorNotFound("Not Found", "User's CGN status not found")
+        ),
+        TE.map(userCgn =>
+          userCgn.card.status !== PendingStatusEnum.PENDING
+            ? {
+                ...card,
+                activation_date: userCgn.card.activation_date,
+                expiration_date: userCgn.card.expiration_date
+              }
+            : {
+                status: userCgn.card.status
+              }
         )
-      ),
-      TE.chainW(card =>
-        pipe(
-          checkUpdateCardIsRunning(client, fiscalCode, card),
-          TE.chainW(() =>
-            pipe(
-              TE.tryCatch(
-                () =>
-                  client.startNew(
-                    "UpdateCgnOrchestrator",
-                    orchestratorId,
-                    OrchestratorInput.encode({
-                      fiscalCode,
-                      newStatusCard: card
-                    })
-                  ),
-                E.toError
-              ),
-              TE.bimap(
-                err => {
-                  context.log.error(
-                    `${logPrefix}|Cannot start UpdateCgnOrchestrator|ERROR=${err.message}`
-                  );
-                  return ResponseErrorInternal(
-                    "Cannot start UpdateCgnOrchestrator"
-                  );
-                },
-                () => {
-                  const instanceId: InstanceId = {
-                    id: orchestratorId
-                  };
-                  return ResponseSuccessRedirectToResource(
-                    instanceId,
-                    `/api/v1/cgn/status/${fiscalCode}`,
-                    instanceId
-                  );
-                }
-              )
+      )
+    ),
+    TE.chainW(card =>
+      pipe(
+        checkUpdateCardIsRunning(client, fiscalCode, card),
+        TE.chainW(() =>
+          pipe(
+            TE.tryCatch(
+              () =>
+                client.startNew(
+                  "UpdateCgnOrchestrator",
+                  orchestratorId,
+                  OrchestratorInput.encode({
+                    fiscalCode,
+                    newStatusCard: card
+                  })
+                ),
+              E.toError
+            ),
+            TE.bimap(
+              err => {
+                context.log.error(
+                  `${logPrefix}|Cannot start UpdateCgnOrchestrator|ERROR=${err.message}`
+                );
+                return ResponseErrorInternal(
+                  "Cannot start UpdateCgnOrchestrator"
+                );
+              },
+              () => {
+                const instanceId: InstanceId = {
+                  id: orchestratorId
+                };
+                return ResponseSuccessRedirectToResource(
+                  instanceId,
+                  `/api/v1/cgn/status/${fiscalCode}`,
+                  instanceId
+                );
+              }
             )
-          ),
-          TE.orElseW(response =>
-            response.kind === "IResponseSuccessAccepted"
-              ? TE.of(response)
-              : TE.left(response)
           )
+        ),
+        TE.orElseW(response =>
+          response.kind === "IResponseSuccessAccepted"
+            ? TE.of(response)
+            : TE.left(response)
         )
-      ),
-      TE.toUnion
-    )();
-  };
-}
+      )
+    ),
+    TE.toUnion
+  )();
+};
 
-export function UpsertCgnStatus(
+export const UpsertCgnStatus = (
   userCgnModel: UserCgnModel
-): express.RequestHandler {
+): express.RequestHandler => {
   const handler = UpsertCgnStatusHandler(userCgnModel);
 
   const middlewaresWrap = withRequestMiddlewares(
@@ -161,4 +162,4 @@ export function UpsertCgnStatus(
   );
 
   return wrapRequestHandler(middlewaresWrap(handler));
-}
+};

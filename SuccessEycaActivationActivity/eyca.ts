@@ -1,3 +1,4 @@
+/* eslint-disable max-params */
 import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { format } from "date-fns";
 import * as E from "fp-ts/lib/Either";
@@ -92,7 +93,7 @@ export const updateCard = (
   password: NonEmptyString,
   ccdbNumber: CcdbNumber,
   cardDateExpiration: Timestamp
-) =>
+): TE.TaskEither<Error, NonEmptyString> =>
   pipe(
     retrieveCcdbSessionId(redisClient, eycaClient, username, password),
     TE.chain(sessionId =>
@@ -129,7 +130,7 @@ export const preIssueCard = (
   eycaClient: ReturnType<EycaAPIClient>,
   username: NonEmptyString,
   password: NonEmptyString
-) =>
+): TE.TaskEither<Error, CcdbNumber> =>
   pipe(
     retrieveCcdbSessionId(redisClient, eycaClient, username, password),
     TE.chain(sessionId =>

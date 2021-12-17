@@ -31,7 +31,9 @@ export const getSendMessageActivityHandler = (
   getProfile: GetProfileT,
   sendMessage: SendMessageT,
   logPrefix: string = `SendMessageActivity`
+  // eslint-disable-next-line sonarjs/cognitive-complexity
 ) => (context: Context, input: unknown): Promise<ActivityResult> => {
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   const failure = (reason: string) => {
     context.log.error(reason);
     return ActivityResultFailure.encode({

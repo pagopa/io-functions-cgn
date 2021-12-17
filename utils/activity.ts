@@ -21,6 +21,7 @@ export const ActivityResult = t.taggedUnion("kind", [
 
 export type ActivityResult = t.TypeOf<typeof ActivityResult>;
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const failure = (context: Context, logPrefix: string) => (
   err: Error,
   description: string = ""
@@ -36,7 +37,7 @@ export const failure = (context: Context, logPrefix: string) => (
   });
 };
 
-export const success = () =>
+export const success = (): ActivityResultSuccess =>
   ActivityResultSuccess.encode({
     kind: "SUCCESS"
   });

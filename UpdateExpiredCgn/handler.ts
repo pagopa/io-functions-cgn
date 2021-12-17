@@ -18,7 +18,7 @@ import {
   terminateUpdateCgnOrchestratorTask
 } from "../utils/orchestrators";
 
-const finish = () => Promise.resolve(void 0);
+const finish = (): Promise<void> => Promise.resolve(void 0);
 
 initTelemetryClient();
 const ORCHESTRATION_TERMINATION_REASON = "An highest priority CGN update orchestrator needs to start" as NonEmptyString;
@@ -126,10 +126,12 @@ export const getUpdateExpiredCgnHandler = (
       )
   );
 
-  // tslint:disable-next-line: readonly-array
+  // eslint-disable-next-line functional/prefer-readonly-type
   const results = [];
   const tasksChunks = A.chunksOf(100)(tasks);
   for (const tasksChunk of tasksChunks) {
+    // eslint-disable-next-line functional/prefer-readonly-type
+    // eslint-disable-next-line functional/immutable-data
     results.push(await A.sequence(TE.ApplicativePar)(tasksChunk)());
   }
   return results;

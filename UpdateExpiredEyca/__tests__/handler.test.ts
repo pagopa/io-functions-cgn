@@ -1,4 +1,4 @@
-/* tslint:disable: no-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { ExponentialRetryPolicyFilter } from "azure-storage";
@@ -15,7 +15,7 @@ const activationAndExpirationDates = {
   activationDate: cgnActivatedDates.activation_date,
   expirationDate: cgnActivatedDates.expiration_date
 };
-// tslint:disable-next-line: readonly-array
+// eslint-disable-next-line functional/prefer-readonly-type
 const aSetOfExpiredRows: tableUtils.ExpiredCardRowKey[] = [
   {
     fiscalCode: "RODFDS82S10H501T" as FiscalCode,

@@ -42,11 +42,13 @@ type IGetEycaStatusHandler = (
   fiscalCode: FiscalCode
 ) => Promise<ResponseTypes>;
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function GetEycaStatusHandler(
   userEycaCardModel: UserEycaCardModel,
   userCgnModel: UserCgnModel,
   eycaUpperBoundAge: NonNegativeInteger
 ): IGetEycaStatusHandler {
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   return async (_, fiscalCode) =>
     pipe(
       isEycaEligible(fiscalCode, eycaUpperBoundAge),
@@ -112,6 +114,7 @@ export function GetEycaStatusHandler(
     )();
 }
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function GetEycaStatus(
   userEycaCardModel: UserEycaCardModel,
   userCgnModel: UserCgnModel,

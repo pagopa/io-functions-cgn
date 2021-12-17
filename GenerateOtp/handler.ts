@@ -74,13 +74,15 @@ const generateNewOtpAndStore = (
     )
   );
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function GetGenerateOtpHandler(
   userCgnModel: UserCgnModel,
   redisClient: RedisClient,
   otpTtl: NonNegativeInteger
 ): IGetGenerateOtpHandler {
-  return async (_, fiscalCode) => {
-    return pipe(
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  return async (_, fiscalCode) =>
+    pipe(
       userCgnModel.findLastVersionByModelId([fiscalCode]),
       TE.mapLeft(() =>
         ResponseErrorInternal("Error trying to retrieve user's CGN status")
@@ -113,9 +115,9 @@ export function GetGenerateOtpHandler(
       TE.map(ResponseSuccessJson),
       TE.toUnion
     )();
-  };
 }
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function GetGenerateOtp(
   userCgnModel: UserCgnModel,
   redisClient: RedisClient,

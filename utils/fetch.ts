@@ -9,7 +9,7 @@ import { UrlFromString } from "@pagopa/ts-commons/lib/url";
 import * as E from "fp-ts/lib/Either";
 import { pipe } from "fp-ts/lib/function";
 
-export const getProtocol = (endpoint: string) =>
+export const getProtocol = (endpoint: string): string | undefined =>
   pipe(
     endpoint,
     UrlFromString.decode,
@@ -17,12 +17,15 @@ export const getProtocol = (endpoint: string) =>
     E.getOrElseW(() => undefined)
   );
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const withTimeout = (timeout: Millisecond) => (fetchApi: typeof fetch) =>
   toFetch(setFetchTimeout(timeout, AbortableFetch(fetchApi)));
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const withCertificate = (
   protocol: string,
-  getCerts: () => { cert: string; key: string }
+  getCerts: () => { readonly cert: string; readonly key: string }
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 ) => () =>
   protocol === "http"
     ? agent.getHttpFetch(process.env)
