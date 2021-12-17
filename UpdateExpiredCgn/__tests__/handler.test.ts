@@ -1,21 +1,14 @@
 /* tslint:disable: no-any */
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
+import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { ExponentialRetryPolicyFilter } from "azure-storage";
-import * as df from "durable-functions";
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
-import {
-  context,
-  getClient,
-  mockStartNew
-} from "../../__mocks__/durable-functions";
+import * as TE from "fp-ts/lib/TaskEither";
+import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import * as aInsights from "../../utils/appinsights";
 import * as expirationUtils from "../../utils/card_expiration";
 import * as orchUtils from "../../utils/orchestrators";
 import { getUpdateExpiredCgnHandler } from "../handler";
-
-jest.spyOn(df, "getClient").mockImplementation(getClient as any);
 
 const activationAndExpirationDates = {
   activationDate: cgnActivatedDates.activation_date,
@@ -46,12 +39,10 @@ jest
 
 const terminateOrchestratorMock = jest
   .fn()
-  .mockImplementation(() => taskEither.of(void 0));
+  .mockImplementation(() => TE.of(void 0));
 jest
   .spyOn(orchUtils, "terminateUpdateCgnOrchestratorTask")
   .mockImplementation(terminateOrchestratorMock);
-
-jest.spyOn(df, "getClient").mockImplementation(getClient as any);
 
 const trackExceptionMock = jest.fn(_ => void 0);
 jest.spyOn(aInsights, "trackException").mockImplementation(trackExceptionMock);
@@ -61,7 +52,7 @@ describe("UpdateExpiredCgn", () => {
   });
   it("should process all fiscalCodes present on table", async () => {
     getExpiredCgnUsersMock.mockImplementationOnce(() =>
-      taskEither.of(aSetOfExpiredRows)
+      TE.of(aSetOfExpiredRows)
     );
     const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
       tableServiceMock as any,
@@ -74,7 +65,7 @@ describe("UpdateExpiredCgn", () => {
 
   it("should terminate other orchestrators running for activation and revocation", async () => {
     getExpiredCgnUsersMock.mockImplementationOnce(() =>
-      taskEither.of(aSetOfExpiredRows)
+      TE.of(aSetOfExpiredRows)
     );
     const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
       tableServiceMock as any,
@@ -88,7 +79,7 @@ describe("UpdateExpiredCgn", () => {
   });
 
   it("should not instantiate any orchestrator if there are no elements to process", async () => {
-    getExpiredCgnUsersMock.mockImplementationOnce(() => taskEither.of([]));
+    getExpiredCgnUsersMock.mockImplementationOnce(() => TE.of([]));
     const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
       tableServiceMock as any,
       expiredCgnTableName
@@ -100,7 +91,7 @@ describe("UpdateExpiredCgn", () => {
 
   it("should not instantiate any orchestrator if there are errors querying table", async () => {
     getExpiredCgnUsersMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Cannot query table"))
+      TE.left(new Error("Cannot query table"))
     );
     const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
       tableServiceMock as any,
@@ -121,10 +112,10 @@ describe("UpdateExpiredCgn", () => {
   });
   it("should not instantiate some orchestrator if there are errors terminating other instances for a certain fiscalCode", async () => {
     getExpiredCgnUsersMock.mockImplementationOnce(() =>
-      taskEither.of(aSetOfExpiredRows)
+      TE.of(aSetOfExpiredRows)
     );
     terminateOrchestratorMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Error"))
+      TE.left(new Error("Error"))
     );
     const updateExpiredCgnHandler = getUpdateExpiredCgnHandler(
       tableServiceMock as any,

@@ -1,16 +1,21 @@
-import { agent } from "italia-ts-commons";
+import { agent } from "@pagopa/ts-commons";
 import {
   AbortableFetch,
   setFetchTimeout,
   toFetch
-} from "italia-ts-commons/lib/fetch";
-import { Millisecond } from "italia-ts-commons/lib/units";
-import { UrlFromString } from "italia-ts-commons/lib/url";
+} from "@pagopa/ts-commons/lib/fetch";
+import { Millisecond } from "@pagopa/ts-commons/lib/units";
+import { UrlFromString } from "@pagopa/ts-commons/lib/url";
+import * as E from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
 
 export const getProtocol = (endpoint: string) =>
-  UrlFromString.decode(endpoint)
-    .map(url => url.protocol?.slice(0, -1))
-    .getOrElse(undefined);
+  pipe(
+    endpoint,
+    UrlFromString.decode,
+    E.map(url => url.protocol?.slice(0, -1)),
+    E.getOrElseW(() => undefined)
+  );
 
 export const withTimeout = (timeout: Millisecond) => (fetchApi: typeof fetch) =>
   toFetch(setFetchTimeout(timeout, AbortableFetch(fetchApi)));

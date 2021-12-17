@@ -1,11 +1,10 @@
 /* tslint:disable: no-any */
 
 import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
-import { some } from "fp-ts/lib/Option";
-import { none } from "fp-ts/lib/Option";
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
+import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
   CardActivated,
@@ -50,10 +49,10 @@ const anOtp: Otp = {
 
 const storeOtpAndRelatedFiscalCodeMock = jest
   .fn()
-  .mockImplementation(() => taskEither.of(true));
+  .mockImplementation(() => TE.of(true));
 const retrieveOtpByFiscalCodeMock = jest
   .fn()
-  .mockImplementation(() => taskEither.of(none));
+  .mockImplementation(() => TE.of(O.none));
 jest
   .spyOn(redis_util, "retrieveOtpByFiscalCode")
   .mockImplementation(retrieveOtpByFiscalCodeMock);
@@ -64,7 +63,7 @@ jest
 const findLastVersionByModelIdMock = jest
   .fn()
   .mockImplementation(() =>
-    taskEither.of(some({ ...aUserCgn, card: anActivatedCgn }))
+    TE.of(O.some({ ...aUserCgn, card: anActivatedCgn }))
   );
 const userCgnModelMock = {
   findLastVersionByModelId: findLastVersionByModelIdMock
@@ -95,7 +94,7 @@ describe("GetGenerateOtpHandler", () => {
   });
   it("should return an internal error when a query error occurs", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Query Error"))
+      TE.left(new Error("Query Error"))
     );
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
@@ -121,7 +120,7 @@ describe("GetGenerateOtpHandler", () => {
 
   it("should return an internal error if Redis OTP store fails", async () => {
     storeOtpAndRelatedFiscalCodeMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Cannot store OTP on Redis"))
+      TE.left(new Error("Cannot store OTP on Redis"))
     );
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
@@ -134,7 +133,7 @@ describe("GetGenerateOtpHandler", () => {
 
   it("should return an internal error if Redis OTP retrieve fails", async () => {
     retrieveOtpByFiscalCodeMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Cannot retrieve OTP on Redis"))
+      TE.left(new Error("Cannot retrieve OTP on Redis"))
     );
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
@@ -146,9 +145,7 @@ describe("GetGenerateOtpHandler", () => {
   });
 
   it("should return forbidden if no userCgn is found", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(O.none));
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
       {} as any,
@@ -160,7 +157,7 @@ describe("GetGenerateOtpHandler", () => {
 
   it("should return Forbidden if a pending userCgn is found", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(aUserCgn))
+      TE.of(O.some(aUserCgn))
     );
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
@@ -173,7 +170,7 @@ describe("GetGenerateOtpHandler", () => {
 
   it("should return success with a previous stored OTP if it is present", async () => {
     retrieveOtpByFiscalCodeMock.mockImplementationOnce(() =>
-      taskEither.of(some(anOtp))
+      TE.of(O.some(anOtp))
     );
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,

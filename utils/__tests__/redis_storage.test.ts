@@ -1,7 +1,8 @@
 // tslint:disable: no-any
 
-import { isLeft, isRight } from "fp-ts/lib/Either";
-import { isNone } from "fp-ts/lib/Option";
+import { pipe } from "fp-ts/lib/function";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 import {
   existsKeyTask,
   getTask,
@@ -25,120 +26,128 @@ const redisClientMock = {
 
 describe("setWithExpirationTask", () => {
   it("should return true if redis store key-value pair correctly", async () => {
-    await setWithExpirationTask(
-      redisClientMock as any,
-      aRedisKey,
-      aRedisValue,
-      aRedisDefaultExpiration
-    )
-      .fold(
+    await pipe(
+      setWithExpirationTask(
+        redisClientMock as any,
+        aRedisKey,
+        aRedisValue,
+        aRedisDefaultExpiration
+      ),
+      TE.bimap(
         _ => fail(),
         value => expect(value).toEqual(true)
       )
-      .run();
+    )();
   });
 
   it("should return an error if redis store key-value pair returns undefined", async () => {
     setMock.mockImplementationOnce((_, __, ___, ____, cb) =>
       cb(undefined, undefined)
     );
-    await setWithExpirationTask(
-      redisClientMock as any,
-      aRedisKey,
-      aRedisValue,
-      aRedisDefaultExpiration
-    )
-      .fold(
+    await pipe(
+      setWithExpirationTask(
+        redisClientMock as any,
+        aRedisKey,
+        aRedisValue,
+        aRedisDefaultExpiration
+      ),
+      TE.bimap(
         _ => expect(_).toBeDefined(),
         () => fail()
       )
-      .run();
+    )();
   });
 
   it("should return an error if redis store key-value pair fails", async () => {
     setMock.mockImplementationOnce((_, __, ___, ____, cb) =>
       cb(new Error("Cannot store key-value pair"), undefined)
     );
-    await setWithExpirationTask(
-      redisClientMock as any,
-      aRedisKey,
-      aRedisValue,
-      aRedisDefaultExpiration
-    )
-      .fold(
+    await pipe(
+      setWithExpirationTask(
+        redisClientMock as any,
+        aRedisKey,
+        aRedisValue,
+        aRedisDefaultExpiration
+      ),
+      TE.bimap(
         _ => expect(_).toBeDefined(),
         () => fail()
       )
-      .run();
+    )();
   });
 });
 
 describe("getTask", () => {
   it("should return a value if redis get key-value pair correctly", async () => {
-    await getTask(redisClientMock as any, aRedisKey)
-      .fold(
+    await pipe(
+      getTask(redisClientMock as any, aRedisKey),
+      TE.bimap(
         () => fail(),
-        maybeResult =>
-          maybeResult.foldL(
-            () => fail(),
-            value => expect(value).toEqual(aRedisValue)
-          )
+        O.fold(
+          () => fail(),
+          value => expect(value).toEqual(aRedisValue)
+        )
       )
-      .run();
+    )();
   });
 
   it("should return none if no value was found for the provided key", async () => {
     getMock.mockImplementationOnce((_, cb) => cb(undefined, null));
-    await getTask(redisClientMock as any, aRedisKey)
-      .fold(
+    await pipe(
+      getTask(redisClientMock as any, aRedisKey),
+      TE.bimap(
         () => fail(),
-        maybeResult => expect(isNone(maybeResult)).toBeTruthy()
+        maybeResult => expect(O.isNone(maybeResult)).toBeTruthy()
       )
-      .run();
+    )();
   });
 
   it("should return an error if redis get value fails", async () => {
     getMock.mockImplementationOnce((_, cb) =>
       cb(new Error("Cannot get value"), null)
     );
-    await getTask(redisClientMock as any, aRedisKey)
-      .fold(
+    await pipe(
+      getTask(redisClientMock as any, aRedisKey),
+      TE.bimap(
         _ => expect(_).toBeDefined(),
         () => fail()
       )
-      .run();
+    )();
   });
 });
 
 describe("existsTask", () => {
   it("should return true if key exists in redis", async () => {
-    await existsKeyTask(redisClientMock as any, aRedisKey)
-      .fold(
+    await pipe(
+      existsKeyTask(redisClientMock as any, aRedisKey),
+      TE.bimap(
         () => fail(),
         exists => expect(exists).toBeTruthy()
       )
-      .run();
+    )();
   });
 
   it("should return false if key does not exists in redis", async () => {
     existsMock.mockImplementationOnce((_, cb) => cb(null, 0));
-    await existsKeyTask(redisClientMock as any, aRedisKey)
-      .fold(
+    await pipe(
+      existsKeyTask(redisClientMock as any, aRedisKey),
+      TE.bimap(
         () => fail(),
         exists => expect(exists).toBeFalsy()
       )
-      .run();
+    )();
   });
 
   it("should return an error if redis exists fails", async () => {
     existsMock.mockImplementationOnce((_, cb) =>
       cb(new Error("Cannot recognize exists on redis"), null)
     );
-    await existsKeyTask(redisClientMock as any, aRedisKey)
-      .fold(
+    await pipe(
+      existsKeyTask(redisClientMock as any, aRedisKey),
+      TE.bimap(
         _ => expect(_).toBeDefined(),
         () => fail()
       )
-      .run();
+    )();
   });
 });

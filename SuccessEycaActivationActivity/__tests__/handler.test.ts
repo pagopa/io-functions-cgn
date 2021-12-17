@@ -1,9 +1,9 @@
 /* tslint:disable: no-any */
+import { toCosmosErrorResponse } from "@pagopa/io-functions-commons/dist/src/utils/cosmosdb_model";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import * as date_fns from "date-fns";
-import { none, some } from "fp-ts/lib/Option";
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { toCosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 import { context } from "../../__mocks__/durable-functions";
 import { now } from "../../__mocks__/mock";
 import { StatusEnum as ActivatedStatusEnum } from "../../generated/definitions/CardActivated";
@@ -47,10 +47,10 @@ const anActivatedUserEycaCard: UserEycaCard = {
 
 const findLastVersionByModelIdMock = jest
   .fn()
-  .mockImplementation(() => taskEither.of(some(aPendingUserEycaCard)));
+  .mockImplementation(() => TE.of(O.some(aPendingUserEycaCard)));
 
 const updateMock = jest.fn().mockImplementation(() => {
-  return taskEither.of(anActivatedUserEycaCard);
+  return TE.of(anActivatedUserEycaCard);
 });
 
 const userEycaCardModelMock = {
@@ -59,14 +59,10 @@ const userEycaCardModelMock = {
 };
 
 const aCcdbNumber = "X123-Y123-Z123-W123" as CcdbNumber;
-const preIssueCardMock = jest
-  .fn()
-  .mockImplementation(() => taskEither.of(aCcdbNumber));
+const preIssueCardMock = jest.fn().mockImplementation(() => TE.of(aCcdbNumber));
 const updateCardMock = jest
   .fn()
-  .mockImplementation(() =>
-    taskEither.of("Object(s) updated." as NonEmptyString)
-  );
+  .mockImplementation(() => TE.of("Object(s) updated." as NonEmptyString));
 
 jest.spyOn(eyca, "updateCard").mockImplementation(updateCardMock);
 jest.spyOn(eyca, "preIssueCard").mockImplementation(preIssueCardMock);
@@ -97,7 +93,7 @@ describe("SuccessEycaActivationActivity", () => {
 
   it("should return failure if an error occurs during UserEycaCard retrieve", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      fromLeft(toCosmosErrorResponse(new Error("query error")))
+      TE.left(toCosmosErrorResponse(new Error("query error")))
     );
     const handler = getSuccessEycaActivationActivityHandler(
       {} as any,
@@ -116,9 +112,7 @@ describe("SuccessEycaActivationActivity", () => {
   });
 
   it("should return failure if no UserEycaCard was found", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(O.none));
     const handler = getSuccessEycaActivationActivityHandler(
       {} as any,
       {} as any,
@@ -137,7 +131,7 @@ describe("SuccessEycaActivationActivity", () => {
 
   it("should return failure if EYCA card code retrieve fails", async () => {
     preIssueCardMock.mockImplementationOnce(() =>
-      fromLeft("Error on PreIssueCard")
+      TE.left("Error on PreIssueCard")
     );
     const handler = getSuccessEycaActivationActivityHandler(
       {} as any,
@@ -151,9 +145,7 @@ describe("SuccessEycaActivationActivity", () => {
   });
 
   it("should return failure if EYCA card update API fails", async () => {
-    updateCardMock.mockImplementationOnce(() =>
-      fromLeft("Error on UpdateCard")
-    );
+    updateCardMock.mockImplementationOnce(() => TE.left("Error on UpdateCard"));
     const handler = getSuccessEycaActivationActivityHandler(
       {} as any,
       {} as any,
@@ -166,9 +158,7 @@ describe("SuccessEycaActivationActivity", () => {
   });
 
   it("should return failure if EYCA card update fails", async () => {
-    updateMock.mockImplementationOnce(() =>
-      fromLeft("Cannot update EYCA card")
-    );
+    updateMock.mockImplementationOnce(() => TE.left("Cannot update EYCA card"));
     const handler = getSuccessEycaActivationActivityHandler(
       {} as any,
       {} as any,

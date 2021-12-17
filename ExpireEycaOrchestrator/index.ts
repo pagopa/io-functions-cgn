@@ -1,11 +1,13 @@
 ﻿import { IOrchestrationFunctionContext } from "durable-functions/lib/src/classes";
 
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import * as df from "durable-functions";
 import * as t from "io-ts";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
 
 import { ActivityInput as ExpireEycaActivityInput } from "../ExpireEycaActivity/handler";
 
+import * as E from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { ActivityResult } from "../utils/activity";
 import { getEycaExpirationMessage } from "../utils/messages";
@@ -36,8 +38,15 @@ export const handler = function*(
 
   const input = context.df.getInput();
 
-  const { fiscalCode } = OrchestratorInput.decode(input).getOrElseL(e =>
-    trackExAndThrowWithErrorStatus(e, "eyca.expiration.exception.decode.input")
+  const { fiscalCode } = pipe(
+    input,
+    OrchestratorInput.decode,
+    E.getOrElseW(e =>
+      trackExAndThrowWithErrorStatus(
+        e,
+        "eyca.expiration.exception.decode.input"
+      )
+    )
   );
   const tagOverrides = {
     "ai.operation.id": fiscalCode,
@@ -55,12 +64,14 @@ export const handler = function*(
       eycaExpirationActivityInput
     );
 
-    const decodedEycaExpirationActivity = ActivityResult.decode(
-      eycaExpirationActivityResult
-    ).getOrElseL(_ =>
-      trackExAndThrowWithErrorStatus(
-        _,
-        "eyca.expiration.exception.decode.activityOutput"
+    const decodedEycaExpirationActivity = pipe(
+      eycaExpirationActivityResult,
+      ActivityResult.decode,
+      E.getOrElseW(_ =>
+        trackExAndThrowWithErrorStatus(
+          _,
+          "eyca.expiration.exception.decode.activityOutput"
+        )
       )
     );
 

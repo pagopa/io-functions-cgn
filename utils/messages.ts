@@ -1,7 +1,7 @@
 // tslint:disable: no-duplicate-string object-literal-sort-keys
 
+import { MessageContent } from "@pagopa/io-functions-commons/dist/generated/definitions/MessageContent";
 import { format } from "date-fns";
-import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
 import { Card } from "../generated/definitions/Card";
 import { CardActivated } from "../generated/definitions/CardActivated";
 import { CardExpired } from "../generated/definitions/CardExpired";

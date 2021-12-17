@@ -1,18 +1,13 @@
 import * as express from "express";
 
 import { Context } from "@azure/functions";
-import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
-import * as date_fns from "date-fns";
-import { fromOption, toError } from "fp-ts/lib/Either";
-import { identity } from "fp-ts/lib/function";
-import { fromEither, fromPredicate, taskEither } from "fp-ts/lib/TaskEither";
-import { tryCatch } from "fp-ts/lib/TaskEither";
-import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
-import { RequiredParamMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_param";
+import { ContextMiddleware } from "@pagopa/io-functions-commons/dist/src/utils/middlewares/context_middleware";
+import { RequiredParamMiddleware } from "@pagopa/io-functions-commons/dist/src/utils/middlewares/required_param";
 import {
   withRequestMiddlewares,
   wrapRequestHandler
-} from "io-functions-commons/dist/src/utils/request_middleware";
+} from "@pagopa/io-functions-commons/dist/src/utils/request_middleware";
+import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import {
   IResponseErrorForbiddenNotAuthorized,
   IResponseErrorInternal,
@@ -20,8 +15,13 @@ import {
   ResponseErrorForbiddenNotAuthorized,
   ResponseErrorInternal,
   ResponseSuccessJson
-} from "italia-ts-commons/lib/responses";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+} from "@pagopa/ts-commons/lib/responses";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
+import * as date_fns from "date-fns";
+import * as E from "fp-ts/lib/Either";
+import { flow, pipe } from "fp-ts/lib/function";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 import { RedisClient } from "redis";
 import { CardActivated } from "../generated/definitions/CardActivated";
 import { Otp } from "../generated/definitions/Otp";
@@ -39,67 +39,80 @@ type IGetGenerateOtpHandler = (
   fiscalCode: FiscalCode
 ) => Promise<ResponseTypes>;
 
+const generateNewOtpAndStore = (
+  redisClient: RedisClient,
+  fiscalCode: FiscalCode,
+  otpTtl: NonNegativeInteger
+): TE.TaskEither<IResponseErrorInternal, Otp> =>
+  pipe(
+    TE.tryCatch(() => generateOtpCode(), E.toError),
+    TE.bimap(
+      e => ResponseErrorInternal(`Cannot generate OTP Code| ${e.message}`),
+      otpCode => ({
+        code: otpCode,
+        expires_at: date_fns.addSeconds(Date.now(), otpTtl),
+        ttl: otpTtl
+      })
+    ),
+    TE.chain(newOtp =>
+      pipe(
+        storeOtpAndRelatedFiscalCode(
+          redisClient,
+          newOtp.code,
+          {
+            expiresAt: newOtp.expires_at,
+            fiscalCode,
+            ttl: otpTtl
+          },
+          otpTtl
+        ),
+        TE.bimap(
+          err => ResponseErrorInternal(err.message),
+          () => newOtp
+        )
+      )
+    )
+  );
+
 export function GetGenerateOtpHandler(
   userCgnModel: UserCgnModel,
   redisClient: RedisClient,
   otpTtl: NonNegativeInteger
 ): IGetGenerateOtpHandler {
   return async (_, fiscalCode) => {
-    return userCgnModel
-      .findLastVersionByModelId([fiscalCode])
-      .mapLeft<IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized>(
-        () =>
-          ResponseErrorInternal("Error trying to retrieve user's CGN status")
-      )
-      .chain(maybeUserCgn =>
-        fromEither(
-          fromOption(ResponseErrorForbiddenNotAuthorized)(maybeUserCgn)
-        )
-      )
-      .chain(
-        fromPredicate(
+    return pipe(
+      userCgnModel.findLastVersionByModelId([fiscalCode]),
+      TE.mapLeft(() =>
+        ResponseErrorInternal("Error trying to retrieve user's CGN status")
+      ),
+      TE.chainW(TE.fromOption(() => ResponseErrorForbiddenNotAuthorized)),
+      TE.chainW(
+        TE.fromPredicate(
           userCgn => CardActivated.is(userCgn.card),
           () => ResponseErrorForbiddenNotAuthorized
         )
-      )
-      .chain(() =>
-        retrieveOtpByFiscalCode(redisClient, fiscalCode)
-          .mapLeft(e =>
+      ),
+      TE.chainW(() =>
+        pipe(
+          retrieveOtpByFiscalCode(redisClient, fiscalCode),
+          TE.mapLeft(e =>
             ResponseErrorInternal(
               `Cannot retrieve OTP from fiscalCode| ${e.message}`
             )
-          )
-          .chain(maybeOtp =>
-            maybeOtp.foldL(
-              () =>
-                tryCatch(() => generateOtpCode(), toError)
-                  .mapLeft(e =>
-                    ResponseErrorInternal(
-                      `Cannot generate OTP Code| ${e.message}`
-                    )
-                  )
-                  .map(otpCode => ({
-                    code: otpCode,
-                    expires_at: date_fns.addSeconds(Date.now(), otpTtl),
-                    ttl: otpTtl
-                  }))
-                  .chain(newOtp =>
-                    storeOtpAndRelatedFiscalCode(
-                      redisClient,
-                      newOtp.code,
-                      { expiresAt: newOtp.expires_at, fiscalCode, ttl: otpTtl },
-                      otpTtl
-                    ).bimap(
-                      err => ResponseErrorInternal(err.message),
-                      () => newOtp
-                    )
-                  ),
-              otp => taskEither.of(otp)
+          ),
+          TE.chain(
+            flow(
+              O.fold(
+                () => generateNewOtpAndStore(redisClient, fiscalCode, otpTtl),
+                otp => TE.of(otp)
+              )
             )
           )
-      )
-      .fold<ResponseTypes>(identity, ResponseSuccessJson)
-      .run();
+        )
+      ),
+      TE.map(ResponseSuccessJson),
+      TE.toUnion
+    )();
   };
 }
 

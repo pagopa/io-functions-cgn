@@ -1,5 +1,5 @@
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { addYears } from "date-fns";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
 
 export const now = new Date();
 

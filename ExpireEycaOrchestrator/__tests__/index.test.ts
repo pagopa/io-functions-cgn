@@ -1,6 +1,6 @@
 // tslint:disable: object-literal-sort-keys
 
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { context as contextMock } from "../../__mocks__/durable-functions";
 import { handler } from "../index";
 

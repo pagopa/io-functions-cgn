@@ -1,8 +1,8 @@
 import { randomBytes } from "crypto";
 import { promisify } from "util";
 
+import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { isLeft } from "fp-ts/lib/Either";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { OtpCode } from "../generated/definitions/OtpCode";
 
 // Note that we redeclare the alphabet and the length of the CGN here as a
@@ -38,7 +38,7 @@ export async function genRandomCardCode(
       `FATAL: genRandomCardCode generated invalid Youth Card code [${code}]`
     );
   }
-  return cardCode.value;
+  return cardCode.right;
 }
 
 /**
@@ -56,5 +56,5 @@ export async function generateOtpCode(
     // this should never happen
     throw Error(`FATAL: generateOtpCode generated invalid OTP code [${code}]`);
   }
-  return otpCode.value;
+  return otpCode.right;
 }

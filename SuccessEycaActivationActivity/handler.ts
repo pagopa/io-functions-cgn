@@ -1,9 +1,9 @@
 import { Context } from "@azure/functions";
-import { fromOption, toError } from "fp-ts/lib/Either";
-import { identity } from "fp-ts/lib/function";
-import { fromEither } from "fp-ts/lib/TaskEither";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import * as E from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
+import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { RedisClient } from "redis";
 import { EycaAPIClient } from "../clients/eyca";
 import { StatusEnum } from "../generated/definitions/CardActivated";
@@ -30,31 +30,38 @@ export const getSuccessEycaActivationActivityHandler = (
   logPrefix: string = "SuccessEycaActivationActivityHandler"
 ) => (context: Context, input: unknown): Promise<ActivityResult> => {
   const fail = failure(context, logPrefix);
-  return fromEither(ActivityInput.decode(input))
-    .mapLeft(errs => fail(errorsToError(errs), "Cannot decode Activity Input"))
-    .chain(({ fiscalCode, activationDate, expirationDate }) =>
-      userEycaCardModel
-        .findLastVersionByModelId([fiscalCode])
-        .mapLeft(() =>
+  return pipe(
+    input,
+    ActivityInput.decode,
+    TE.fromEither,
+    TE.mapLeft(errs =>
+      fail(errorsToError(errs), "Cannot decode Activity Input")
+    ),
+    TE.chain(({ fiscalCode, activationDate, expirationDate }) =>
+      pipe(
+        userEycaCardModel.findLastVersionByModelId([fiscalCode]),
+        TE.mapLeft(() =>
           fail(
             new Error("Cannot retrieve EYCA card for the provided fiscalCode")
           )
-        )
-        .chain(maybeEycaCard =>
-          fromEither(
-            fromOption(
+        ),
+        TE.chain(maybeEycaCard =>
+          pipe(
+            maybeEycaCard,
+            TE.fromOption(() =>
               fail(new Error("No EYCA card found for the provided fiscalCode"))
-            )(maybeEycaCard)
+            )
           )
-        )
-        .chain(eycaCard =>
-          preIssueCard(
-            redisClient,
-            eycaClient,
-            eycaApiUsername,
-            eycaApiPassword
-          )
-            .map(cardNumber => ({
+        ),
+        TE.chain(eycaCard =>
+          pipe(
+            preIssueCard(
+              redisClient,
+              eycaClient,
+              eycaApiUsername,
+              eycaApiPassword
+            ),
+            TE.map(cardNumber => ({
               ...eycaCard,
               card: {
                 activation_date: activationDate,
@@ -62,26 +69,32 @@ export const getSuccessEycaActivationActivityHandler = (
                 expiration_date: expirationDate,
                 status: StatusEnum.ACTIVATED
               }
-            }))
-            .mapLeft(fail)
+            })),
+            TE.mapLeft(fail)
+          )
         )
-    )
-    .chain(_ =>
-      updateCard(
-        redisClient,
-        eycaClient,
-        eycaApiUsername,
-        eycaApiPassword,
-        _.card.card_number,
-        _.card.expiration_date
       )
-        .mapLeft(fail)
-        .chain(() =>
-          userEycaCardModel
-            .update(_)
-            .mapLeft(err => fail(toError(err), "Cannot update EYCA card"))
+    ),
+    TE.chain(_ =>
+      pipe(
+        updateCard(
+          redisClient,
+          eycaClient,
+          eycaApiUsername,
+          eycaApiPassword,
+          _.card.card_number,
+          _.card.expiration_date
+        ),
+        TE.mapLeft(fail),
+        TE.chain(() =>
+          pipe(
+            userEycaCardModel.update(_),
+            TE.mapLeft(err => fail(E.toError(err), "Cannot update EYCA card"))
+          )
         )
-    )
-    .fold<ActivityResult>(identity, () => success())
-    .run();
+      )
+    ),
+    TE.map(() => success()),
+    TE.toUnion
+  )();
 };

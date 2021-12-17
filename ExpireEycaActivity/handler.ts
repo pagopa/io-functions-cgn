@@ -1,9 +1,10 @@
 import { Context } from "@azure/functions";
-import { fromOption, toError } from "fp-ts/lib/Either";
-import { identity } from "fp-ts/lib/function";
-import { fromEither } from "fp-ts/lib/TaskEither";
+import { toError } from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
+import * as TE from "fp-ts/lib/TaskEither";
+
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import * as t from "io-ts";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
 import { StatusEnum as CardExpiredStatus } from "../generated/definitions/CardExpired";
 import { EycaCardActivated } from "../generated/definitions/EycaCardActivated";
 import { UserEycaCardModel } from "../models/user_eyca_card";
@@ -21,49 +22,61 @@ export const getExpireEycaActivityHandler = (
   logPrefix: string = "ExpireEycaActivity"
 ) => (context: Context, input: unknown): Promise<ActivityResult> => {
   const fail = failure(context, logPrefix);
-  return fromEither(ActivityInput.decode(input))
-    .mapLeft(errs => fail(errorsToError(errs), "Cannot decode Activity Input"))
-    .chain(activityInput =>
-      userEycaCardModel
-        .findLastVersionByModelId([activityInput.fiscalCode])
-        .mapLeft(() =>
+  return pipe(
+    input,
+    ActivityInput.decode,
+    TE.fromEither,
+    TE.mapLeft(errs =>
+      fail(errorsToError(errs), "Cannot decode Activity Input")
+    ),
+    TE.chain(activityInput =>
+      pipe(
+        userEycaCardModel.findLastVersionByModelId([activityInput.fiscalCode]),
+        TE.mapLeft(() =>
           fail(
             new Error(
               "Cannot retrieve User EYCA Card for the provided fiscalCode"
             )
           )
-        )
-        .chain(maybeUserEycaCard =>
-          fromEither(
-            fromOption(
-              fail(
-                new Error("No User EYCA Card found for the provided fiscalCode")
-              )
-            )(maybeUserEycaCard)
+        ),
+        TE.chain(
+          TE.fromOption(() =>
+            fail(
+              new Error("No User EYCA Card found for the provided fiscalCode")
+            )
+          )
+        ),
+        TE.chain(userEycaCard =>
+          pipe(
+            userEycaCard.card,
+            EycaCardActivated.decode,
+            TE.fromEither,
+            TE.bimap(
+              () =>
+                fail(
+                  new Error("Cannot expire an EYCA Card that is not ACTIVATED")
+                ),
+              card => ({
+                ...userEycaCard,
+                card: {
+                  ...card,
+                  status: CardExpiredStatus.EXPIRED
+                }
+              })
+            )
+          )
+        ),
+        TE.chain(userEycaCard =>
+          pipe(
+            userEycaCardModel.update(userEycaCard),
+            TE.bimap(
+              err => fail(toError(err), "Cannot update User EYCA Card"),
+              () => success()
+            )
           )
         )
-        .chain(userEycaCard =>
-          fromEither(EycaCardActivated.decode(userEycaCard.card)).bimap(
-            () =>
-              fail(
-                new Error("Cannot expire an EYCA Card that is not ACTIVATED")
-              ),
-            card => ({
-              ...userEycaCard,
-              card: {
-                ...card,
-                status: CardExpiredStatus.EXPIRED
-              }
-            })
-          )
-        )
-    )
-    .chain(_ =>
-      userEycaCardModel.update(_).bimap(
-        err => fail(toError(err), "Cannot update User EYCA Card"),
-        () => success()
       )
-    )
-    .fold<ActivityResult>(identity, identity)
-    .run();
+    ),
+    TE.toUnion
+  )();
 };

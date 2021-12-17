@@ -1,13 +1,9 @@
 import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { format } from "date-fns";
-import { toError } from "fp-ts/lib/Either";
-import {
-  fromEither,
-  fromLeft,
-  TaskEither,
-  taskEither,
-  tryCatch
-} from "fp-ts/lib/TaskEither";
+import * as E from "fp-ts/lib/Either";
+import { flow, pipe } from "fp-ts/lib/function";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 import { RedisClient } from "redis";
 import { EycaAPIClient } from "../clients/eyca";
 import { Timestamp } from "../generated/definitions/Timestamp";
@@ -28,27 +24,31 @@ const ccdbLogin = (
   eycaClient: ReturnType<EycaAPIClient>,
   username: NonEmptyString,
   password: NonEmptyString
-): TaskEither<Error, NonEmptyString> =>
-  tryCatch(
-    () =>
-      eycaClient.authLogin({
-        password,
-        type: "json",
-        username
-      }),
-    toError
-  )
-    .mapLeft(err => new Error(`Cannot call EYCA authLogin API ${err.message}`))
-    .chain(_ => fromEither(_).mapLeft(errorsToError))
-    .chain<NonEmptyString>(res =>
+): TE.TaskEither<Error, NonEmptyString> =>
+  pipe(
+    TE.tryCatch(
+      () =>
+        eycaClient.authLogin({
+          password,
+          type: "json",
+          username
+        }),
+      E.toError
+    ),
+    TE.mapLeft(
+      err => new Error(`Cannot call EYCA authLogin API ${err.message}`)
+    ),
+    TE.chain(flow(TE.fromEither, TE.mapLeft(errorsToError))),
+    TE.chain(res =>
       res.status !== 200 || ErrorResponse.is(res.value.api_response)
-        ? fromLeft(
+        ? TE.left(
             new Error(
               `Error on EYCA authLogin API|STATUS=${res.status}, DETAIL=${res.value.api_response.text}`
             )
           )
-        : taskEither.of(res.value.api_response.text)
-    );
+        : TE.of(res.value.api_response.text)
+    )
+  );
 
 /**
  * Retrieves a previous stored session_id on Redis cache.
@@ -60,19 +60,28 @@ const retrieveCcdbSessionId = (
   eycaClient: ReturnType<EycaAPIClient>,
   username: NonEmptyString,
   password: NonEmptyString
-): TaskEither<Error, NonEmptyString> =>
-  getTask(redisClient, CCDB_SESSION_ID_KEY).chain(maybeSessionId =>
-    maybeSessionId.foldL(
-      () =>
-        ccdbLogin(eycaClient, username, password).chain(sessionId =>
-          setWithExpirationTask(
-            redisClient,
-            CCDB_SESSION_ID_KEY,
-            sessionId,
-            CCDB_SESSION_ID_TTL
-          ).map(() => sessionId)
-        ),
-      sessionId => taskEither.of(sessionId as NonEmptyString)
+): TE.TaskEither<Error, NonEmptyString> =>
+  pipe(
+    getTask(redisClient, CCDB_SESSION_ID_KEY),
+    TE.chain(
+      O.fold(
+        () =>
+          pipe(
+            ccdbLogin(eycaClient, username, password),
+            TE.chain(sessionId =>
+              pipe(
+                setWithExpirationTask(
+                  redisClient,
+                  CCDB_SESSION_ID_KEY,
+                  sessionId,
+                  CCDB_SESSION_ID_TTL
+                ),
+                TE.map(() => sessionId)
+              )
+            )
+          ),
+        sessionId => TE.of(sessionId as NonEmptyString)
+      )
     )
   );
 
@@ -84,31 +93,35 @@ export const updateCard = (
   ccdbNumber: CcdbNumber,
   cardDateExpiration: Timestamp
 ) =>
-  retrieveCcdbSessionId(redisClient, eycaClient, username, password).chain(
-    sessionId =>
-      tryCatch(
-        () =>
-          eycaClient.updateCard({
-            card_date_expiration: format(cardDateExpiration, "yyyy-MM-dd"),
-            ccdb_number: ccdbNumber,
-            session_id: sessionId,
-            type: "json"
-          }),
-        toError
-      )
-        .mapLeft(
+  pipe(
+    retrieveCcdbSessionId(redisClient, eycaClient, username, password),
+    TE.chain(sessionId =>
+      pipe(
+        TE.tryCatch(
+          () =>
+            eycaClient.updateCard({
+              card_date_expiration: format(cardDateExpiration, "yyyy-MM-dd"),
+              ccdb_number: ccdbNumber,
+              session_id: sessionId,
+              type: "json"
+            }),
+          E.toError
+        ),
+        TE.mapLeft(
           err => new Error(`Cannot call EYCA updateCard API ${err.message}`)
-        )
-        .chain(_ => fromEither(_).mapLeft(errorsToError))
-        .chain<NonEmptyString>(res =>
+        ),
+        TE.chain(flow(TE.fromEither, TE.mapLeft(errorsToError))),
+        TE.chain(res =>
           res.status !== 200 || ErrorResponse.is(res.value.api_response)
-            ? fromLeft(
+            ? TE.left(
                 new Error(
                   `Error on EYCA updateCard API|STATUS=${res.status}, DETAIL=${res.value.api_response.text}`
                 )
               )
-            : taskEither.of(res.value.api_response.text)
+            : TE.of(res.value.api_response.text)
         )
+      )
+    )
   );
 
 export const preIssueCard = (
@@ -117,30 +130,32 @@ export const preIssueCard = (
   username: NonEmptyString,
   password: NonEmptyString
 ) =>
-  retrieveCcdbSessionId(redisClient, eycaClient, username, password).chain(
-    sessionId =>
-      tryCatch(
-        () =>
-          eycaClient.preIssueCard({
-            session_id: sessionId,
-            type: "json"
-          }),
-        toError
-      )
-        .chain(_ => fromEither(_).mapLeft(errorsToError))
-        .chain(response =>
+  pipe(
+    retrieveCcdbSessionId(redisClient, eycaClient, username, password),
+    TE.chain(sessionId =>
+      pipe(
+        TE.tryCatch(
+          () =>
+            eycaClient.preIssueCard({
+              session_id: sessionId,
+              type: "json"
+            }),
+          E.toError
+        ),
+        TE.chain(flow(TE.fromEither, TE.mapLeft(errorsToError))),
+        TE.chain(response =>
           response.status !== 200 ||
           ErrorResponse.is(response.value.api_response)
-            ? fromLeft(
+            ? TE.left(
                 new Error(
                   `Error on EYCA preIssueCard API|STATUS=${response.status}, DETAIL=${response.value.api_response.text}`
                 )
               )
-            : taskEither.of(
-                response.value.api_response.data.card[0].ccdb_number
-              )
+            : TE.of(response.value.api_response.data.card[0].ccdb_number)
+        ),
+        TE.chain(
+          flow(CcdbNumber.decode, TE.fromEither, TE.mapLeft(errorsToError))
         )
-        .chain(responseText =>
-          fromEither(CcdbNumber.decode(responseText).mapLeft(errorsToError))
-        )
+      )
+    )
   );

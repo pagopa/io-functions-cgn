@@ -1,11 +1,12 @@
 ﻿import { Context } from "@azure/functions";
+import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { ExponentialRetryPolicyFilter, TableService } from "azure-storage";
 import * as date_fns from "date-fns";
 import * as df from "durable-functions";
-import { array, chunksOf } from "fp-ts/lib/Array";
-import { Either, isLeft, toError } from "fp-ts/lib/Either";
-import { taskEither, tryCatch } from "fp-ts/lib/TaskEither";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import * as A from "fp-ts/lib/Array";
+import * as E from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
+import * as TE from "fp-ts/lib/TaskEither";
 import { OrchestratorInput } from "../ExpireEycaOrchestrator/index";
 import { StatusEnum as CardExpiredStatusEnum } from "../generated/definitions/CardExpired";
 import { StatusEnum } from "../generated/definitions/CardPending";
@@ -27,7 +28,7 @@ export const getUpdateExpiredEycaHandler = (
   logPrefix: string = "UpdateExpiredEycaHandler"
 ) => async (
   context: Context
-): Promise<ReadonlyArray<Either<Error, ReadonlyArray<string>>> | void> => {
+): Promise<ReadonlyArray<E.Either<Error, ReadonlyArray<string>>> | void> => {
   const today = date_fns.format(Date.now(), "yyyy-MM-dd");
 
   const errorOrExpiredEycaUsers = await getExpiredCardUsers(
@@ -35,14 +36,14 @@ export const getUpdateExpiredEycaHandler = (
     tableService.withFilter(new ExponentialRetryPolicyFilter(5)),
     eycaExpirationTableName,
     today
-  ).run();
+  )();
 
-  if (isLeft(errorOrExpiredEycaUsers)) {
+  if (E.isLeft(errorOrExpiredEycaUsers)) {
     context.log.verbose(
-      `${logPrefix}|ERROR=${errorOrExpiredEycaUsers.value.message}`
+      `${logPrefix}|ERROR=${errorOrExpiredEycaUsers.left.message}`
     );
     trackException({
-      exception: errorOrExpiredEycaUsers.value,
+      exception: errorOrExpiredEycaUsers.left,
       properties: {
         id: `${today}.eyca.expiration`,
         name: "eyca.expiration.error"
@@ -52,7 +53,7 @@ export const getUpdateExpiredEycaHandler = (
     return finish();
   }
 
-  const expiredEycaUsers = errorOrExpiredEycaUsers.value;
+  const expiredEycaUsers = errorOrExpiredEycaUsers.right;
   context.log.info(
     `${logPrefix}|Processing ${expiredEycaUsers.length} expired Eyca cards`
   );
@@ -62,12 +63,13 @@ export const getUpdateExpiredEycaHandler = (
 
   const tasks = expiredEycaUsers.map(({ fiscalCode }) =>
     // first we terminate other possible EYCA activation orchestrators
-    terminateOrchestratorById(
-      makeEycaOrchestratorId(fiscalCode, StatusEnum.PENDING),
-      client,
-      ORCHESTRATION_TERMINATION_REASON
-    )
-      .chain(() => {
+    pipe(
+      terminateOrchestratorById(
+        makeEycaOrchestratorId(fiscalCode, StatusEnum.PENDING),
+        client,
+        ORCHESTRATION_TERMINATION_REASON
+      ),
+      TE.chain(() => {
         context.log.info(
           `${logPrefix}| Starting new EYCA expire orchestrator for fiscalCode=${fiscalCode.substr(
             0,
@@ -75,7 +77,7 @@ export const getUpdateExpiredEycaHandler = (
           )}`
         );
         // Now we try to start Expire operation
-        return tryCatch(
+        return TE.tryCatch(
           () =>
             client.startNew(
               "ExpireEycaOrchestrator",
@@ -84,10 +86,10 @@ export const getUpdateExpiredEycaHandler = (
                 fiscalCode
               })
             ),
-          toError
+          E.toError
         );
-      })
-      .mapLeft(err => {
+      }),
+      TE.mapLeft(err => {
         context.log.error(
           `${logPrefix}|Error while starting EYCA expiration for fiscalCode=${fiscalCode.substr(
             0,
@@ -104,17 +106,14 @@ export const getUpdateExpiredEycaHandler = (
         });
         return err;
       })
+    )
   );
 
   // tslint:disable-next-line: readonly-array
   const results = [];
-  const tasksChunks = chunksOf(tasks, 100);
+  const tasksChunks = A.chunksOf(100)(tasks);
   for (const tasksChunk of tasksChunks) {
-    results.push(
-      await array
-        .sequence(taskEither)(tasksChunk)
-        .run()
-    );
+    results.push(await A.sequence(TE.ApplicativePar)(tasksChunk)());
   }
   return results;
 };

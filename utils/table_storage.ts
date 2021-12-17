@@ -5,13 +5,14 @@ import {
   TableUtilities
 } from "azure-storage";
 
-import { Either, isLeft, left, right } from "fp-ts/lib/Either";
-import { fromNullable } from "fp-ts/lib/Option";
-import { TaskEither, taskify } from "fp-ts/lib/TaskEither";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import * as E from "fp-ts/lib/Either";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 import { Timestamp } from "../generated/definitions/Timestamp";
 
 import * as date_fns from "date-fns";
+import { pipe } from "fp-ts/lib/function";
 
 /**
  * A minimal Youth Card storage table Entry
@@ -35,7 +36,7 @@ export type TableEntry = Readonly<{
  */
 export type PagedQuery = (
   currentToken: TableService.TableContinuationToken
-) => Promise<Either<Error, TableService.QueryEntitiesResult<TableEntry>>>;
+) => Promise<E.Either<Error, TableService.QueryEntitiesResult<TableEntry>>>;
 
 /**
  * Returns a paged query function for a certain query on a storage table
@@ -52,7 +53,7 @@ export const getPagedQuery = (tableService: TableService, table: string) => (
         error: Error,
         result: TableService.QueryEntitiesResult<TableEntry>,
         response: ServiceResponse
-      ) => resolve(response.isSuccessful ? right(result) : left(error))
+      ) => resolve(response.isSuccessful ? E.right(result) : E.left(error))
     )
   );
 
@@ -70,17 +71,21 @@ export async function* iterateOnPages(
   do {
     // query for a page of entries
     const errorOrResults = await pagedQuery(token);
-    if (isLeft(errorOrResults)) {
+    if (E.isLeft(errorOrResults)) {
       // throw an exception in case of error
-      throw errorOrResults.value;
+      throw errorOrResults.left;
     }
     // call the async callback with the current page of entries
-    const results = errorOrResults.value;
+    const results = errorOrResults.right;
     yield results.entries;
     // update the continuation token, the loop will continue until
     // the token is defined
-    token = fromNullable(results.continuationToken).getOrElse(
-      (undefined as unknown) as TableService.TableContinuationToken
+    token = pipe(
+      results.continuationToken,
+      O.fromNullable,
+      O.getOrElse(
+        () => (undefined as unknown) as TableService.TableContinuationToken
+      )
     );
   } while (token !== undefined && token !== null);
 }
@@ -104,9 +109,9 @@ export const insertCardExpiration = (
   fiscalCode: FiscalCode,
   activationDate: Date,
   expirationDate: Date
-): TaskEither<Error, TableService.EntityMetadata> => {
+): TE.TaskEither<Error, TableService.EntityMetadata> => {
   const eg = TableUtilities.entityGenerator;
-  return taskify<Error, TableService.EntityMetadata>(cb =>
+  return TE.taskify<Error, TableService.EntityMetadata>(cb =>
     tableService.insertOrReplaceEntity(
       cardExpirationTableName,
       {

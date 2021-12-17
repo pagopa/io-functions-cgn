@@ -1,10 +1,10 @@
 import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { addYears, isAfter } from "date-fns";
-import { Either, fromOption } from "fp-ts/lib/Either";
-import { Option, tryCatch } from "fp-ts/lib/Option";
-import { fromLeft, TaskEither } from "fp-ts/lib/TaskEither";
-import { taskEither } from "fp-ts/lib/TaskEither";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import * as E from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 
 const CGN_LOWER_BOUND_AGE = 18;
 
@@ -51,8 +51,8 @@ const months: { [k: string]: number } = {
   ["T"]: 12
 };
 
-export const toBirthDate = (fiscalCode: FiscalCode): Option<Date> => {
-  return tryCatch(() => {
+export const toBirthDate = (fiscalCode: FiscalCode): O.Option<Date> => {
+  return O.tryCatch(() => {
     const tempDay = parseInt(fiscalCode.substring(9, 11), 10);
     if (isNaN(tempDay)) {
       throw new Error();
@@ -98,20 +98,21 @@ export const toBirthDate = (fiscalCode: FiscalCode): Option<Date> => {
 export const extractCgnExpirationDate = (
   fiscalCode: FiscalCode,
   cgnUpperBoundAge: NonNegativeInteger
-): TaskEither<Error, Date> =>
-  taskEither
-    .of<Error, FiscalCode>(fiscalCode)
-    .map(_ => toBirthDate(_))
-    .chain(maybeBirthDate =>
-      maybeBirthDate.foldL(
+): TE.TaskEither<Error, Date> =>
+  pipe(
+    TE.of(fiscalCode),
+    TE.map(toBirthDate),
+    TE.chain(
+      O.fold(
         () =>
-          fromLeft<Error, Date>(
+          TE.left<Error, Date>(
             new Error("Cannot extract birth date from given fiscalCode")
           ),
-        birthDate => taskEither.of<Error, Date>(birthDate)
+        TE.of
       )
-    )
-    .chain(birthDate => taskEither.of(addYears(birthDate, cgnUpperBoundAge)));
+    ),
+    TE.chain(birthDate => TE.of(addYears(birthDate, cgnUpperBoundAge)))
+  );
 
 /**
  * Check if a citizen is eligible for getting a CGN
@@ -121,42 +122,47 @@ export const extractCgnExpirationDate = (
 export const checkCgnRequirements = (
   fiscalCode: FiscalCode,
   cgnUpperBoundAge: NonNegativeInteger
-): TaskEither<Error, boolean> =>
-  taskEither
-    .of<Error, FiscalCode>(fiscalCode)
-    .map(_ => toBirthDate(_))
-    .chain(maybeBirthDate =>
-      maybeBirthDate.foldL(
+): TE.TaskEither<Error, boolean> =>
+  pipe(
+    TE.of(fiscalCode),
+    TE.map(toBirthDate),
+    TE.chain(
+      O.fold(
         () =>
-          fromLeft<Error, Date>(
-            new Error("Cannot extract birth date from given fiscalCode")
-          ),
-        birthDate => taskEither.of<Error, Date>(birthDate)
+          TE.left(new Error("Cannot extract birth date from given fiscalCode")),
+        birthDate => TE.of<Error, Date>(birthDate)
       )
-    )
-    .chain(birthDate =>
-      taskEither.of(
+    ),
+    TE.chain(birthDate =>
+      TE.of(
         isOlderThan(CGN_LOWER_BOUND_AGE)(birthDate, new Date()) &&
           isYoungerThan(cgnUpperBoundAge)(birthDate, new Date())
       )
-    );
+    )
+  );
 
 export const isEycaEligible = (
   fiscalCode: FiscalCode,
   eycaUpperBoundAge: NonNegativeInteger
-): Either<Error, boolean> =>
-  fromOption(new Error("Cannot recognize EYCA eligibility"))(
-    toBirthDate(fiscalCode)
-  ).map(
-    birthDate =>
-      isOlderThan(EYCA_LOWER_BOUND_AGE)(birthDate, new Date()) &&
-      isYoungerThan(eycaUpperBoundAge)(birthDate, new Date())
+): E.Either<Error, boolean> =>
+  pipe(
+    E.fromOption(() => new Error("Cannot recognize EYCA eligibility"))(
+      toBirthDate(fiscalCode)
+    ),
+    E.map(
+      birthDate =>
+        isOlderThan(EYCA_LOWER_BOUND_AGE)(birthDate, new Date()) &&
+        isYoungerThan(eycaUpperBoundAge)(birthDate, new Date())
+    )
   );
 
 export const extractEycaExpirationDate = (
   fiscalCode: FiscalCode,
   eycaUpperBoundAge: NonNegativeInteger
-): Either<Error, Date> =>
-  fromOption(new Error("Cannot extract birth date from FiscalCode"))(
-    toBirthDate(fiscalCode)
-  ).map(birthDate => addYears(birthDate, eycaUpperBoundAge));
+): E.Either<Error, Date> =>
+  pipe(
+    E.fromOption(() => new Error("Cannot extract birth date from FiscalCode"))(
+      toBirthDate(fiscalCode)
+    ),
+    E.map(birthDate => addYears(birthDate, eycaUpperBoundAge))
+  );

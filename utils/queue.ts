@@ -1,5 +1,5 @@
+import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { QueueService } from "azure-storage";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
 import { getConfigOrThrow } from "./config";
 
 const config = getConfigOrThrow();
