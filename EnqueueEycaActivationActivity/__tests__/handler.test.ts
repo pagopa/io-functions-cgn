@@ -1,4 +1,4 @@
-/* tslint:disable: no-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as TE from "fp-ts/lib/TaskEither";
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";

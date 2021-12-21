@@ -1,6 +1,7 @@
 import * as df from "durable-functions";
 import { IOrchestrationFunctionContext } from "durable-functions/lib/src/classes";
 import { DurableOrchestrationClient } from "durable-functions/lib/src/durableorchestrationclient";
+import { DurableOrchestrationStatus } from "durable-functions/lib/src/durableorchestrationstatus";
 
 import { readableReport } from "@pagopa/ts-commons/lib/reporters";
 import {
@@ -22,7 +23,7 @@ import {
   ExceptionTelemetry
 } from "applicationinsights/out/Declarations/Contracts";
 import { array } from "fp-ts";
-import { constVoid, flow, pipe } from "fp-ts/lib/function";
+import { constVoid, flow, Lazy, pipe } from "fp-ts/lib/function";
 import * as t from "io-ts";
 import { Card } from "../generated/definitions/Card";
 import { StatusEnum as CardActivatedStatusEnum } from "../generated/definitions/CardActivated";
@@ -33,27 +34,30 @@ import { trackEvent, trackException } from "./appinsights";
 
 /**
  * The identifier for UpdateCgnOrchestrator
+ *
  * @param fiscalCode the id of the requesting user
  * @param cardStatus the status of the update's operation
  */
 export const makeUpdateCgnOrchestratorId = (
   fiscalCode: FiscalCode,
   cardStatus: string
-) => `${fiscalCode}-UPDCGN-${cardStatus}`;
+): string => `${fiscalCode}-UPDCGN-${cardStatus}`;
 
 /**
  * The identifier for an EYCA related orchestrator
+ *
  * @param fiscalCode the id of the requesting user
  */
 export const makeEycaOrchestratorId = (
   fiscalCode: FiscalCode,
   cardStatus: string
-) => `${fiscalCode}-EYCA-${cardStatus}`;
+): string => `${fiscalCode}-EYCA-${cardStatus}`;
 
 export const getOrchestratorStatus = (
   client: DurableOrchestrationClient,
   orchestratorId: string
-) => TE.tryCatch(() => client.getStatus(orchestratorId), toError);
+): TE.TaskEither<Error, DurableOrchestrationStatus> =>
+  TE.tryCatch(() => client.getStatus(orchestratorId), toError);
 
 /**
  * Returns the status of the orchestrator augmented with an isRunning attribute
@@ -64,7 +68,7 @@ export const isOrchestratorRunning = (
 ): TE.TaskEither<
   Error,
   PromiseType<ReturnType<typeof client["getStatus"]>> & {
-    isRunning: boolean;
+    readonly isRunning: boolean;
   }
 > =>
   pipe(
@@ -148,7 +152,7 @@ export const terminateOrchestratorById = (
   orchestratorId: string,
   client: DurableOrchestrationClient,
   reason: NonEmptyString
-) => {
+): TE.TaskEither<Error, void> => {
   const voidTask = TE.of<Error, void>(void 0);
   return pipe(
     TE.tryCatch(() => client.getStatus(orchestratorId), toError),
@@ -186,7 +190,7 @@ export const terminateUpdateCgnOrchestratorTask = (
   fiscalCode: FiscalCode,
   status: string,
   reason: NonEmptyString
-) => {
+): TE.TaskEither<Error, void> => {
   const orchestratorId = makeUpdateCgnOrchestratorId(fiscalCode, status);
   return terminateOrchestratorById(orchestratorId, client, reason);
 };
@@ -194,7 +198,10 @@ export const terminateUpdateCgnOrchestratorTask = (
 export const trackExceptionAndThrow = (
   context: IOrchestrationFunctionContext,
   logPrefix: string
-) => (err: Error | t.Errors, name: string) => {
+): ((err: Error | t.Errors, name: string) => never) => (
+  err: Error | t.Errors,
+  name: string
+): never => {
   const errMessage = err instanceof Error ? err.message : readableReport(err);
   context.log.verbose(`${logPrefix}|ERROR=${errMessage}`);
   trackException({
@@ -209,7 +216,10 @@ export const trackExceptionAndThrow = (
 export const getTrackExceptionAndThrowWithErrorStatus = (
   context: IOrchestrationFunctionContext,
   logPrefix: string
-) => (err: Error | t.Errors, name: string) => {
+): ((err: Error | t.Errors, name: string) => never) => (
+  err: Error | t.Errors,
+  name: string
+): never => {
   const errMessage = err instanceof Error ? err.message : readableReport(err);
   context.log.verbose(`${logPrefix}|ERROR=${errMessage}`);
   trackException({
@@ -230,8 +240,9 @@ export const getTrackExceptionAndThrowWithErrorStatus = (
  */
 export const trackEventIfNotReplaying = (
   context: IOrchestrationFunctionContext
-) => (evt: EventTelemetry) =>
-  context.df.isReplaying ? constVoid : trackEvent(evt);
+): ((evt: EventTelemetry) => void | Lazy<void>) => (
+  evt: EventTelemetry
+): void | Lazy<void> => (context.df.isReplaying ? constVoid : trackEvent(evt));
 
 /**
  * This function is used to track an AI's exception
@@ -239,5 +250,7 @@ export const trackEventIfNotReplaying = (
  */
 export const trackExceptionIfNotReplaying = (
   context: IOrchestrationFunctionContext
-) => (evt: ExceptionTelemetry) =>
+): ((evt: ExceptionTelemetry) => void | Lazy<void>) => (
+  evt: ExceptionTelemetry
+): void | Lazy<void> =>
   context.df.isReplaying ? constVoid : trackException(evt);

@@ -21,12 +21,14 @@ export type ContinueEycaActivationInput = t.TypeOf<
   typeof ContinueEycaActivationInput
 >;
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 const permanentDecodeFailure = (errs: t.Errors) =>
   Failure.encode({
     kind: "PERMANENT",
     reason: `Cannot decode input: ${readableReport(errs)}`
   });
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 const transientOrchestratorError = (err: unknown) =>
   Failure.encode({
     kind: "TRANSIENT",
@@ -41,8 +43,8 @@ export const ContinueEycaActivationHandler = (
   context: Context,
   message: unknown,
   eycaUpperBoundAge: NonNegativeInteger
-): Promise<Failure | string> => {
-  return pipe(
+): Promise<Failure | string> =>
+  pipe(
     message,
     ContinueEycaActivationInput.decode,
     TE.fromEither,
@@ -100,4 +102,3 @@ export const ContinueEycaActivationHandler = (
     ),
     TE.toUnion
   )();
-};

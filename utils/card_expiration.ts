@@ -36,22 +36,22 @@ const withExpiredCardRowFromEntry = (f: (s: ExpiredCardRowKey) => void) => (
 /**
  * Fetches all user hashed returned by the provided paged query
  */
-export async function queryUsers(
+export const queryUsers = async (
   pagedQuery: PagedQuery
-): Promise<ReadonlySet<ExpiredCardRowKey>> {
+): Promise<ReadonlySet<ExpiredCardRowKey>> => {
   const entries = new Set<ExpiredCardRowKey>();
   const addToSet = withExpiredCardRowFromEntry(s => entries.add(s));
   for await (const page of iterateOnPages(pagedQuery)) {
     page.forEach(addToSet);
   }
   return entries;
-}
+};
 
 export const getExpiredCardUsers = (
   tableService: TableService,
   expiredCardTableName: string,
   refDate: string
-) =>
+): TE.TaskEither<Error, ReadonlyArray<ExpiredCardRowKey>> =>
   // get a function that can query the expired cgns table
   pipe(
     TE.of(getPagedQuery(tableService, expiredCardTableName)),

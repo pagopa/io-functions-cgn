@@ -9,23 +9,23 @@ import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import * as E from "fp-ts/lib/Either";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
-import { Timestamp } from "../generated/definitions/Timestamp";
 
 import * as date_fns from "date-fns";
 import { pipe } from "fp-ts/lib/function";
+import { Timestamp } from "../generated/definitions/Timestamp";
 
 /**
  * A minimal Youth Card storage table Entry
  */
 export type TableEntry = Readonly<{
-  RowKey: Readonly<{
-    _: FiscalCode;
+  readonly RowKey: Readonly<{
+    readonly _: FiscalCode;
   }>;
-  ActivationDate: Readonly<{
-    _: Timestamp;
+  readonly ActivationDate: Readonly<{
+    readonly _: Timestamp;
   }>;
-  ExpirationDate: Readonly<{
-    _: Timestamp;
+  readonly ExpirationDate: Readonly<{
+    readonly _: Timestamp;
   }>;
 }>;
 
@@ -43,7 +43,9 @@ export type PagedQuery = (
  */
 export const getPagedQuery = (tableService: TableService, table: string) => (
   tableQuery: TableQuery
-): PagedQuery => currentToken =>
+): PagedQuery => (
+  currentToken
+): Promise<E.Either<Error, TableService.QueryEntitiesResult<TableEntry>>> =>
   new Promise(resolve =>
     tableService.queryEntities(
       table,
@@ -66,7 +68,7 @@ export const getPagedQuery = (tableService: TableService, table: string) => (
 export async function* iterateOnPages(
   pagedQuery: PagedQuery
 ): AsyncIterableIterator<ReadonlyArray<TableEntry>> {
-  // tslint:disable-next-line: no-let
+  // eslint-disable-next-line functional/no-let
   let token = (undefined as unknown) as TableService.TableContinuationToken;
   do {
     // query for a page of entries

@@ -1,4 +1,6 @@
 import {
+  IResponseErrorInternal,
+  IResponseErrorNotFound,
   ResponseErrorInternal,
   ResponseErrorNotFound
 } from "@pagopa/ts-commons/lib/responses";
@@ -7,13 +9,13 @@ import { QueueService } from "azure-storage";
 import { pipe } from "fp-ts/lib/function";
 import * as TE from "fp-ts/lib/TaskEither";
 import { ContinueEycaActivationInput } from "../ContinueEycaActivation/handler";
-import { UserCgnModel } from "../models/user_cgn";
-import { UserEycaCardModel } from "../models/user_eyca_card";
+import { UserCgn, UserCgnModel } from "../models/user_cgn";
+import { UserEycaCard, UserEycaCardModel } from "../models/user_eyca_card";
 
 export const retrieveUserCgn = (
   userCgnModel: UserCgnModel,
   fiscalCode: FiscalCode
-) =>
+): TE.TaskEither<IResponseErrorInternal | IResponseErrorNotFound, UserCgn> =>
   pipe(
     userCgnModel.findLastVersionByModelId([fiscalCode]),
     TE.mapLeft(() =>
@@ -29,7 +31,10 @@ export const retrieveUserCgn = (
 export const retrieveUserEycaCard = (
   userEycaCardModel: UserEycaCardModel,
   fiscalCode: FiscalCode
-) =>
+): TE.TaskEither<
+  IResponseErrorInternal | IResponseErrorNotFound,
+  UserEycaCard
+> =>
   pipe(
     userEycaCardModel.findLastVersionByModelId([fiscalCode]),
     TE.mapLeft(() =>
@@ -48,7 +53,9 @@ export const retrieveUserEycaCard = (
 export const getEnqueueEycaActivation = (
   queueService: QueueService,
   queueName: NonEmptyString
-) => {
+): ((
+  input: ContinueEycaActivationInput
+) => TE.TaskEither<Error, QueueService.QueueMessageResult>) => {
   const createMessage = TE.taskify(
     queueService.createMessage.bind(queueService)
   );

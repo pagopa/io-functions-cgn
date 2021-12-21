@@ -1,4 +1,4 @@
-/* tslint:disable: no-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import * as date_fns from "date-fns";
 import * as TE from "fp-ts/lib/TaskEither";

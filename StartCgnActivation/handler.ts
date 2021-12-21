@@ -80,6 +80,7 @@ const mapOrchestratorStatus = (
  * Check if a citizen is eligible for CGN activation
  * A citizen is eligible for a CGN while he's from 18 to 35 years old
  * If eligible returns the calculated expiration date for the CGN
+ *
  * @param fiscalCode: the citizen's fiscalCode
  */
 const getCgnExpirationDataTask = (
@@ -110,17 +111,20 @@ const getCgnExpirationDataTask = (
     )
   );
 
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 const getCgnCodeTask = () =>
   pipe(
     TE.tryCatch(() => genRandomCardCode(), E.toError),
     TE.mapLeft(() => ResponseErrorInternal("Cannot generate a new CGN code"))
   );
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function StartCgnActivationHandler(
   userCgnModel: UserCgnModel,
   cgnUpperBoundAge: NonNegativeInteger,
   logPrefix: string = "StartCgnActivationHandler"
 ): IStartCgnActivationHandler {
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
     const orchestratorId = makeUpdateCgnOrchestratorId(
@@ -265,6 +269,7 @@ export function StartCgnActivationHandler(
   };
 }
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function StartCgnActivation(
   userCgnModel: UserCgnModel,
   cgnUpperBoundAge: NonNegativeInteger

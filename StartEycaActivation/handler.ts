@@ -73,6 +73,7 @@ const mapOrchestratorStatus = (
  * Check if a citizen is eligible for EYCA activation
  * A citizen is eligible for EYCA while he's from 18 to 30 years old
  * and it has already activated a CGN
+ *
  * @param fiscalCode: the citizen's fiscalCode
  */
 const getEycaEligibleTask = (
@@ -115,12 +116,14 @@ const getEycaEligibleTask = (
     )
   );
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function StartEycaActivationHandler(
   userEycaCardModel: UserEycaCardModel,
   userCgnModel: UserCgnModel,
   eycaUpperBoundAge: NonNegativeInteger,
   logPrefix: string = "StartEycaActivationHandler"
 ): IStartCgnActivationHandler {
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
     const orchestratorId = makeEycaOrchestratorId(
@@ -274,6 +277,7 @@ export function StartEycaActivationHandler(
   };
 }
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function StartEycaActivation(
   userEycaCardModel: UserEycaCardModel,
   userCgnModel: UserCgnModel,

@@ -1,3 +1,4 @@
+/* eslint-disable max-params */
 import { Context } from "@azure/functions";
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import * as E from "fp-ts/lib/Either";

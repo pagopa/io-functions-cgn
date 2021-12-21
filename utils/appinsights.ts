@@ -15,7 +15,9 @@ import * as O from "fp-ts/lib/Option";
 const DEFAULT_SAMPLING_PERCENTAGE = 20;
 
 // Avoid to initialize Application Insights more than once
-export const initTelemetryClient = (env = process.env) =>
+export const initTelemetryClient = (
+  env = process.env
+): ai.TelemetryClient | undefined =>
   ai.defaultClient
     ? ai.defaultClient
     : pipe(
@@ -35,14 +37,14 @@ export const initTelemetryClient = (env = process.env) =>
         )
       );
 
-export const trackEvent = (event: EventTelemetry) => {
+export const trackEvent = (event: EventTelemetry): void => {
   pipe(
     O.fromNullable(initTelemetryClient()),
     O.map(client => O.tryCatch(() => client.trackEvent(event)))
   );
 };
 
-export const trackException = (event: ExceptionTelemetry) => {
+export const trackException = (event: ExceptionTelemetry): void => {
   pipe(
     O.fromNullable(initTelemetryClient()),
     O.map(client => O.tryCatch(() => client.trackException(event)))

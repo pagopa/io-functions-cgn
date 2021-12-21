@@ -1,5 +1,4 @@
-// tslint:disable: no-duplicate-string object-literal-sort-keys
-
+/* eslint-disable sonarjs/no-duplicate-string, sort-keys */
 import { MessageContent } from "@pagopa/io-functions-commons/dist/generated/definitions/MessageContent";
 import { format } from "date-fns";
 import { Card } from "../generated/definitions/Card";
@@ -10,7 +9,7 @@ import { CardRevoked } from "../generated/definitions/CardRevoked";
 import { assertNever } from "./types";
 
 export const MESSAGES = {
-  CardRevoked: (card: CardRevoked) =>
+  CardRevoked: (card: CardRevoked): MessageContent =>
     ({
       subject: "La tua carta è stata annullata",
       markdown: `
@@ -21,7 +20,7 @@ Ti avvisiamo che la tua Carta Giovani Nazionale è stata annullata il giorno ${f
             
 Non sarà più possibile utilizzare la carta nè nei punti fisici nè online.`
     } as MessageContent),
-  CardActivated: () =>
+  CardActivated: (): MessageContent =>
     ({
       subject: "La tua Carta Giovani è attiva!",
       markdown: `Buone notizie! **La tua Carta Giovani Nazionale è attiva** e la potrai trovare all’interno della sezione Portafoglio.
@@ -31,7 +30,7 @@ Ti ricordiamo che solo tu puoi usufruire degli sconti presentando la Carta press
 La Carta Giovani Nazionale sarà valida da oggi fino al compimento dei 36 anni. Buono shopping!
 `
     } as MessageContent),
-  CardExpired: () =>
+  CardExpired: (): MessageContent =>
     ({
       subject: "La tua Carta Giovani Nazionale è scaduta",
       markdown: `Ti avvisiamo che da oggi non è più possibile utilizzare la tua Carta Giovani Nazionale.
@@ -54,7 +53,7 @@ export const getMessage = (card: Card): MessageContent => {
     throw new Error("Unexpected Card status");
   }
 
-  return assertNever(card as never);
+  return assertNever(card);
 };
 
 export const getEycaExpirationMessage = (): MessageContent =>

@@ -24,7 +24,7 @@ const userCgnsContainer = cosmosdbClient
 
 const userCgnModel = new UserCgnModel(userCgnsContainer);
 
-// tslint:disable-next-line: no-let
+// eslint-disable-next-line functional/no-let
 let logger: Context["log"] | undefined;
 const contextTransport = new AzureContextTransport(() => logger, {
   level: "debug"
@@ -41,10 +41,10 @@ app.post("/api/v1/cgn/:fiscalcode/status", UpsertCgnStatus(userCgnModel));
 const azureFunctionHandler = createAzureFunctionHandler(app);
 
 // Binds the express app to an Azure Function handler
-function httpStart(context: Context): void {
+const httpStart = (context: Context): void => {
   logger = context.log;
   setAppContext(app, context);
   azureFunctionHandler(context);
-}
+};
 
 export default httpStart;

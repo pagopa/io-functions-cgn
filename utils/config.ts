@@ -4,6 +4,7 @@
  * Single point of access for the application confguration. Handles validation on required environment variables.
  * The configuration is evaluate eagerly at the first access to the module. The module exposes convenient methods to access such value.
  */
+/* eslint-disable sort-keys */
 
 import {
   IntegerFromString,
@@ -101,9 +102,7 @@ const errorOrConfig: t.Validation<IConfig> = IConfig.decode({
  *
  * @returns either the configuration values or a list of validation errors
  */
-export function getConfig(): t.Validation<IConfig> {
-  return errorOrConfig;
-}
+export const getConfig = (): t.Validation<IConfig> => errorOrConfig;
 
 /**
  * Read the application configuration and check for invalid values.
@@ -112,11 +111,10 @@ export function getConfig(): t.Validation<IConfig> {
  * @returns the configuration values
  * @throws validation errors found while parsing the application configuration
  */
-export function getConfigOrThrow(): IConfig {
-  return pipe(
+export const getConfigOrThrow = (): IConfig =>
+  pipe(
     errorOrConfig,
     E.getOrElseW(errors => {
       throw new Error(`Invalid configuration: ${readableReport(errors)}`);
     })
   );
-}

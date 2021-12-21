@@ -26,9 +26,9 @@ const asyncRandomBytes = promisify(randomBytes);
 /**
  * Generates a new random Card code
  */
-export async function genRandomCardCode(
+export const genRandomCardCode = async (
   getAsyncRandomBytes: typeof asyncRandomBytes = asyncRandomBytes
-): Promise<NonEmptyString> {
+): Promise<NonEmptyString> => {
   const randomBuffer = await getAsyncRandomBytes(BONUSCODE_LENGTH);
   const code = [...randomBuffer].map(b => ALPHABET[b % ALPHABET_LEN]).join("");
   const cardCode = NonEmptyString.decode(code);
@@ -39,14 +39,14 @@ export async function genRandomCardCode(
     );
   }
   return cardCode.right;
-}
+};
 
 /**
  * Generates a new random OTP code
  */
-export async function generateOtpCode(
+export const generateOtpCode = async (
   getAsyncRandomBytes: typeof asyncRandomBytes = asyncRandomBytes
-): Promise<OtpCode> {
+): Promise<OtpCode> => {
   const randomBuffer = await getAsyncRandomBytes(OTPCODE_LENGTH);
   const code = [...randomBuffer]
     .map(b => OTP_ALPHABET[b % OTP_ALPHABET_LEN])
@@ -57,4 +57,4 @@ export async function generateOtpCode(
     throw Error(`FATAL: generateOtpCode generated invalid OTP code [${code}]`);
   }
   return otpCode.right;
-}
+};

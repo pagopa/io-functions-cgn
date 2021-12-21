@@ -1,4 +1,4 @@
-/* tslint:disable: no-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { addYears } from "date-fns";
 import * as E from "fp-ts/lib/Either";
@@ -210,7 +210,7 @@ describe("StartEycaActivation", () => {
       DEFAULT_EYCA_UPPER_BOUND_AGE
     );
     const response = await startEycaActivationHandler(
-      // tslint:disable-next-line: no-console
+      // eslint-disable-next-line no-console
       { log: { error: console.log } } as any,
       aFiscalCode
     );

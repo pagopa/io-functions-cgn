@@ -5,12 +5,12 @@ import RedisClustr = require("redis-clustr");
 import { getConfigOrThrow } from "./config";
 const config = getConfigOrThrow();
 
-function createSimpleRedisClient(
+const createSimpleRedisClient = (
   redisUrl: string,
   password?: string,
   port?: string,
   useTls: boolean = true
-): redis.RedisClient {
+): redis.RedisClient => {
   const DEFAULT_REDIS_PORT = "6379";
 
   const redisPort: number = parseInt(port || DEFAULT_REDIS_PORT, 10);
@@ -20,13 +20,13 @@ function createSimpleRedisClient(
     port: redisPort,
     tls: useTls ? { servername: redisUrl } : undefined
   });
-}
+};
 
-function createClusterRedisClient(
+const createClusterRedisClient = (
   redisUrl: string,
   password?: string,
   port?: string
-): redis.RedisClient {
+): redis.RedisClient => {
   const DEFAULT_REDIS_PORT = "6379";
 
   const redisPort: number = parseInt(port || DEFAULT_REDIS_PORT, 10);
@@ -44,7 +44,7 @@ function createClusterRedisClient(
       }
     ]
   }) as redis.RedisClient; // Casting RedisClustr with missing typings to RedisClient (same usage).
-}
+};
 
 export const REDIS_CLIENT = pipe(
   config.isProduction,

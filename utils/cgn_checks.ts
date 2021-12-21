@@ -14,29 +14,24 @@ const EYCA_LOWER_BOUND_AGE = 18;
  * Returns a comparator of two dates that returns true if
  * the difference in years is at least the provided value.
  */
-export const isOlderThan = (years: number) => (
-  dateOfBirth: Date,
-  when: Date
-) => {
-  return !isAfter(addYears(dateOfBirth, years), when);
-};
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export const isOlderThan = (years: number) => (dateOfBirth: Date, when: Date) =>
+  !isAfter(addYears(dateOfBirth, years), when);
 
 /**
  * Returns a comparator of two dates that returns true if
  * the difference in years is at most the provided value.
  */
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const isYoungerThan = (years: number) => (
   dateOfBirth: Date,
   when: Date
-) => {
-  return isAfter(addYears(dateOfBirth, years), when);
-};
+) => isAfter(addYears(dateOfBirth, years), when);
 
-export const isValidDate = (d: Date) => {
-  return d instanceof Date && !isNaN(d.getTime());
-};
+export const isValidDate = (d: Date): boolean =>
+  d instanceof Date && !isNaN(d.getTime());
 
-const months: { [k: string]: number } = {
+const months: { readonly [k: string]: number } = {
   ["A"]: 1,
   ["B"]: 2,
   ["C"]: 3,
@@ -51,8 +46,8 @@ const months: { [k: string]: number } = {
   ["T"]: 12
 };
 
-export const toBirthDate = (fiscalCode: FiscalCode): O.Option<Date> => {
-  return O.tryCatch(() => {
+export const toBirthDate = (fiscalCode: FiscalCode): O.Option<Date> =>
+  O.tryCatch(() => {
     const tempDay = parseInt(fiscalCode.substring(9, 11), 10);
     if (isNaN(tempDay)) {
       throw new Error();
@@ -88,11 +83,11 @@ export const toBirthDate = (fiscalCode: FiscalCode): O.Option<Date> => {
 
     return birthDay;
   });
-};
 
 /**
  * Returns the CGN expiration date by a given fiscalCode.
  * Namely the CGN expiration date is the 36th birthday
+ *
  * @param fiscalCode: the citizen's fiscalCode
  */
 export const extractCgnExpirationDate = (
@@ -117,6 +112,7 @@ export const extractCgnExpirationDate = (
 /**
  * Check if a citizen is eligible for getting a CGN
  * A citizen is eligible while it is from 18 to 36 years old
+ *
  * @param fiscalCode the citizen's fiscalCode
  */
 export const checkCgnRequirements = (
