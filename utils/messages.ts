@@ -27,7 +27,7 @@ Non sarà più possibile utilizzare la carta nè nei punti fisici nè online.`
 
 Ti ricordiamo che solo tu puoi usufruire degli sconti presentando la Carta presso gli esercenti fisici aderenti, oppure inserendo i codici nell’apposito campo presso gli esercenti aderenti online.
 
-La Carta Giovani Nazionale sarà valida da oggi fino al compimento dei 36 anni. Inizia subito ad usarla!
+La Carta Giovani Nazionale sarà valida da oggi fino al compimento dei 36 anni. Inizia subito a usarla!
 `
     } as MessageContent),
   CardExpired: (): MessageContent =>
