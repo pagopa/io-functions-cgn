@@ -10,13 +10,13 @@ info:
   description: >
     Documentation of the IO Function API here.
 host: api.cd.italia.it
-basePath: "/api/v1"
+basePath: "/api/v1/cgn"
 schemes:
   - https
 security:
   - ApiKey: []
 paths:
-  "/cgn/status/{fiscalcode}":
+  "/status/{fiscalcode}":
     get:
       summary: Get CGN details Status
       operationId: getCgnStatus
@@ -85,7 +85,7 @@ paths:
           schema:
             $ref: "#/definitions/ProblemJson"
 
-  "/cgn/eyca/status/{fiscalcode}":
+  "/eyca/status/{fiscalcode}":
     get:
       summary: Get EYCA details Status
       operationId: getEycaStatus
@@ -116,7 +116,7 @@ paths:
           schema:
             $ref: "#/definitions/ProblemJson"
   
-  "/cgn/{fiscalcode}/eyca/activation":
+  "/{fiscalcode}/eyca/activation":
     post:
       operationId: startEycaActivation
       summary: |
@@ -173,7 +173,7 @@ paths:
           schema:
             $ref: "#/definitions/ProblemJson"
 
-  "/cgn/{fiscalcode}/activation":
+  "/{fiscalcode}/activation":
     post:
       operationId: startCgnActivation
       summary: |
@@ -230,7 +230,7 @@ paths:
           schema:
             $ref: "#/definitions/ProblemJson"
 
-  "/cgn/otp/{fiscalcode}":
+  "/otp/{fiscalcode}":
     post:
       operationId: generateOtp
       summary: |
