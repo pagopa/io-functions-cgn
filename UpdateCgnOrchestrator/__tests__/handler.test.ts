@@ -69,11 +69,15 @@ describe("UpdateCgnOrchestrator", () => {
       newStatusCard: aUserCardActivated
     }));
     mockCallActivityWithRetry
-      // 1 StoreCgnExpiration
+      // 1 UpsertSpecialServiceActivation
       .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 2 UpdateCgnStatus
+      // 2 StoreCgnExpiration
+      .mockReturnValueOnce({ kind: "SUCCESS" })
+      // 3 UpdateCgnStatus
       .mockReturnValueOnce(anUpdateCgnStatusResult)
-      // 4 SendMessageActivity
+      // 4 UpsertSpecialServiceActivation
+      .mockReturnValueOnce({ kind: "SUCCESS" })
+      // 5 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unnecessary-type-assertion
     const orchestrator = UpdateCgnOrchestratorHandler(
@@ -81,29 +85,44 @@ describe("UpdateCgnOrchestrator", () => {
       DEFAULT_EYCA_UPPER_BOUND_AGE
     );
 
-    // 1 StoreCgnExpiration
+    // 1 UpsertSpecialServiceActivation
     const res1 = orchestrator.next();
     expect(res1.value).toEqual({
       kind: "SUCCESS"
     });
 
-    // 2 UpdateCgnStatus
+    // 2 StoreCgnExpiration
     const res2 = orchestrator.next(res1.value);
-    expect(res2.value).toEqual({ kind: "SUCCESS" });
+    expect(res2.value).toEqual({
+      kind: "SUCCESS"
+    });
 
-    // 3 CreateTimer
+    // 3 UpdateCgnStatus
     const res3 = orchestrator.next(res2.value);
-    expect(res3.value).toEqual("CreateTimer");
+    expect(res3.value).toEqual({ kind: "SUCCESS" });
 
-    // 4 SendMessage
+    // 4 UpsertSpecialServiceActivation
     const res4 = orchestrator.next(res3.value);
-    expect(res4.value).toEqual("SendMessageActivity");
+    expect(res4.value).toEqual({
+      kind: "SUCCESS"
+    });
+
+    // 5 CreateTimer
+    const res5 = orchestrator.next(res4.value);
+    expect(res5.value).toEqual("CreateTimer");
+
+    // 6 SendMessage
+    const res6 = orchestrator.next(res5.value);
+    expect(res6.value).toEqual("SendMessageActivity");
 
     // Complete the orchestrator execution
     orchestrator.next();
 
+    console.log(
+      JSON.stringify(contextMockWithDf.df.callActivityWithRetry.mock)
+    );
     expect(
-      contextMockWithDf.df.callActivityWithRetry.mock.calls[2][2].content
+      contextMockWithDf.df.callActivityWithRetry.mock.calls[4][2].content
     ).toEqual(MESSAGES.CardActivated());
     expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
