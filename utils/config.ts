@@ -36,8 +36,8 @@ export const DEFAULT_EYCA_UPPER_BOUND_AGE = 31 as NonNegativeInteger;
 
 export const CgnServiceParams = t.interface({
   CGN_SERVICE_ID: ServiceId,
-  CGN_SERVICE_SUBSCRIPTION_KEY: NonEmptyString,
-  IO_FUNCTION_SERVICES_BASE_URL: NonEmptyString
+  SERVICES_API_KEY: NonEmptyString,
+  SERVICES_API_URL: NonEmptyString
 });
 export type CgnServiceParams = t.TypeOf<typeof CgnServiceParams>;
 

@@ -11,8 +11,8 @@ import { getConfigOrThrow } from "../utils/config";
 
 const config = getConfigOrThrow();
 
-export const servicesBaseUrl = config.IO_FUNCTION_SERVICES_BASE_URL;
-export const cgnSubscriptionKey = config.CGN_SERVICE_SUBSCRIPTION_KEY;
+export const servicesBaseUrl = config.SERVICES_API_URL;
+export const cgnSubscriptionKey = config.SERVICES_API_KEY;
 
 // 5 seconds timeout by default
 const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
