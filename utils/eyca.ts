@@ -167,29 +167,33 @@ export const deleteCard = (
   username: NonEmptyString,
   password: NonEmptyString,
   ccdbNumber: CcdbNumber
-) =>
-  retrieveCcdbSessionId(redisClient, eycaClient, username, password).chain(
-    sessionId =>
-      tryCatch(
-        () =>
-          eycaClient.deleteCard({
-            ccdb_number: ccdbNumber,
-            session_id: sessionId,
-            type: "json"
-          }),
-        toError
-      )
-        .mapLeft(
+): TE.TaskEither<Error, NonEmptyString> =>
+  pipe(
+    retrieveCcdbSessionId(redisClient, eycaClient, username, password),
+    TE.chain(sessionId =>
+      pipe(
+        TE.tryCatch(
+          () =>
+            eycaClient.deleteCard({
+              ccdb_number: ccdbNumber,
+              session_id: sessionId,
+              type: "json"
+            }),
+          E.toError
+        ),
+        TE.mapLeft(
           err => new Error(`Cannot call EYCA deleteCard API ${err.message}`)
-        )
-        .chain(_ => fromEither(_).mapLeft(errorsToError))
-        .chain<NonEmptyString>(res =>
+        ),
+        TE.chain(flow(TE.fromEither, TE.mapLeft(errorsToError))),
+        TE.chainW(res =>
           res.status !== 200 || ErrorResponse.is(res.value.api_response)
-            ? fromLeft(
+            ? TE.left(
                 new Error(
                   `Error on EYCA deleteCard API|STATUS=${res.status}, DETAIL=${res.value.api_response.text}`
                 )
               )
-            : taskEither.of(res.value.api_response.text)
+            : TE.of(res.value.api_response.text)
         )
+      )
+    )
   );

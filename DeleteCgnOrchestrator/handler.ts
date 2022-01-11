@@ -1,9 +1,10 @@
 ﻿import { IOrchestrationFunctionContext } from "durable-functions/lib/src/classes";
 
 import { addSeconds } from "date-fns";
-import { toError } from "fp-ts/lib/Either";
+import * as E from "fp-ts/lib/Either";
 import * as t from "io-ts";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import { pipe } from "fp-ts/lib/function";
 import {
   ActivityInput as DeleteCgnActivityInput,
   DeleteCgnActivityResult
@@ -39,6 +40,7 @@ export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 const NOTIFICATION_DELAY_SECONDS = 10;
 
 // tslint:disable-next-line: no-big-function
+// eslint-disable-next-line max-lines-per-function
 export const DeleteCgnOrchestratorHandler = function*(
   context: IOrchestrationFunctionContext,
   logPrefix: string = "DeleteCgnOrchestrator"
@@ -55,20 +57,22 @@ export const DeleteCgnOrchestratorHandler = function*(
   }
 
   const input = context.df.getInput();
-  const decodedInput = OrchestratorInput.decode(input).getOrElseL(e =>
-    trackExAndThrow(e, "cgn.delete.exception.decode.input")
+  const decodedInput = pipe(
+    input,
+    OrchestratorInput.decode,
+    E.getOrElseW(e => trackExAndThrow(e, "cgn.delete.exception.decode.input"))
   );
 
   const { fiscalCode, eycaCardNumber } = decodedInput;
-  // TODO: verificare
   const tagOverrides = {
     "ai.operation.id": fiscalCode,
     "ai.operation.parentId": fiscalCode
   };
 
-  // tslint:disable-next-line: no-let
+  // eslint-disable-next-line functional/no-let
   let eycaDataToBackup;
-  // tslint:disable-next-line: no-let
+
+  // eslint-disable-next-line functional/no-let
   let cgnDataToBackup;
 
   try {
@@ -82,12 +86,14 @@ export const DeleteCgnOrchestratorHandler = function*(
             cardNumber: eycaCardNumber
           })
         );
-        const decodedDeleteEycaRemoteResult = ActivityResult.decode(
-          deleteEycaRemoteResult
-        ).getOrElseL(e =>
-          trackExAndThrowWithError(
-            e,
-            "cgn.delete.exception.decode.eycaRemoteOutput"
+        const decodedDeleteEycaRemoteResult = pipe(
+          deleteEycaRemoteResult,
+          ActivityResult.decode,
+          E.getOrElseW(e =>
+            trackExAndThrowWithError(
+              e,
+              "cgn.delete.exception.decode.eycaRemoteOutput"
+            )
           )
         );
         if (decodedDeleteEycaRemoteResult.kind !== "SUCCESS") {
@@ -103,12 +109,14 @@ export const DeleteCgnOrchestratorHandler = function*(
           internalRetryOptions,
           DeleteEycaExpirationActivityInput.encode({ fiscalCode })
         );
-        const decodedDeleteEycaExpirationResult = ActivityResult.decode(
-          deleteEycaExpirationResult
-        ).getOrElseL(e =>
-          trackExAndThrowWithError(
-            e,
-            "cgn.delete.exception.decode.eycaExpirationOutput"
+        const decodedDeleteEycaExpirationResult = pipe(
+          deleteEycaExpirationResult,
+          ActivityResult.decode,
+          E.getOrElseW(e =>
+            trackExAndThrowWithError(
+              e,
+              "cgn.delete.exception.decode.eycaExpirationOutput"
+            )
           )
         );
         if (decodedDeleteEycaExpirationResult.kind !== "SUCCESS") {
@@ -124,10 +132,15 @@ export const DeleteCgnOrchestratorHandler = function*(
           internalRetryOptions,
           DeleteEycaActivityInput.encode({ fiscalCode })
         );
-        const decodedDeleteEycaResult = DeleteEycaActivityResult.decode(
-          deleteEycaResult
-        ).getOrElseL(e =>
-          trackExAndThrowWithError(e, "cgn.delete.exception.decode.eycaOutput")
+        const decodedDeleteEycaResult = pipe(
+          deleteEycaResult,
+          DeleteEycaActivityResult.decode,
+          E.getOrElseW(e =>
+            trackExAndThrowWithError(
+              e,
+              "cgn.delete.exception.decode.eycaOutput"
+            )
+          )
         );
         if (decodedDeleteEycaResult.kind !== "SUCCESS") {
           trackExAndThrowWithError(
@@ -145,12 +158,14 @@ export const DeleteCgnOrchestratorHandler = function*(
         internalRetryOptions,
         DeleteCgnExpirationActivityInput.encode({ fiscalCode })
       );
-      const decodedDeleteCgnExpirationResult = ActivityResult.decode(
-        deleteCgnExpirationResult
-      ).getOrElseL(e =>
-        trackExAndThrowWithError(
-          e,
-          "cgn.delete.exception.decode.cgnExpirationOutput"
+      const decodedDeleteCgnExpirationResult = pipe(
+        deleteCgnExpirationResult,
+        ActivityResult.decode,
+        E.getOrElseW(e =>
+          trackExAndThrowWithError(
+            e,
+            "cgn.delete.exception.decode.cgnExpirationOutput"
+          )
         )
       );
       if (decodedDeleteCgnExpirationResult.kind !== "SUCCESS") {
@@ -166,10 +181,12 @@ export const DeleteCgnOrchestratorHandler = function*(
         internalRetryOptions,
         DeleteCgnActivityInput.encode({ fiscalCode })
       );
-      const decodedDeleteCgnResult = DeleteCgnActivityResult.decode(
-        deleteCgnResult
-      ).getOrElseL(e =>
-        trackExAndThrowWithError(e, "cgn.delete.exception.decode.cgnOutput")
+      const decodedDeleteCgnResult = pipe(
+        deleteCgnResult,
+        DeleteCgnActivityResult.decode,
+        E.getOrElseW(e =>
+          trackExAndThrowWithError(e, "cgn.delete.exception.decode.cgnOutput")
+        )
       );
       if (decodedDeleteCgnResult.kind !== "SUCCESS") {
         trackExAndThrowWithError(
@@ -180,7 +197,7 @@ export const DeleteCgnOrchestratorHandler = function*(
         cgnDataToBackup = decodedDeleteCgnResult.cards;
 
         // Backup all data for legal issue
-        const legatDataToBackup: DeleteLegalDataBackupActivityInput = {
+        const legalDataToBackup: DeleteLegalDataBackupActivityInput = {
           backupFolder: "cgn" as NonEmptyString,
           cgnCards: cgnDataToBackup,
           eycaCards: eycaDataToBackup,
@@ -190,14 +207,16 @@ export const DeleteCgnOrchestratorHandler = function*(
         const legalDataBackupResult = yield context.df.callActivityWithRetry(
           "DeleteLegalDataBackupActivity",
           internalRetryOptions,
-          legatDataToBackup
+          legalDataToBackup
         );
-        const decodedLegalDataBackupResult = ActivityResult.decode(
-          legalDataBackupResult
-        ).getOrElseL(e =>
-          trackExAndThrowWithError(
-            e,
-            "cgn.delete.exception.decode.legalDataBackupUpdate"
+        const decodedLegalDataBackupResult = pipe(
+          legalDataBackupResult,
+          ActivityResult.decode,
+          E.getOrElseW(e =>
+            trackExAndThrowWithError(
+              e,
+              "cgn.delete.exception.decode.legalDataBackupUpdate"
+            )
           )
         );
         if (decodedLegalDataBackupResult.kind !== "SUCCESS") {
@@ -267,7 +286,7 @@ export const DeleteCgnOrchestratorHandler = function*(
   } catch (err) {
     context.log.error(`${logPrefix}|ERROR|${String(err)}`);
     trackExIfNotReplaying({
-      exception: toError(err),
+      exception: E.toError(err),
       properties: {
         id: fiscalCode,
         name: "cgn.delete.error"

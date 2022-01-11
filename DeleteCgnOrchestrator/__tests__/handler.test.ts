@@ -1,6 +1,6 @@
 // tslint:disable: object-literal-sort-keys no-any
 
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { context as contextMock } from "../../__mocks__/durable-functions";
 import {
   aCosmosResourceMetadata,
@@ -12,7 +12,7 @@ import {
 } from "../../generated/definitions/CardActivated";
 
 import { addYears } from "date-fns";
-import { NonNegativeInteger } from "italia-ts-commons/lib/numbers";
+import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import { CcdbNumber } from "../../generated/definitions/CcdbNumber";
 import { EycaCardActivated } from "../../generated/definitions/EycaCardActivated";
 import { RetrievedUserCgn, UserCgn } from "../../models/user_cgn";

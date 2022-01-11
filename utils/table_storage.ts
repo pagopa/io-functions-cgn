@@ -133,9 +133,9 @@ export const insertCardExpiration = (
 export const deleteCardExpiration = (
   tableService: TableService,
   cardExpirationTableName: NonEmptyString
-) => (fiscalCode: FiscalCode): TaskEither<Error, ServiceResponse> => {
+) => (fiscalCode: FiscalCode): TE.TaskEither<Error, ServiceResponse> => {
   const eg = TableUtilities.entityGenerator;
-  return taskify<Error, ServiceResponse>(cb =>
+  return TE.taskify<Error, ServiceResponse>(cb =>
     tableService.deleteEntity(
       cardExpirationTableName,
       {

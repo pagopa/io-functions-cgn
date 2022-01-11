@@ -1,6 +1,6 @@
 /* tslint:disable: no-any */
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import * as TE from "fp-ts/lib/TaskEither";
+import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
 import { CcdbNumber } from "../../generated/eyca-api/CcdbNumber";
 import * as eycaUtils from "../../utils/eyca";
@@ -14,7 +14,7 @@ const aWrongActivityInput = {
   cardNumber: "1234-3333-2222"
 };
 
-const deleteCardMock = jest.fn().mockImplementation(() => taskEither.of("OK"));
+const deleteCardMock = jest.fn().mockImplementation(() => TE.of("OK"));
 jest.spyOn(eycaUtils, "deleteCard").mockImplementation(deleteCardMock);
 
 const anEycaUsername = "EYCA_USERNAME" as NonEmptyString;
@@ -38,7 +38,7 @@ describe("DeleteEycaRemoteActivity", () => {
   });
 
   it("should return failure if an error occurs during deleteCard", async () => {
-    deleteCardMock.mockImplementationOnce(() => fromLeft(new Error("Error")));
+    deleteCardMock.mockImplementationOnce(() => TE.left(new Error("Error")));
     const deleteEycaRemoteActivityHandler = getDeleteEycaRemoteActivityHandler(
       {} as any,
       {} as any,

@@ -3,24 +3,16 @@ import { ResponseErrorConflict } from "@pagopa/ts-commons/lib/responses";
 import * as df from "durable-functions";
 import { DurableOrchestrationStatus } from "durable-functions/lib/src/classes";
 import * as express from "express";
-import { fromOption, toError } from "fp-ts/lib/Either";
-import { identity } from "fp-ts/lib/function";
-import { fromNullable, none, some } from "fp-ts/lib/Option";
-import { Option } from "fp-ts/lib/Option";
-import {
-  fromEither,
-  fromLeft,
-  fromPredicate,
-  TaskEither,
-  taskEither,
-  tryCatch
-} from "fp-ts/lib/TaskEither";
-import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
-import { RequiredParamMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_param";
+import * as E from "fp-ts/lib/Either";
+import { pipe, flow } from "fp-ts/lib/function";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
+import { ContextMiddleware } from "@pagopa/io-functions-commons/dist/src/utils/middlewares/context_middleware";
+import { RequiredParamMiddleware } from "@pagopa/io-functions-commons/dist/src/utils/middlewares/required_param";
 import {
   withRequestMiddlewares,
   wrapRequestHandler
-} from "io-functions-commons/dist/src/utils/request_middleware";
+} from "@pagopa/io-functions-commons/dist/src/utils/request_middleware";
 import {
   IResponseErrorConflict,
   IResponseErrorForbiddenNotAuthorized,
@@ -31,8 +23,8 @@ import {
   ResponseErrorInternal,
   ResponseSuccessAccepted,
   ResponseSuccessRedirectToResource
-} from "italia-ts-commons/lib/responses";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+} from "@pagopa/ts-commons/lib/responses";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { OrchestratorInput } from "../DeleteCgnOrchestrator/handler";
 import { Card } from "../generated/definitions/Card";
 import { CardActivated } from "../generated/definitions/CardActivated";
@@ -42,7 +34,7 @@ import { CcdbNumber } from "../generated/definitions/CcdbNumber";
 import { EycaCardActivated } from "../generated/definitions/EycaCardActivated";
 import { EycaCardExpired } from "../generated/definitions/EycaCardExpired";
 import { InstanceId } from "../generated/definitions/InstanceId";
-import { UserCgnModel } from "../models/user_cgn";
+import { UserCgn, UserCgnModel } from "../models/user_cgn";
 import { UserEycaCardModel } from "../models/user_eyca_card";
 import { makeUpdateCgnOrchestratorId } from "../utils/orchestrators";
 import { checkUpdateCardIsRunning } from "../utils/orchestrators";
@@ -63,14 +55,14 @@ export type IDeleteCardActivationHandler = (
 
 const mapOrchestratorStatus = (
   orchestratorStatus: DurableOrchestrationStatus
-): TaskEither<IResponseSuccessAccepted, IResponseErrorInternal> => {
+): TE.TaskEither<IResponseSuccessAccepted, IResponseErrorInternal> => {
   switch (orchestratorStatus.runtimeStatus) {
     case df.OrchestrationRuntimeStatus.Pending:
     case df.OrchestrationRuntimeStatus.Running:
     case df.OrchestrationRuntimeStatus.ContinuedAsNew:
-      return fromLeft(ResponseSuccessAccepted());
+      return TE.left(ResponseSuccessAccepted());
     default:
-      return taskEither.of(
+      return TE.of(
         ResponseErrorInternal("Cannot recognize the orchestrator status")
       );
   }
@@ -78,53 +70,62 @@ const mapOrchestratorStatus = (
 
 /**
  * Check if a citizen has an active CGN Card
+ *
  * @param fiscalCode: the citizen's fiscalCode
  */
-const readLastCgn = (fiscalCode: FiscalCode, userCgnModel: UserCgnModel) =>
-  userCgnModel
-    .findLastVersionByModelId([fiscalCode])
-    .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
-      ResponseErrorInternal("Cannot find any CGN for that CF")
+const readLastCgn = (
+  fiscalCode: FiscalCode,
+  userCgnModel: UserCgnModel
+): TE.TaskEither<
+  IResponseErrorInternal | IResponseErrorForbiddenNotAuthorized,
+  UserCgn
+> =>
+  pipe(
+    userCgnModel.findLastVersionByModelId([fiscalCode]),
+    TE.mapLeft(() => ResponseErrorInternal("Cannot find any CGN for that CF")),
+    TE.chainW(maybeUserCgn =>
+      TE.fromOption(() => ResponseErrorForbiddenNotAuthorized)(maybeUserCgn)
+    ),
+    TE.chainW(userCgn =>
+      pipe(
+        TE.fromPredicate(
+          CardActivated.is || CardExpired.is,
+          () => ResponseErrorForbiddenNotAuthorized
+        )(userCgn.card),
+        TE.map(_ => userCgn)
+      )
     )
-    .chain(maybeUserCgn =>
-      fromEither(fromOption(ResponseErrorForbiddenNotAuthorized)(maybeUserCgn))
-    )
-    .chain(userCgn =>
-      fromPredicate(
-        CardActivated.is || CardExpired.is,
-        () => ResponseErrorForbiddenNotAuthorized
-      )(userCgn.card).map(_ => userCgn)
-    );
+  );
 
 const getEycaCcdbNumber = (
   fiscalCode: FiscalCode,
   userEycaCardModel: UserEycaCardModel
-): TaskEither<ErrorTypes | IResponseSuccessAccepted, Option<CcdbNumber>> =>
-  userEycaCardModel
-    .findLastVersionByModelId([fiscalCode])
-    .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
-      ResponseErrorInternal("Cannot find any EYCA for that CF")
-    )
-    .chain(maybeEycaCard =>
-      maybeEycaCard.foldL(
-        () => taskEither.of(none),
+): TE.TaskEither<ErrorTypes | IResponseSuccessAccepted, O.Option<CcdbNumber>> =>
+  pipe(
+    userEycaCardModel.findLastVersionByModelId([fiscalCode]),
+    TE.mapLeft(() => ResponseErrorInternal("Cannot find any EYCA for that CF")),
+    TE.chainW(
+      O.fold(
+        () => TE.of(O.none),
         eycaCard =>
           EycaCardActivated.is(eycaCard) || EycaCardExpired.is(eycaCard)
-            ? taskEither.of(some(eycaCard.card_number))
-            : fromLeft(
+            ? TE.of(O.some(eycaCard.card_number))
+            : TE.left(
                 ResponseErrorConflict(
                   `Cannot delete an EYCA card that it doesn't match status with cgn card`
                 )
               )
       )
-    );
+    )
+  );
 
-export function DeleteCardActivationHandler(
+export const DeleteCardActivationHandler = (
   userEycaCardModel: UserEycaCardModel,
   userCgnModel: UserCgnModel,
   logPrefix: string = "DeleteCardActivationHandler"
-): IDeleteCardActivationHandler {
-  return async (context, fiscalCode) => {
+): IDeleteCardActivationHandler =>
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  async (context, fiscalCode) => {
     const client = df.getClient(context);
 
     const orchestratorId = makeUpdateCgnOrchestratorId(
@@ -132,45 +133,48 @@ export function DeleteCardActivationHandler(
       CardPendingDeleteStatusEnum.PENDING_DELETE
     ) as NonEmptyString;
 
-    return readLastCgn(fiscalCode, userCgnModel)
-      .chain(userCgnCard =>
-        getEycaCcdbNumber(fiscalCode, userEycaCardModel).map(
-          maybeCcdbNumber => ({
-            eycaCardNumber: maybeCcdbNumber.toUndefined(),
+    return pipe(
+      readLastCgn(fiscalCode, userCgnModel),
+      TE.chain(userCgnCard =>
+        pipe(
+          getEycaCcdbNumber(fiscalCode, userEycaCardModel),
+          TE.map(maybeCcdbNumber => ({
+            eycaCardNumber: O.toUndefined(maybeCcdbNumber),
             userCgn: userCgnCard
-          })
+          }))
         )
-      )
-      .chain(userCardsData =>
-        tryCatch(() => client.getStatus(orchestratorId), toError)
-          .mapLeft<ErrorTypes | IResponseSuccessAccepted>(() =>
+      ),
+      TE.chainW(userCardsData =>
+        pipe(
+          TE.tryCatch(() => client.getStatus(orchestratorId), E.toError),
+          TE.mapLeft(() =>
             ResponseErrorInternal("Cannot retrieve activation status")
-          )
-          .chain(maybeStatus =>
-            fromNullable(maybeStatus).foldL(
-              () => taskEither.of(userCardsData),
-              _ => mapOrchestratorStatus(_).map(() => userCardsData)
+          ),
+          TE.chainW(
+            flow(
+              O.fromNullable,
+              O.fold(
+                () => TE.of(userCardsData),
+                flow(
+                  mapOrchestratorStatus,
+                  TE.map(() => userCardsData)
+                )
+              )
             )
           )
-      )
-      .chain(({ userCgn, eycaCardNumber }) =>
+        )
+      ),
+      TE.chainW(({ userCgn, eycaCardNumber }) =>
         // now we check if exists another update process for the same CGN
-        checkUpdateCardIsRunning(client, fiscalCode, {
-          ...userCgn.card,
-          status: CardPendingDeleteStatusEnum.PENDING_DELETE
-        } as Card).foldTaskEither<
-          ErrorTypes,
-          | IResponseSuccessAccepted
-          | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
-        >(
-          response =>
-            response.kind === "IResponseSuccessAccepted"
-              ? taskEither.of(response)
-              : fromLeft(response),
-          () =>
+        pipe(
+          checkUpdateCardIsRunning(client, fiscalCode, {
+            ...userCgn.card,
+            status: CardPendingDeleteStatusEnum.PENDING_DELETE
+          } as Card),
+          TE.chainW(() =>
             // We can generate an internal CGN identifier and insert a new CGN in a PENDING status
-            userCgnModel
-              .upsert({
+            pipe(
+              userCgnModel.upsert({
                 ...userCgn,
                 card: {
                   ...userCgn.card,
@@ -178,35 +182,38 @@ export function DeleteCardActivationHandler(
                 } as Card,
                 fiscalCode,
                 kind: "INewUserCgn"
-              })
-              .mapLeft(e =>
+              }),
+              TE.mapLeft(e =>
                 ResponseErrorInternal(
                   `Cannot insert a new version of CGN on PENDING_DELETE|${e.kind}`
                 )
-              )
-              .chain(() =>
-                tryCatch(
-                  () =>
-                    // Starting a new activation process with proper input
-                    client.startNew(
-                      "DeleteCgnOrchestrator",
-                      orchestratorId,
-                      OrchestratorInput.encode({
-                        eycaCardNumber,
-                        fiscalCode
-                      })
-                    ),
-                  toError
-                ).mapLeft(err => {
-                  context.log.error(
-                    `${logPrefix}|Cannot start DeleteCgnOrchestrator|ERROR=${err.message}`
-                  );
-                  return ResponseErrorInternal(
-                    "Cannot start DeleteCgnOrchestrator"
-                  );
-                })
-              )
-              .map(() => {
+              ),
+              TE.chainW(() =>
+                pipe(
+                  TE.tryCatch(
+                    () =>
+                      // Starting a new activation process with proper input
+                      client.startNew(
+                        "DeleteCgnOrchestrator",
+                        orchestratorId,
+                        OrchestratorInput.encode({
+                          eycaCardNumber,
+                          fiscalCode
+                        })
+                      ),
+                    E.toError
+                  ),
+                  TE.mapLeft(err => {
+                    context.log.error(
+                      `${logPrefix}|Cannot start DeleteCgnOrchestrator|ERROR=${err.message}`
+                    );
+                    return ResponseErrorInternal(
+                      "Cannot start DeleteCgnOrchestrator"
+                    );
+                  })
+                )
+              ),
+              TE.map(() => {
                 const instanceId: InstanceId = {
                   id: orchestratorId
                 };
@@ -216,17 +223,23 @@ export function DeleteCardActivationHandler(
                   instanceId
                 );
               })
+            )
+          ),
+          TE.orElseW(response =>
+            response.kind === "IResponseSuccessAccepted"
+              ? TE.of(response)
+              : TE.left(response)
+          )
         )
-      )
-      .fold<ReturnTypes>(identity, identity)
-      .run();
+      ),
+      TE.toUnion
+    )();
   };
-}
 
-export function DeleteCardActivation(
+export const DeleteCardActivation = (
   userEycaCardModel: UserEycaCardModel,
   userCgnModel: UserCgnModel
-): express.RequestHandler {
+): express.RequestHandler => {
   const handler = DeleteCardActivationHandler(userEycaCardModel, userCgnModel);
 
   const middlewaresWrap = withRequestMiddlewares(
@@ -235,4 +248,4 @@ export function DeleteCardActivation(
   );
 
   return wrapRequestHandler(middlewaresWrap(handler));
-}
+};

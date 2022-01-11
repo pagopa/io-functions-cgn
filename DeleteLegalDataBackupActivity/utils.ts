@@ -1,6 +1,7 @@
 import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { BlobService } from "azure-storage";
-import { TaskEither, taskify } from "fp-ts/lib/TaskEither";
+import { pipe } from "fp-ts/lib/function";
+import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 
 export const BlobCreationFailure = t.interface({
@@ -24,19 +25,22 @@ export const saveDataToBlob = <T>(
   folder: NonEmptyString,
   blobName: NonEmptyString,
   data: T
-): TaskEither<BlobCreationFailure, T> =>
-  taskify<Error, BlobService.BlobResult>(cb =>
-    blobService.createBlockBlobFromText(
-      containerName,
-      `${folder}${folder ? "/" : ""}${blobName}`,
-      JSON.stringify(data),
-      cb
+): TE.TaskEither<BlobCreationFailure, T> =>
+  pipe(
+    TE.taskify<Error, BlobService.BlobResult>(cb =>
+      blobService.createBlockBlobFromText(
+        containerName,
+        `${folder}${folder ? "/" : ""}${blobName}`,
+        JSON.stringify(data),
+        cb
+      )
+    )(),
+    TE.bimap(
+      err =>
+        BlobCreationFailure.encode({
+          kind: "BLOB_FAILURE",
+          reason: err.message
+        }),
+      _ => data
     )
-  )().bimap(
-    err =>
-      BlobCreationFailure.encode({
-        kind: "BLOB_FAILURE",
-        reason: err.message
-      }),
-    _ => data
   );

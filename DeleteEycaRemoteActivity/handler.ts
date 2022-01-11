@@ -1,8 +1,8 @@
 import { Context } from "@azure/functions";
-import { identity } from "fp-ts/lib/function";
-import { fromEither } from "fp-ts/lib/TaskEither";
+import { pipe } from "fp-ts/lib/function";
+import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { RedisClient } from "redis";
 import { EycaAPIClient } from "../clients/eyca";
 import { CcdbNumber } from "../generated/eyca-api/CcdbNumber";
@@ -24,17 +24,25 @@ export const getDeleteEycaRemoteActivityHandler = (
   logPrefix: string = "DeleteEycaRemoteActivityHandler"
 ) => (context: Context, input: unknown): Promise<ActivityResult> => {
   const fail = failure(context, logPrefix);
-  return fromEither(ActivityInput.decode(input))
-    .mapLeft(errs => fail(errorsToError(errs), "Cannot decode Activity Input"))
-    .chain(_ =>
-      deleteCard(
-        redisClient,
-        eycaClient,
-        eycaApiUsername,
-        eycaApiPassword,
-        _.cardNumber
-      ).mapLeft(fail)
-    )
-    .fold<ActivityResult>(identity, () => success())
-    .run();
+  return pipe(
+    input,
+    ActivityInput.decode,
+    TE.fromEither,
+    TE.mapLeft(errs =>
+      fail(errorsToError(errs), "Cannot decode Activity Input")
+    ),
+    TE.chain(_ =>
+      pipe(
+        deleteCard(
+          redisClient,
+          eycaClient,
+          eycaApiUsername,
+          eycaApiPassword,
+          _.cardNumber
+        ),
+        TE.bimap(fail, () => success())
+      )
+    ),
+    TE.toUnion
+  )();
 };

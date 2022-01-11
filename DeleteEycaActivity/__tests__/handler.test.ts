@@ -1,6 +1,6 @@
 /* tslint:disable: no-any */
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import * as TE from "fp-ts/lib/TaskEither";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import { Card } from "../../generated/definitions/Card";
@@ -27,10 +27,8 @@ const aUserCardRevoked: EycaCardRevoked = {
 const anArrayOfCardResults: ReadonlyArray<Card> = [aUserCardRevoked];
 const findAllMock = jest
   .fn()
-  .mockImplementation(() => taskEither.of(anArrayOfCardResults));
-const deleteVersionMock = jest
-  .fn()
-  .mockImplementation(() => taskEither.of("id"));
+  .mockImplementation(() => TE.of(anArrayOfCardResults));
+const deleteVersionMock = jest.fn().mockImplementation(() => TE.of("id"));
 
 const userEycaModelMock = {
   deleteVersion: deleteVersionMock,
@@ -55,7 +53,7 @@ describe("DeleteEycaActivity", () => {
 
   it("should return failure if an error occurs during findAll", async () => {
     findAllMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Cannot retrieve data"))
+      TE.left(new Error("Cannot retrieve data"))
     );
     const deleteEycaActivityHandler = getDeleteEycaActivityHandler(
       userEycaModelMock as any
@@ -71,10 +69,10 @@ describe("DeleteEycaActivity", () => {
 
   it("should return failure if an error occurs during deleteVersion", async () => {
     findAllMock.mockImplementationOnce(() =>
-      taskEither.of([...anArrayOfCardResults, anArrayOfCardResults])
+      TE.of([...anArrayOfCardResults, anArrayOfCardResults])
     );
     deleteVersionMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Cannot delete version"))
+      TE.left(new Error("Cannot delete version"))
     );
     const deleteEycaActivityHandler = getDeleteEycaActivityHandler(
       userEycaModelMock as any

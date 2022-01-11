@@ -1,13 +1,12 @@
-/* tslint:disable: no-any */
 import { addYears } from "date-fns";
 import { none, some } from "fp-ts/lib/Option";
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { toCosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
+import * as TE from "fp-ts/lib/TaskEither";
+import { toCosmosErrorResponse } from "@pagopa/io-functions-commons/dist/src/utils/cosmosdb_model";
 import {
   ResponseErrorInternal,
   ResponseSuccessAccepted
-} from "italia-ts-commons/lib/responses";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+} from "@pagopa/ts-commons/lib/responses";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import { Card } from "../../generated/definitions/Card";
@@ -78,10 +77,8 @@ const aEycaUserCardRevoked: EycaCardRevoked = {
 const anArrayOfCardResults: ReadonlyArray<Card> = [aEycaUserCardRevoked];
 const eycaFindAllMock = jest
   .fn()
-  .mockImplementation(() => taskEither.of(anArrayOfCardResults));
-const eycaDeleteVersionMock = jest
-  .fn()
-  .mockImplementation(() => taskEither.of("id"));
+  .mockImplementation(() => TE.of(anArrayOfCardResults));
+const eycaDeleteVersionMock = jest.fn().mockImplementation(() => TE.of("id"));
 const eycaFindLastVersionByModelIdMock = jest.fn();
 
 const userEycaModelMock = {
@@ -92,7 +89,7 @@ const userEycaModelMock = {
 
 const cgnFindLastVersionByModelIdMock = jest
   .fn()
-  .mockImplementation(() => taskEither.of(some(aUserCardRevoked)));
+  .mockImplementation(() => TE.of(some(aUserCardRevoked)));
 const cgnUpdateMock = jest.fn();
 const cgnUpsertModelMock = jest.fn();
 
@@ -114,7 +111,7 @@ describe("DeleteCardActivationHandler", () => {
 
   it("should return an Internal Error if an error occurs during UserCgn retrieve", async () => {
     cgnFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      fromLeft(toCosmosErrorResponse(new Error("query error")))
+      TE.left(toCosmosErrorResponse(new Error("query error")))
     );
     const deleteCardActivationHandler = DeleteCardActivationHandler(
       (userEycaModelMock as unknown) as UserEycaCardModel,
@@ -126,7 +123,7 @@ describe("DeleteCardActivationHandler", () => {
 
   it("should return an NotAuthorized Error if the user CGN is revoked", async () => {
     cgnFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(aRevokedUserCgn))
+      TE.of(some(aRevokedUserCgn))
     );
 
     const deleteCardActivationHandler = DeleteCardActivationHandler(
@@ -139,10 +136,10 @@ describe("DeleteCardActivationHandler", () => {
 
   it("should return an Internal Error if an error occurs during Eyca Card retrieve", async () => {
     cgnFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(anActivatedUserCgn))
+      TE.of(some(anActivatedUserCgn))
     );
     eycaFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      fromLeft(toCosmosErrorResponse(new Error("query error")))
+      TE.left(toCosmosErrorResponse(new Error("query error")))
     );
     const deleteCardActivationHandler = DeleteCardActivationHandler(
       (userEycaModelMock as unknown) as UserEycaCardModel,
@@ -154,10 +151,10 @@ describe("DeleteCardActivationHandler", () => {
 
   it("should return an conflict error if there is an active cgn card and a revoked eyca card", async () => {
     cgnFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(anActivatedUserCgn))
+      TE.of(some(anActivatedUserCgn))
     );
     eycaFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(aEycaUserCardRevoked))
+      TE.of(some(aEycaUserCardRevoked))
     );
     const deleteCardActivationHandler = DeleteCardActivationHandler(
       (userEycaModelMock as unknown) as UserEycaCardModel,
@@ -169,13 +166,11 @@ describe("DeleteCardActivationHandler", () => {
 
   it("should return an Internal Error if it is not possible to check status of an other orchestrator with the same id", async () => {
     cgnFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(anActivatedUserCgn))
+      TE.of(some(anActivatedUserCgn))
     );
-    eycaFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
+    eycaFindLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(none));
     checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
-      fromLeft(ResponseErrorInternal("Error"))
+      TE.left(ResponseErrorInternal("Error"))
     );
     const deleteCardActivationHandler = DeleteCardActivationHandler(
       (userEycaModelMock as unknown) as UserEycaCardModel,
@@ -187,13 +182,13 @@ describe("DeleteCardActivationHandler", () => {
 
   it("should return an Accepted response if there is another orchestrator running with the same id", async () => {
     cgnFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(anActivatedUserCgn))
+      TE.of(some(anActivatedUserCgn))
     );
     eycaFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(aUserEycaCardActivated))
+      TE.of(some(aUserEycaCardActivated))
     );
     checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
-      fromLeft(ResponseSuccessAccepted())
+      TE.left(ResponseSuccessAccepted())
     );
     const deleteCardActivationHandler = DeleteCardActivationHandler(
       (userEycaModelMock as unknown) as UserEycaCardModel,
@@ -205,15 +200,13 @@ describe("DeleteCardActivationHandler", () => {
 
   it("should start a new orchestrator if there aren' t conflict on the same id", async () => {
     cgnFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(anActivatedUserCgn))
+      TE.of(some(anActivatedUserCgn))
     );
     eycaFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(aUserEycaCardActivated))
+      TE.of(some(aUserEycaCardActivated))
     );
-    checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
-      taskEither.of(false)
-    );
-    cgnUpsertModelMock.mockImplementationOnce(() => taskEither.of({}));
+    checkUpdateCardIsRunningMock.mockImplementationOnce(() => TE.of(false));
+    cgnUpsertModelMock.mockImplementationOnce(() => TE.of({}));
     const deleteCardActivationHandler = DeleteCardActivationHandler(
       (userEycaModelMock as unknown) as UserEycaCardModel,
       (userCgnModelMock as unknown) as UserCgnModel
@@ -223,17 +216,15 @@ describe("DeleteCardActivationHandler", () => {
   });
 
   it("should start an Internal Error if there are errors while inserting a new Cgn in pending delete status", async () => {
-    checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
-      taskEither.of(false)
-    );
+    checkUpdateCardIsRunningMock.mockImplementationOnce(() => TE.of(false));
     cgnFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(anActivatedUserCgn))
+      TE.of(some(anActivatedUserCgn))
     );
     eycaFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(aUserEycaCardActivated))
+      TE.of(some(aUserEycaCardActivated))
     );
     cgnUpsertModelMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Insert error"))
+      TE.left(new Error("Insert error"))
     );
     const deleteCardActivationHandler = DeleteCardActivationHandler(
       (userEycaModelMock as unknown) as UserEycaCardModel,

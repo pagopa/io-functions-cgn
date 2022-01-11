@@ -1,9 +1,9 @@
 import { Context } from "@azure/functions";
-import { array } from "fp-ts/lib/Array";
-import { identity } from "fp-ts/lib/function";
-import { fromEither, taskEither } from "fp-ts/lib/TaskEither";
+import * as AR from "fp-ts/lib/Array";
+import { pipe } from "fp-ts/lib/function";
+import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { RetrievedUserCgn, UserCgnModel } from "../models/user_cgn";
 import {
   ActivityResultFailure,
@@ -43,28 +43,35 @@ export const getDeleteCgnActivityHandler = (
 ) => (context: Context, input: unknown): Promise<DeleteCgnActivityResult> => {
   const fail = failure(context, logPrefix);
 
-  return fromEither(ActivityInput.decode(input))
-    .mapLeft(errs => fail(errorsToError(errs), "Cannot decode Activity Input"))
-    .chain(activityInput =>
-      userCgnModel
-        .findAll(activityInput.fiscalCode)
-        .mapLeft(_ => fail(_, "Cannot retriew all cgn card"))
-    )
-    .chain(cards =>
-      array
-        .sequence(taskEither)(
+  return pipe(
+    input,
+    ActivityInput.decode,
+    TE.fromEither,
+    TE.mapLeft(errs =>
+      fail(errorsToError(errs), "Cannot decode Activity Input")
+    ),
+    TE.chainW(activityInput =>
+      pipe(
+        userCgnModel.findAll(activityInput.fiscalCode),
+        TE.mapLeft(_ => fail(_, "Cannot retriew all cgn card"))
+      )
+    ),
+    TE.chainW(cards =>
+      pipe(
+        AR.sequence(TE.ApplicativePar)(
           cards.map(element =>
             userCgnModel.deleteVersion(element.fiscalCode, element.id)
           )
-        )
-        .bimap(
+        ),
+        TE.bimap(
           _ => fail(_, "Cannot delete cgn version"),
-          () => cards
+          () => ({
+            cards,
+            kind: "SUCCESS" as const
+          })
         )
-    )
-    .fold<DeleteCgnActivityResult>(identity, cards => ({
-      cards,
-      kind: "SUCCESS"
-    }))
-    .run();
+      )
+    ),
+    TE.toUnion
+  )();
 };

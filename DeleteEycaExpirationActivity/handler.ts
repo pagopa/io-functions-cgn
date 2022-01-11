@@ -1,9 +1,9 @@
 import { Context } from "@azure/functions";
 import { TableService } from "azure-storage";
-import { identity } from "fp-ts/lib/function";
-import { fromEither } from "fp-ts/lib/TaskEither";
+import { pipe } from "fp-ts/lib/function";
+import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { ActivityResult, failure, success } from "../utils/activity";
 import { errorsToError } from "../utils/conversions";
 import { deleteCardExpiration } from "../utils/table_storage";
@@ -28,14 +28,22 @@ export const getDeleteEycaExpirationActivityHandler = (
     tableService,
     eycaExpirationTableName
   );
-  return fromEither(ActivityInput.decode(input))
-    .mapLeft(errs => fail(errorsToError(errs), "Cannot decode Activity Input"))
-    .chain(activityInput =>
-      deleteEycaExpirationTask(activityInput.fiscalCode).bimap(
-        err => fail(err, "Cannot delete EYCA expiration tuple"),
-        success
+  return pipe(
+    input,
+    ActivityInput.decode,
+    TE.fromEither,
+    TE.mapLeft(errs =>
+      fail(errorsToError(errs), "Cannot decode Activity Input")
+    ),
+    TE.chain(activityInput =>
+      pipe(
+        deleteEycaExpirationTask(activityInput.fiscalCode),
+        TE.bimap(
+          err => fail(err, "Cannot delete EYCA expiration tuple"),
+          success
+        )
       )
-    )
-    .fold<ActivityResult>(identity, identity)
-    .run();
+    ),
+    TE.toUnion
+  )();
 };

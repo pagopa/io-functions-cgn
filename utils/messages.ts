@@ -38,7 +38,7 @@ La Carta Giovani Nazionale sarà valida da oggi fino al compimento dei 36 anni. 
 
 Grazie per aver partecipato al programma, speriamo tu abbia fatto ottimi acquisti!`
     } as MessageContent),
-  CardDeleted: () =>
+  CardDeleted: (): MessageContent =>
     ({
       subject: "La tua Carta Giovani Nazionale è stata eliminata",
       markdown: `Ti avvisiamo che da oggi non è più possibile utilizzare la tua Carta Giovani Nazionale.

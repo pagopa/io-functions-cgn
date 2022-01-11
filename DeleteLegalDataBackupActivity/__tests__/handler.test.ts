@@ -1,10 +1,10 @@
 /* tslint:disable: no-any */
 import { BlobService } from "azure-storage";
 import * as date_fns from "date-fns";
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { CosmosResource } from "io-functions-commons/dist/src/utils/cosmosdb_model";
-import { NonNegativeInteger } from "italia-ts-commons/lib/numbers";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import * as TE from "fp-ts/lib/TaskEither";
+import { CosmosResource } from "@pagopa/io-functions-commons/dist/src/utils/cosmosdb_model";
+import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
 import { now } from "../../__mocks__/mock";
 import { StatusEnum as ActivatedStatusEnum } from "../../generated/definitions/CardActivated";
@@ -78,7 +78,7 @@ describe("Deleted Card Data to backup to legal reasons", () => {
     );
 
     saveDataToBlobMock.mockImplementationOnce(() =>
-      fromLeft(
+      TE.left(
         BlobCreationFailure.encode({
           kind: "BLOB_FAILURE",
           reason: "Blob failure test"
@@ -103,9 +103,7 @@ describe("Deleted Card Data to backup to legal reasons", () => {
       messageContentContainerName
     );
 
-    saveDataToBlobMock.mockImplementationOnce(() =>
-      taskEither.of(legatDataToBackup)
-    );
+    saveDataToBlobMock.mockImplementationOnce(() => TE.of(legatDataToBackup));
 
     const response = await deleteLegalDataBackupActivityHandler(
       context,

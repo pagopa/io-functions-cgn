@@ -1,6 +1,6 @@
-/* tslint:disable: no-any */
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import * as TE from "fp-ts/lib/TaskEither";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
 import * as tableUtils from "../../utils/table_storage";
 import {
@@ -32,7 +32,7 @@ describe("DeleteEycaExpirationActivity", () => {
     );
 
     deleteEycaExpirationMock.mockImplementationOnce(_ =>
-      jest.fn(() => fromLeft(new Error("Entity Error")))
+      jest.fn(() => TE.left(new Error("Entity Error")))
     );
     const response = await deleteEycaExpirationActivityHandler(
       context,
@@ -48,7 +48,7 @@ describe("DeleteEycaExpirationActivity", () => {
     );
 
     deleteEycaExpirationMock.mockImplementationOnce(_ =>
-      jest.fn(() => taskEither.of({}))
+      jest.fn(() => TE.of({}))
     );
     const response = await deleteEycaExpirationActivityHandler(
       context,

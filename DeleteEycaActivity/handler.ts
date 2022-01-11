@@ -1,9 +1,9 @@
 import { Context } from "@azure/functions";
-import { array } from "fp-ts/lib/Array";
-import { identity } from "fp-ts/lib/function";
-import { fromEither, taskEither } from "fp-ts/lib/TaskEither";
+import * as AR from "fp-ts/lib/Array";
+import { pipe } from "fp-ts/lib/function";
+import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import {
   RetrievedUserEycaCard,
   UserEycaCardModel
@@ -32,10 +32,10 @@ export type DeleteEycaActivityResultSuccess = t.TypeOf<
   typeof DeleteEycaActivityResultSuccess
 >;
 
-export const DeleteEycaActivityResult = t.taggedUnion("kind", [
-  DeleteEycaActivityResultSuccess,
-  ActivityResultFailure
-]);
+export const DeleteEycaActivityResult = t.union(
+  [DeleteEycaActivityResultSuccess, ActivityResultFailure],
+  "kind"
+);
 
 export type DeleteEycaActivityResult = t.TypeOf<
   typeof DeleteEycaActivityResult
@@ -50,26 +50,33 @@ export const getDeleteEycaActivityHandler = (
 ) => (context: Context, input: unknown): Promise<DeleteEycaActivityResult> => {
   const fail = failure(context, logPrefix);
 
-  return fromEither(ActivityInput.decode(input))
-    .mapLeft(errs => fail(errorsToError(errs), "Cannot decode Activity Input"))
-    .chain(activityInput =>
-      userEycaModel
-        .findAll(activityInput.fiscalCode)
-        .mapLeft(_ => fail(_, "Cannot retriew all eyca card"))
-    )
-    .chain(cards =>
-      array
-        .sequence(taskEither)(
+  return pipe(
+    input,
+    ActivityInput.decode,
+    TE.fromEither,
+    TE.mapLeft(errs =>
+      fail(errorsToError(errs), "Cannot decode Activity Input")
+    ),
+    TE.chain(activityInput =>
+      pipe(
+        userEycaModel.findAll(activityInput.fiscalCode),
+        TE.mapLeft(_ => fail(_, "Cannot retriew all eyca card"))
+      )
+    ),
+    TE.chain(cards =>
+      pipe(
+        AR.sequence(TE.ApplicativePar)(
           cards.map(element =>
             userEycaModel.deleteVersion(element.fiscalCode, element.id)
           )
-        )
-        .mapLeft(_ => fail(_, "Cannot delete eyca version"))
-        .map(() => cards)
-    )
-    .fold<DeleteEycaActivityResult>(identity, cards => ({
-      cards,
-      kind: "SUCCESS"
-    }))
-    .run();
+        ),
+        TE.mapLeft(_ => fail(_, "Cannot delete eyca version")),
+        TE.map(() => ({
+          cards,
+          kind: "SUCCESS" as const
+        }))
+      )
+    ),
+    TE.toUnion
+  )();
 };

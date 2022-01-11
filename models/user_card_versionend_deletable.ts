@@ -1,16 +1,18 @@
+/* eslint-disable no-invalid-this */
 import { SqlQuerySpec } from "@azure/cosmos";
-import { rights } from "fp-ts/lib/Array";
-import { toError } from "fp-ts/lib/Either";
-import { tryCatch } from "fp-ts/lib/TaskEither";
+import * as AR from "fp-ts/lib/Array";
+import * as E from "fp-ts/lib/Either";
+import * as TE from "fp-ts/lib/TaskEither";
 import {
   asyncIteratorToArray,
   flattenAsyncIterator
-} from "io-functions-commons/dist/src/utils/async";
+} from "@pagopa/io-functions-commons/dist/src/utils/async";
 import {
   CosmosdbModelVersioned,
   RetrievedVersionedModel
-} from "io-functions-commons/dist/src/utils/cosmosdb_model_versioned";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+} from "@pagopa/io-functions-commons/dist/src/utils/cosmosdb_model_versioned";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import { pipe } from "fp-ts/lib/function";
 
 export abstract class UserCardVersionedDeletable<
   T,
@@ -19,49 +21,55 @@ export abstract class UserCardVersionedDeletable<
   ModelIdKey extends keyof T,
   PartitionKey extends keyof T = ModelIdKey
 > extends CosmosdbModelVersioned<T, TN, TR, ModelIdKey, PartitionKey> {
-  public deleteVersion = (
+  public readonly deleteVersion = (
     fiscalCode: FiscalCode,
     documentId: NonEmptyString
-  ) => {
-    return tryCatch(
-      () => this.container.item(documentId, fiscalCode).delete(),
-      toError
-    ).map(_ => _.item.id);
-  };
+  ): TE.TaskEither<Error, string> =>
+    pipe(
+      TE.tryCatch(
+        () => this.container.item(documentId, fiscalCode).delete(),
+        E.toError
+      ),
+      TE.map(_ => _.item.id)
+    );
 
-  protected findAll = (
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  protected readonly findAll = (
     fiscalCode: FiscalCode,
     cardTableName: string | NonEmptyString,
     cardPkField: string | NonEmptyString
-  ) => {
-    return tryCatch(
-      () =>
-        asyncIteratorToArray(
-          flattenAsyncIterator(
-            this.getQueryIterator(
-              this.createGetAllCardQuery(fiscalCode, cardTableName, cardPkField)
-            )[Symbol.asyncIterator]()
-          )
-        ),
-      toError
-    )
-      .map(_ => Array.from(_))
-      .map(_ => rights(_));
-  };
+  ) =>
+    pipe(
+      TE.tryCatch(
+        () =>
+          asyncIteratorToArray(
+            flattenAsyncIterator(
+              this.getQueryIterator(
+                this.createGetAllCardQuery(
+                  fiscalCode,
+                  cardTableName,
+                  cardPkField
+                )
+              )[Symbol.asyncIterator]()
+            )
+          ),
+        E.toError
+      ),
+      TE.map(_ => Array.from(_)),
+      TE.map(AR.rights)
+    );
 
-  private createGetAllCardQuery = (
+  private readonly createGetAllCardQuery = (
     fiscalCode: FiscalCode,
     cardTableName: string | NonEmptyString,
     cardPkField: string | NonEmptyString
-  ): SqlQuerySpec => {
-    return {
-      parameters: [
-        {
-          name: "@fiscalCode",
-          value: fiscalCode
-        }
-      ],
-      query: `select * from ${cardTableName} as c where c.${cardPkField} = @fiscalCode`
-    };
-  };
+  ): SqlQuerySpec => ({
+    parameters: [
+      {
+        name: "@fiscalCode",
+        value: fiscalCode
+      }
+    ],
+    query: `select * from ${cardTableName} as c where c.${cardPkField} = @fiscalCode`
+  });
 }
