@@ -1,11 +1,12 @@
 ﻿import { IOrchestrationFunctionContext } from "durable-functions/lib/src/classes";
 
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { ExceptionTelemetry } from "applicationinsights/out/Declarations/Contracts";
 import * as df from "durable-functions";
-import { constVoid } from "fp-ts/lib/function";
+import { constVoid, Lazy, pipe } from "fp-ts/lib/function";
 import * as t from "io-ts";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
 
+import * as E from "fp-ts/lib/Either";
 import { ActivityInput as StoreEycaExpirationActivityInput } from "../StoreEycaExpirationActivity/handler";
 import { ActivityInput as SuccessEycaActivationActivityInput } from "../SuccessEycaActivationActivity/handler";
 
@@ -34,17 +35,22 @@ export const handler = function*(
     context.df.setCustomStatus("RUNNING");
   }
 
-  const trackExceptionIfNotReplaying = (evt: ExceptionTelemetry) =>
+  const trackExceptionIfNotReplaying = (
+    evt: ExceptionTelemetry
+  ): void | Lazy<void> =>
     context.df.isReplaying ? constVoid : trackException(evt);
 
   const input = context.df.getInput();
 
-  const {
-    activationDate,
-    expirationDate,
-    fiscalCode
-  } = OrchestratorInput.decode(input).getOrElseL(e =>
-    trackExAndThrowWithErrorStatus(e, "cgn.eyca.update.exception.decode.input")
+  const { activationDate, expirationDate, fiscalCode } = pipe(
+    input,
+    OrchestratorInput.decode,
+    E.getOrElseW(e =>
+      trackExAndThrowWithErrorStatus(
+        e,
+        "cgn.eyca.update.exception.decode.input"
+      )
+    )
   );
   const tagOverrides = {
     "ai.operation.id": fiscalCode,
@@ -74,12 +80,14 @@ export const handler = function*(
       })
     );
 
-    const expirationDateStoreActivityResultDecoded = ActivityResult.decode(
-      expirationDateStoreActivityResult
-    ).getOrElseL(_ =>
-      trackExAndThrowWithErrorStatus(
-        _,
-        "eyca.activate.exception.decode.activityOutput"
+    const expirationDateStoreActivityResultDecoded = pipe(
+      expirationDateStoreActivityResult,
+      ActivityResult.decode,
+      E.getOrElseW(_ =>
+        trackExAndThrowWithErrorStatus(
+          _,
+          "eyca.activate.exception.decode.activityOutput"
+        )
       )
     );
 
@@ -96,12 +104,15 @@ export const handler = function*(
       updateEycaStatusActivityInput
     );
 
-    const decodedSuccessEycaActivationActivity = ActivityResult.decode(
-      successEycaActivationActivityResult
-    ).getOrElseL(_ =>
-      trackExAndThrowWithErrorStatus(
-        _,
-        "eyca.activate.exception.decode.activityOutput"
+    const decodedSuccessEycaActivationActivity = pipe(
+      successEycaActivationActivityResult,
+      ActivityResult.decode,
+      // eslint-disable-next-line sonarjs/no-identical-functions
+      E.getOrElseW(_ =>
+        trackExAndThrowWithErrorStatus(
+          _,
+          "eyca.activate.exception.decode.activityOutput"
+        )
       )
     );
 

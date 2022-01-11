@@ -1,20 +1,23 @@
-import { getRequiredStringEnv } from "io-functions-commons/dist/src/utils/env";
-import { agent } from "italia-ts-commons";
+import { getRequiredStringEnv } from "@pagopa/io-functions-commons/dist/src/utils/env";
+import { agent } from "@pagopa/ts-commons";
 import {
   AbortableFetch,
   setFetchTimeout,
   toFetch
-} from "italia-ts-commons/lib/fetch";
-import { IntegerFromString } from "italia-ts-commons/lib/numbers";
-import { Millisecond } from "italia-ts-commons/lib/units";
-
+} from "@pagopa/ts-commons/lib/fetch";
+import { IntegerFromString } from "@pagopa/ts-commons/lib/numbers";
+import { Millisecond } from "@pagopa/ts-commons/lib/units";
+import * as E from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
 import { getGetProfile, getSendMessage } from "../utils/notifications";
 import { getSendMessageActivityHandler } from "./handler";
 
 // HTTP external requests timeout in milliseconds
-const SERVICES_REQUEST_TIMEOUT_MS = IntegerFromString.decode(
-  process.env.SERVICES_REQUEST_TIMEOUT_MS
-).getOrElse(10000);
+const SERVICES_REQUEST_TIMEOUT_MS = pipe(
+  process.env.SERVICES_REQUEST_TIMEOUT_MS,
+  IntegerFromString.decode,
+  E.getOrElse(() => 10000)
+);
 
 // Needed to call notifications API
 const servicesApiUrl = getRequiredStringEnv("SERVICES_API_URL");

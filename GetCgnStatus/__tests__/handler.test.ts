@@ -1,11 +1,10 @@
-/* tslint:disable: no-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
+import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import * as date_fns from "date-fns";
-import { some } from "fp-ts/lib/Option";
-import { none } from "fp-ts/lib/Option";
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 import { cgnActivatedDates, now } from "../../__mocks__/mock";
 import {
   CardActivated,
@@ -55,7 +54,7 @@ const aUserCgn: UserCgn = {
 
 const successImpl = async (userCgn: UserCgn) => {
   findLastVersionByModelIdMock.mockImplementationOnce(() =>
-    taskEither.of(some(userCgn))
+    TE.of(O.some(userCgn))
   );
   const handler = GetCgnStatusHandler(userCgnModelMock as any);
   const response = await handler({} as any, aFiscalCode);
@@ -69,7 +68,7 @@ const successImpl = async (userCgn: UserCgn) => {
 describe("GetCgnStatusHandler", () => {
   it("should return an internal error when a query error occurs", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Query Error"))
+      TE.left(new Error("Query Error"))
     );
     const handler = GetCgnStatusHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
@@ -77,9 +76,7 @@ describe("GetCgnStatusHandler", () => {
   });
 
   it("should return not found if no userCgn is found", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(O.none));
     const handler = GetCgnStatusHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorNotFound");

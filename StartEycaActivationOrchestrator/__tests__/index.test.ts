@@ -1,6 +1,6 @@
-// tslint:disable: object-literal-sort-keys
+// eslint-disable sort-keys
 
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { context as contextMock } from "../../__mocks__/durable-functions";
 import { handler } from "../index";
 
@@ -34,7 +34,7 @@ describe("StartEycaActivationOrchestrator", () => {
       // 1 SuccessEycaActivationActivity
       .mockReturnValueOnce({ kind: "SUCCESS" })
       .mockReturnValueOnce({ kind: "SUCCESS" });
-    // tslint:disable-next-line: no-any no-useless-cast
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unnecessary-type-assertion
     const orchestrator = handler(contextMockWithDf as any);
 
     const res1 = orchestrator.next();
@@ -63,7 +63,7 @@ describe("StartEycaActivationOrchestrator", () => {
     mockCallActivityWithRetry
       // 1 SuccessEycaActivationActivity
       .mockReturnValueOnce({ kind: "WRONG" });
-    // tslint:disable-next-line: no-any no-useless-cast
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unnecessary-type-assertion
     const orchestrator = handler(contextMockWithDf as any);
 
     // Complete the orchestrator execution
@@ -80,7 +80,7 @@ describe("StartEycaActivationOrchestrator", () => {
     mockCallActivityWithRetry
       // 1 SuccessEycaActivationActivity
       .mockReturnValueOnce({ kind: "FAILURE" });
-    // tslint:disable-next-line: no-any no-useless-cast
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unnecessary-type-assertion
     const orchestrator = handler(contextMockWithDf as any);
 
     const res1 = orchestrator.next();
@@ -103,7 +103,7 @@ describe("StartEycaActivationOrchestrator", () => {
       // 1 SuccessEycaActivationActivity
       .mockReturnValueOnce({ kind: "SUCCESS" })
       .mockReturnValueOnce({ kind: "FAILURE" });
-    // tslint:disable-next-line: no-any no-useless-cast
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unnecessary-type-assertion
     const orchestrator = handler(contextMockWithDf as any);
 
     const res1 = orchestrator.next();

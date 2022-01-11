@@ -1,6 +1,7 @@
 import { Either, isLeft, left, right, toError } from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
 import { fromNullable, Option } from "fp-ts/lib/Option";
-import { fromEither, TaskEither, tryCatch } from "fp-ts/lib/TaskEither";
+import * as TE from "fp-ts/lib/TaskEither";
 import { RedisClient } from "redis";
 
 /**
@@ -58,12 +59,9 @@ export const falsyResponseToError = (
   error: Error
 ): Either<Error, true> => {
   if (isLeft(response)) {
-    return left(response.value);
+    return response;
   } else {
-    if (response.value) {
-      return right(true);
-    }
-    return left(error);
+    return response.right ? right(true) : left(error);
   }
 };
 
@@ -73,59 +71,70 @@ export const setWithExpirationTask = (
   value: string,
   expirationInSeconds: number,
   errorMsg?: string
-): TaskEither<Error, true> =>
-  tryCatch(
-    () =>
-      new Promise<Either<Error, true>>(resolve =>
-        // Set key to hold the string value. If key already holds a value, it is overwritten, regardless of its type.
-        // @see https://redis.io/commands/set
-        redisClient.set(
-          key,
-          value,
-          "EX",
-          expirationInSeconds,
-          (err, response) =>
-            resolve(
-              falsyResponseToError(
-                singleStringReply(err, response),
-                new Error(
-                  errorMsg ? errorMsg : "Error setting key value pair on redis"
+): TE.TaskEither<Error, true> =>
+  pipe(
+    TE.tryCatch(
+      () =>
+        new Promise<Either<Error, true>>(resolve =>
+          // Set key to hold the string value. If key already holds a value, it is overwritten, regardless of its type.
+          // @see https://redis.io/commands/set
+          redisClient.set(
+            key,
+            value,
+            "EX",
+            expirationInSeconds,
+            (err, response) =>
+              resolve(
+                falsyResponseToError(
+                  singleStringReply(err, response),
+                  new Error(
+                    errorMsg
+                      ? errorMsg
+                      : "Error setting key value pair on redis"
+                  )
                 )
               )
-            )
-        )
-      ),
-    toError
-  ).chain(fromEither);
+          )
+        ),
+      toError
+    ),
+    TE.chain(TE.fromEither)
+  );
 
 export const getTask = (
   redisClient: RedisClient,
   key: string
-): TaskEither<Error, Option<string>> =>
-  tryCatch(
-    () =>
-      new Promise<Either<Error, Option<string>>>(resolve =>
-        // Set key to hold the string value. If key already holds a value, it is overwritten, regardless of its type.
-        // @see https://redis.io/commands/set
-        redisClient.get(key, (err, response) =>
-          resolve(singleValueReply(err, response))
-        )
-      ),
-    toError
-  ).chain(fromEither);
+): TE.TaskEither<Error, Option<string>> =>
+  pipe(
+    TE.tryCatch(
+      () =>
+        new Promise<Either<Error, Option<string>>>(resolve =>
+          // Set key to hold the string value. If key already holds a value, it is overwritten, regardless of its type.
+          // @see https://redis.io/commands/set
+          redisClient.get(key, (err, response) =>
+            resolve(singleValueReply(err, response))
+          )
+        ),
+      toError
+    ),
+    TE.chain(TE.fromEither)
+  );
 
 export const existsKeyTask = (
   redisClient: RedisClient,
   key: string
-): TaskEither<Error, boolean> =>
-  tryCatch(
-    () =>
-      new Promise<Either<Error, boolean>>(resolve =>
-        // Set key to hold the string value. If key already holds a value, it is overwritten, regardless of its type.
-        // @see https://redis.io/commands/set
-        redisClient.exists(key, (err, response) =>
-          resolve(integerRepl(err, response, 1))
-        )
-      ),
-    toError
-  ).chain(fromEither);
+): TE.TaskEither<Error, boolean> =>
+  pipe(
+    TE.tryCatch(
+      () =>
+        new Promise<Either<Error, boolean>>(resolve =>
+          // Set key to hold the string value. If key already holds a value, it is overwritten, regardless of its type.
+          // @see https://redis.io/commands/set
+          redisClient.exists(key, (err, response) =>
+            resolve(integerRepl(err, response, 1))
+          )
+        ),
+      toError
+    ),
+    TE.chain(TE.fromEither)
+  );

@@ -1,11 +1,12 @@
-﻿import { IOrchestrationFunctionContext } from "durable-functions/lib/src/classes";
-
+/* eslint-disable max-lines-per-function */
+import { IOrchestrationFunctionContext } from "durable-functions/lib/src/classes";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { addSeconds } from "date-fns";
 import * as t from "io-ts";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CardRevoked";
-
 import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
+import * as E from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
+import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CardRevoked";
 import { ActivityInput as EnqueueEycaActivationActivityInput } from "../EnqueueEycaActivationActivity/handler";
 import { Card } from "../generated/definitions/Card";
 import { StatusEnum as ActivatedStatusEnum } from "../generated/definitions/CardActivated";
@@ -49,8 +50,10 @@ export const UpdateCgnOrchestratorHandler = function*(
   }
 
   const input = context.df.getInput();
-  const decodedInput = OrchestratorInput.decode(input).getOrElseL(e =>
-    trackExAndThrow(e, "cgn.update.exception.decode.input")
+  const decodedInput = pipe(
+    input,
+    OrchestratorInput.decode,
+    E.getOrElseW(e => trackExAndThrow(e, "cgn.update.exception.decode.input"))
   );
 
   const { fiscalCode, newStatusCard } = decodedInput;
@@ -62,21 +65,22 @@ export const UpdateCgnOrchestratorHandler = function*(
   try {
     try {
       if (newStatusCard.status === ActivatedStatusEnum.ACTIVATED) {
-        const storeCgnExpirationResult = yield context.df.callActivityWithRetry(
-          "StoreCgnExpirationActivity",
-          internalRetryOptions,
-          StoreCgnExpirationActivityInput.encode({
-            activationDate: newStatusCard.activation_date,
-            expirationDate: newStatusCard.expiration_date,
-            fiscalCode
-          })
-        );
-        const decodedStoreCgnExpirationResult = ActivityResult.decode(
-          storeCgnExpirationResult
-        ).getOrElseL(e =>
-          trackExAndThrowWithError(
-            e,
-            "cgn.update.exception.decode.storeCgnExpirationActivityOutput"
+        const decodedStoreCgnExpirationResult = pipe(
+          yield context.df.callActivityWithRetry(
+            "StoreCgnExpirationActivity",
+            internalRetryOptions,
+            StoreCgnExpirationActivityInput.encode({
+              activationDate: newStatusCard.activation_date,
+              expirationDate: newStatusCard.expiration_date,
+              fiscalCode
+            })
+          ),
+          ActivityResult.decode,
+          E.getOrElseW(e =>
+            trackExAndThrowWithError(
+              e,
+              "cgn.update.exception.decode.storeCgnExpirationActivityOutput"
+            )
           )
         );
 
@@ -92,17 +96,18 @@ export const UpdateCgnOrchestratorHandler = function*(
         fiscalCode
       });
 
-      const updateStatusResult = yield context.df.callActivityWithRetry(
-        "UpdateCgnStatusActivity",
-        internalRetryOptions,
-        updateCgnStatusActivityInput
-      );
-      const updateCgnResult = ActivityResult.decode(
-        updateStatusResult
-      ).getOrElseL(e =>
-        trackExAndThrowWithError(
-          e,
-          "cgn.update.exception.decode.activityOutput"
+      const updateCgnResult = pipe(
+        yield context.df.callActivityWithRetry(
+          "UpdateCgnStatusActivity",
+          internalRetryOptions,
+          updateCgnStatusActivityInput
+        ),
+        ActivityResult.decode,
+        E.getOrElseW(e =>
+          trackExAndThrowWithError(
+            e,
+            "cgn.update.exception.decode.activityOutput"
+          )
         )
       );
 
@@ -112,7 +117,6 @@ export const UpdateCgnOrchestratorHandler = function*(
           "cgn.update.exception.failure.activityOutput"
         );
       }
-      // tslint:disable-next-line: no-useless-catch
     } catch (err) {
       if (newStatusCard.status === ActivatedStatusEnum.ACTIVATED) {
         // CGN Activation is failed so we try to send error message if sync flow is stopped
@@ -145,11 +149,11 @@ export const UpdateCgnOrchestratorHandler = function*(
 
     if (newStatusCard.status === ActivatedStatusEnum.ACTIVATED) {
       // now we try to enqueue an EYCA activation if user is eligible for eyca
-      const isEycaEligibleResult = isEycaEligible(
-        fiscalCode,
-        eycaUpperBoundAge
-      ).getOrElseL(e =>
-        trackExAndThrow(e, "cgn.update.exception.eyca.eligibilityCheck")
+      const isEycaEligibleResult = pipe(
+        isEycaEligible(fiscalCode, eycaUpperBoundAge),
+        E.getOrElseW(e =>
+          trackExAndThrow(e, "cgn.update.exception.eyca.eligibilityCheck")
+        )
       );
 
       if (isEycaEligibleResult) {
@@ -159,18 +163,19 @@ export const UpdateCgnOrchestratorHandler = function*(
             fiscalCode
           }
         );
-        const enqueueEycaActivationResult = yield context.df.callActivityWithRetry(
-          "EnqueueEycaActivationActivity",
-          internalRetryOptions,
-          enqueueEycaActivationActivityInput
-        );
 
-        const enqueueEycaActivationOutput = ActivityResult.decode(
-          enqueueEycaActivationResult
-        ).getOrElseL(e =>
-          trackExAndThrow(
-            e,
-            "cgn.update.exception.eyca.activation.activityOutput"
+        const enqueueEycaActivationOutput = pipe(
+          yield context.df.callActivityWithRetry(
+            "EnqueueEycaActivationActivity",
+            internalRetryOptions,
+            enqueueEycaActivationActivityInput
+          ),
+          ActivityResult.decode,
+          E.getOrElseW(e =>
+            trackExAndThrow(
+              e,
+              "cgn.update.exception.eyca.activation.activityOutput"
+            )
           )
         );
 
@@ -225,7 +230,7 @@ export const UpdateCgnOrchestratorHandler = function*(
   } catch (err) {
     context.log.error(`${logPrefix}|ERROR|${String(err)}`);
     trackExIfNotReplaying({
-      exception: err,
+      exception: E.toError(err),
       properties: {
         id: fiscalCode,
         name: "cgn.update.error"

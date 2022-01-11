@@ -1,8 +1,8 @@
 import { Container } from "@azure/cosmos";
-import { RetrievedVersionedModel } from "io-functions-commons/dist/src/utils/cosmosdb_model_versioned";
-import { wrapWithKind } from "io-functions-commons/dist/src/utils/types";
+import { RetrievedVersionedModel } from "@pagopa/io-functions-commons/dist/src/utils/cosmosdb_model_versioned";
+import { wrapWithKind } from "@pagopa/io-functions-commons/dist/src/utils/types";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import * as t from "io-ts";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { Card } from "../generated/definitions/Card";
 import { UserCardVersionedDeletable } from "./user_card_versionend_deletable";
 
@@ -50,11 +50,11 @@ export class UserCgnModel extends UserCardVersionedDeletable<
     super(container, NewUserCgn, RetrievedUserCgn, USER_CGN_MODEL_PK_FIELD);
   }
 
-  public findAll = (fiscalCode: FiscalCode) => {
-    return super.findAll(
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  public readonly findAll = (fiscalCode: FiscalCode) =>
+    super.findAll(
       fiscalCode,
       USER_CGN_COLLECTION_NAME,
       USER_CGN_MODEL_PK_FIELD
     );
-  };
 }

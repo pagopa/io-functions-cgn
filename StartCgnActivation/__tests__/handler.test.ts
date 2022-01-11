@@ -1,13 +1,13 @@
-/* tslint:disable: no-any */
-import { addYears } from "date-fns";
-import { some } from "fp-ts/lib/Option";
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { toCosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { toCosmosErrorResponse } from "@pagopa/io-functions-commons/dist/src/utils/cosmosdb_model";
 import {
   ResponseErrorInternal,
   ResponseSuccessAccepted
-} from "italia-ts-commons/lib/responses";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+} from "@pagopa/ts-commons/lib/responses";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import { addYears } from "date-fns";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
@@ -63,7 +63,7 @@ const anActivatedUserCgn: UserCgn = {
 const findLastVersionByModelIdMock = jest
   .fn()
   .mockImplementation(() =>
-    taskEither.of(some({ ...aRevokedUserCgn, card: aUserCardPending }))
+    TE.of(O.some({ ...aRevokedUserCgn, card: aUserCardPending }))
   );
 const upsertModelMock = jest.fn();
 const userCgnModelMock = {
@@ -83,7 +83,7 @@ describe("StartCgnActivation", () => {
 
   it("should return an Internal Error if an error occurs during UserCgn retrieve", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      fromLeft(toCosmosErrorResponse(new Error("query error")))
+      TE.left(toCosmosErrorResponse(new Error("query error")))
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
       userCgnModelMock as any,
@@ -95,7 +95,7 @@ describe("StartCgnActivation", () => {
 
   it("should return an Internal Error if it is not possible to check status of an other orchestrator with the same id", async () => {
     checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
-      fromLeft(ResponseErrorInternal("Error"))
+      TE.left(ResponseErrorInternal("Error"))
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
       userCgnModelMock as any,
@@ -107,7 +107,7 @@ describe("StartCgnActivation", () => {
 
   it("should return an Accepted response if there is another orchestrator running with the same id", async () => {
     checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
-      fromLeft(ResponseSuccessAccepted())
+      TE.left(ResponseSuccessAccepted())
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
       userCgnModelMock as any,
@@ -118,10 +118,8 @@ describe("StartCgnActivation", () => {
   });
 
   it("should start a new orchestrator if there aren' t conflict on the same id", async () => {
-    checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
-      taskEither.of(false)
-    );
-    upsertModelMock.mockImplementationOnce(() => taskEither.of({}));
+    checkUpdateCardIsRunningMock.mockImplementationOnce(() => TE.of(false));
+    upsertModelMock.mockImplementationOnce(() => TE.of({}));
     const startCgnActivationHandler = StartCgnActivationHandler(
       userCgnModelMock as any,
       DEFAULT_CGN_UPPER_BOUND_AGE
@@ -132,7 +130,7 @@ describe("StartCgnActivation", () => {
 
   it("should return a Conflict Error if a CGN is already ACTIVATED", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(anActivatedUserCgn))
+      TE.of(O.some(anActivatedUserCgn))
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
       userCgnModelMock as any,
@@ -143,11 +141,9 @@ describe("StartCgnActivation", () => {
   });
 
   it("should start an Internal Error if there are errors while inserting a new Cgn in pending status", async () => {
-    checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
-      taskEither.of(false)
-    );
+    checkUpdateCardIsRunningMock.mockImplementationOnce(() => TE.of(false));
     upsertModelMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Insert error"))
+      TE.left(new Error("Insert error"))
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
       userCgnModelMock as any,
@@ -160,7 +156,7 @@ describe("StartCgnActivation", () => {
 
   it("should return a Forbidden Error if a fiscal code is not eligible for CGN", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      fromLeft(toCosmosErrorResponse(new Error("query error")))
+      TE.left(toCosmosErrorResponse(new Error("query error")))
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
       userCgnModelMock as any,

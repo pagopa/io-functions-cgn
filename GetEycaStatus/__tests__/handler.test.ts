@@ -1,11 +1,10 @@
-/* tslint:disable: no-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
+import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import * as date_fns from "date-fns";
-import { left, right } from "fp-ts/lib/Either";
-import { some } from "fp-ts/lib/Option";
-import { none } from "fp-ts/lib/Option";
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import * as E from "fp-ts/lib/Either";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 import { cgnActivatedDates, now } from "../../__mocks__/mock";
 import {
   CardActivated,
@@ -60,14 +59,14 @@ const aUserCgn: UserCgn = {
 
 const findLastVersionByModelIdMock = jest
   .fn()
-  .mockImplementation(() => taskEither.of(some(aUserEycaCard)));
+  .mockImplementation(() => TE.of(O.some(aUserEycaCard)));
 const userEycaCardModelMock = {
   findLastVersionByModelId: findLastVersionByModelIdMock
 };
 
 const findLastVersionCgnByModelIdMock = jest
   .fn()
-  .mockImplementation(() => taskEither.of(some(aUserCgn)));
+  .mockImplementation(() => TE.of(O.some(aUserCgn)));
 const userCgnModelMock = {
   findLastVersionByModelId: findLastVersionCgnByModelIdMock
 };
@@ -78,7 +77,7 @@ const anActivatedEycaCard: EycaCardActivated = {
   expiration_date: date_fns.addDays(now, 10),
   status: ActivatedStatusEnum.ACTIVATED
 };
-const isEycaEligibleMock = jest.fn().mockImplementation(() => right(true));
+const isEycaEligibleMock = jest.fn().mockImplementation(() => E.right(true));
 jest.spyOn(cgn_checks, "isEycaEligible").mockImplementation(isEycaEligibleMock);
 
 const successImpl = async (userEycaCard: UserEycaCard) => {
@@ -102,14 +101,14 @@ describe("GetEycaCardStatusHandler", () => {
 
   it("should return success if a revoked userEycaCard is found", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aUserEycaCard, card: aRevokedEycaCard }))
+      TE.of(O.some({ ...aUserEycaCard, card: aRevokedEycaCard }))
     );
     await successImpl({ ...aUserEycaCard, card: aRevokedEycaCard });
   });
 
   it("should return success if an activated userEycaCard is found", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aUserEycaCard, card: anActivatedEycaCard }))
+      TE.of(O.some({ ...aUserEycaCard, card: anActivatedEycaCard }))
     );
     await successImpl({ ...aUserEycaCard, card: anActivatedEycaCard });
   });
@@ -120,7 +119,7 @@ describe("GetEycaCardStatusHandler", () => {
 
   it("should return an internal error when a query error occurs", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Query Error"))
+      TE.left(new Error("Query Error"))
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
@@ -133,7 +132,7 @@ describe("GetEycaCardStatusHandler", () => {
 
   it("should return an internal error if EYCA eligible check fails", async () => {
     isEycaEligibleMock.mockImplementationOnce(() =>
-      left(new Error("Connt perform EYCA eligibility check"))
+      E.left(new Error("Connt perform EYCA eligibility check"))
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
@@ -145,11 +144,9 @@ describe("GetEycaCardStatusHandler", () => {
   });
 
   it("should return an internal error if query errors occurs on CGN", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(O.none));
     findLastVersionCgnByModelIdMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Query Error"))
+      TE.left(new Error("Query Error"))
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
@@ -161,12 +158,8 @@ describe("GetEycaCardStatusHandler", () => {
   });
 
   it("should return Not found if EYCA and CGN cards are missing", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
-    findLastVersionCgnByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(O.none));
+    findLastVersionCgnByModelIdMock.mockImplementationOnce(() => TE.of(O.none));
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
       userCgnModelMock as any,
@@ -177,11 +170,9 @@ describe("GetEycaCardStatusHandler", () => {
   });
 
   it("should return Not found if EYCA card is missing and CGN card is Pending", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(O.none));
     findLastVersionCgnByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aUserCgn, card: aPendingEycaCard }))
+      TE.of(O.some({ ...aUserCgn, card: aPendingEycaCard }))
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
@@ -193,7 +184,7 @@ describe("GetEycaCardStatusHandler", () => {
   });
 
   it("should return not authorized if no userEycaCard is found and user is not eligible to get it", async () => {
-    isEycaEligibleMock.mockImplementationOnce(() => right(false));
+    isEycaEligibleMock.mockImplementationOnce(() => E.right(false));
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
       userCgnModelMock as any,
@@ -204,9 +195,7 @@ describe("GetEycaCardStatusHandler", () => {
   });
 
   it("should return conflict if no userEycaCard is found and CGN is already activated", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(O.none));
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,
       userCgnModelMock as any,
@@ -217,11 +206,9 @@ describe("GetEycaCardStatusHandler", () => {
   });
 
   it("should return internal error if no userEycaCard is found and eligibility check on user fails", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(O.none));
     isEycaEligibleMock.mockImplementationOnce(() =>
-      left(new Error("Cannot recognize EYCA eligibility"))
+      E.left(new Error("Cannot recognize EYCA eligibility"))
     );
     const handler = GetEycaStatusHandler(
       userEycaCardModelMock as any,

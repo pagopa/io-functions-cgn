@@ -1,18 +1,13 @@
+/* eslint-disable sort-keys */
 import * as express from "express";
-
 import { Context } from "@azure/functions";
-import * as df from "durable-functions";
-import { fromOption, toError } from "fp-ts/lib/Either";
-import { identity } from "fp-ts/lib/function";
-import { fromLeft, taskEither, tryCatch } from "fp-ts/lib/TaskEither";
-import { fromEither } from "fp-ts/lib/TaskEither";
-import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
-import { RequiredBodyPayloadMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_body_payload";
-import { RequiredParamMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_param";
+import { ContextMiddleware } from "@pagopa/io-functions-commons/dist/src/utils/middlewares/context_middleware";
+import { RequiredBodyPayloadMiddleware } from "@pagopa/io-functions-commons/dist/src/utils/middlewares/required_body_payload";
+import { RequiredParamMiddleware } from "@pagopa/io-functions-commons/dist/src/utils/middlewares/required_param";
 import {
   withRequestMiddlewares,
   wrapRequestHandler
-} from "io-functions-commons/dist/src/utils/request_middleware";
+} from "@pagopa/io-functions-commons/dist/src/utils/request_middleware";
 import {
   IResponseErrorConflict,
   IResponseErrorInternal,
@@ -22,8 +17,12 @@ import {
   ResponseErrorInternal,
   ResponseErrorNotFound,
   ResponseSuccessRedirectToResource
-} from "italia-ts-commons/lib/responses";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+} from "@pagopa/ts-commons/lib/responses";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import * as df from "durable-functions";
+import * as E from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
+import * as TE from "fp-ts/lib/TaskEither";
 import { StatusEnum as PendingStatusEnum } from "../generated/definitions/CardPending";
 
 import { StatusEnum } from "../generated/definitions/CardRevoked";
@@ -49,70 +48,64 @@ type IUpsertCgnStatusHandler = (
   cgnStatusUpsertRequest: CgnStatusUpsertRequest
 ) => Promise<ReturnTypes>;
 
-const toCgnStatus = (cgnStatusUpsertRequest: CgnStatusUpsertRequest) => {
-  return {
-    revocation_date: new Date(),
-    revocation_reason: cgnStatusUpsertRequest.revocation_reason,
-    status: StatusEnum.REVOKED
-  };
-};
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+const toCgnStatus = (cgnStatusUpsertRequest: CgnStatusUpsertRequest) => ({
+  revocation_date: new Date(),
+  revocation_reason: cgnStatusUpsertRequest.revocation_reason,
+  status: StatusEnum.REVOKED
+});
 
-export function UpsertCgnStatusHandler(
+export const UpsertCgnStatusHandler = (
   userCgnModel: UserCgnModel,
   logPrefix: string = "UpsertCgnStatusHandler"
-): IUpsertCgnStatusHandler {
-  return async (context, fiscalCode, cgnStatusUpsertRequest) => {
-    const client = df.getClient(context);
-    const orchestratorId = makeUpdateCgnOrchestratorId(
-      fiscalCode,
-      StatusEnum.REVOKED
-    ) as NonEmptyString;
-
-    return taskEither
-      .of<
-        IResponseErrorInternal | IResponseErrorNotFound,
-        CgnStatusUpsertRequest
-      >(cgnStatusUpsertRequest)
-      .chain(_ =>
-        userCgnModel.findLastVersionByModelId([fiscalCode]).bimap(
+): IUpsertCgnStatusHandler => async (
+  context,
+  fiscalCode,
+  cgnStatusUpsertRequest
+): Promise<ReturnTypes> => {
+  const client = df.getClient(context);
+  const orchestratorId = makeUpdateCgnOrchestratorId(
+    fiscalCode,
+    StatusEnum.REVOKED
+  ) as NonEmptyString;
+  return pipe(
+    cgnStatusUpsertRequest,
+    TE.of,
+    TE.chain(upsertRequest =>
+      pipe(
+        userCgnModel.findLastVersionByModelId([fiscalCode]),
+        TE.bimap(
           () =>
             ResponseErrorInternal("Cannot retrieve CGN infos for this user"),
-          maybeUserCgn => ({ maybeUserCgn, card: toCgnStatus(_) })
+          maybeUserCgn => ({ maybeUserCgn, card: toCgnStatus(upsertRequest) })
         )
       )
-      .chain(({ card, maybeUserCgn }) =>
-        fromEither(
-          fromOption(
-            ResponseErrorNotFound("Not Found", "User's CGN status not found")
-          )(maybeUserCgn)
-        ).map(_ =>
-          _.card.status !== PendingStatusEnum.PENDING
+    ),
+    TE.chainW(({ card, maybeUserCgn }) =>
+      pipe(
+        maybeUserCgn,
+        TE.fromOption(() =>
+          ResponseErrorNotFound("Not Found", "User's CGN status not found")
+        ),
+        TE.map(userCgn =>
+          userCgn.card.status !== PendingStatusEnum.PENDING
             ? {
                 ...card,
-                activation_date: _.card.activation_date,
-                expiration_date: _.card.expiration_date
+                activation_date: userCgn.card.activation_date,
+                expiration_date: userCgn.card.expiration_date
               }
             : {
-                status: _.card.status
+                status: userCgn.card.status
               }
         )
       )
-      .foldTaskEither<
-        ErrorTypes,
-        | IResponseSuccessAccepted
-        | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
-      >(fromLeft, card =>
-        checkUpdateCardIsRunning(client, fiscalCode, card).foldTaskEither<
-          ErrorTypes,
-          | IResponseSuccessAccepted
-          | IResponseSuccessRedirectToResource<InstanceId, InstanceId>
-        >(
-          response =>
-            response.kind === "IResponseSuccessAccepted"
-              ? taskEither.of(response)
-              : fromLeft(response),
-          () =>
-            tryCatch(
+    ),
+    TE.chainW(card =>
+      pipe(
+        checkUpdateCardIsRunning(client, fiscalCode, card),
+        TE.chainW(() =>
+          pipe(
+            TE.tryCatch(
               () =>
                 client.startNew(
                   "UpdateCgnOrchestrator",
@@ -122,8 +115,9 @@ export function UpsertCgnStatusHandler(
                     newStatusCard: card
                   })
                 ),
-              toError
-            ).bimap(
+              E.toError
+            ),
+            TE.bimap(
               err => {
                 context.log.error(
                   `${logPrefix}|Cannot start UpdateCgnOrchestrator|ERROR=${err.message}`
@@ -143,16 +137,22 @@ export function UpsertCgnStatusHandler(
                 );
               }
             )
+          )
+        ),
+        TE.orElseW(response =>
+          response.kind === "IResponseSuccessAccepted"
+            ? TE.of(response)
+            : TE.left(response)
         )
       )
-      .fold<ReturnTypes>(identity, identity)
-      .run();
-  };
-}
+    ),
+    TE.toUnion
+  )();
+};
 
-export function UpsertCgnStatus(
+export const UpsertCgnStatus = (
   userCgnModel: UserCgnModel
-): express.RequestHandler {
+): express.RequestHandler => {
   const handler = UpsertCgnStatusHandler(userCgnModel);
 
   const middlewaresWrap = withRequestMiddlewares(
@@ -162,4 +162,4 @@ export function UpsertCgnStatus(
   );
 
   return wrapRequestHandler(middlewaresWrap(handler));
-}
+};

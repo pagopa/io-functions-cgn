@@ -2,10 +2,12 @@
 
 import { Context } from "@azure/functions";
 
-import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
-import { readableReport } from "italia-ts-commons/lib/reporters";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { MessageContent } from "@pagopa/io-functions-commons/dist/generated/definitions/MessageContent";
+import { readableReport } from "@pagopa/ts-commons/lib/reporters";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 
+import * as E from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
 import {
   ActivityResult,
   ActivityResultFailure,
@@ -29,7 +31,9 @@ export const getSendMessageActivityHandler = (
   getProfile: GetProfileT,
   sendMessage: SendMessageT,
   logPrefix: string = `SendMessageActivity`
+  // eslint-disable-next-line sonarjs/cognitive-complexity
 ) => (context: Context, input: unknown): Promise<ActivityResult> => {
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   const failure = (reason: string) => {
     context.log.error(reason);
     return ActivityResultFailure.encode({
@@ -38,55 +42,59 @@ export const getSendMessageActivityHandler = (
     });
   };
 
-  return ActivityInput.decode(input).fold<Promise<ActivityResult>>(
-    async errs =>
-      failure(
-        `${logPrefix}|Cannot decode input|ERROR=${readableReport(
-          errs
-        )}|INPUT=${JSON.stringify(input)}`
-      ),
-    async ({ content, fiscalCode, checkProfile }) => {
-      const cfHash = toHash(fiscalCode);
-      // throws in case of timeout so
-      // the orchestrator can schedule a retry
-      if (checkProfile) {
-        const getProfileStatus = await getProfile(fiscalCode);
+  return pipe(
+    input,
+    ActivityInput.decode,
+    E.fold(
+      async errs =>
+        failure(
+          `${logPrefix}|Cannot decode input|ERROR=${readableReport(
+            errs
+          )}|INPUT=${JSON.stringify(input)}`
+        ),
+      async ({ content, fiscalCode, checkProfile }) => {
+        const cfHash = toHash(fiscalCode);
+        // throws in case of timeout so
+        // the orchestrator can schedule a retry
+        if (checkProfile) {
+          const getProfileStatus = await getProfile(fiscalCode);
 
-        if (getProfileStatus !== 200) {
-          if (getProfileStatus === 404) {
-            context.log.verbose(
-              `${logPrefix}|CFHASH=${cfHash}|PROFILE_NOT_FOUND`
-            );
-            // In case the profile is not found continue
-            return success();
+          if (getProfileStatus !== 200) {
+            if (getProfileStatus === 404) {
+              context.log.verbose(
+                `${logPrefix}|CFHASH=${cfHash}|PROFILE_NOT_FOUND`
+              );
+              // In case the profile is not found continue
+              return success();
+            }
+            const msg = `${logPrefix}|CFHASH=${cfHash}|ERROR=${getProfileStatus}`;
+            if (getProfileStatus >= 500) {
+              throw new Error(msg);
+            } else {
+              return failure(msg);
+            }
           }
-          const msg = `${logPrefix}|CFHASH=${cfHash}|ERROR=${getProfileStatus}`;
-          if (getProfileStatus >= 500) {
+        }
+
+        const sendMessageStatus = await sendMessage(
+          fiscalCode,
+          makeNewMessage(content)
+        );
+
+        if (sendMessageStatus !== 201) {
+          const msg = `${logPrefix}|CFHASH=${cfHash}|ERROR=${sendMessageStatus}`;
+          if (sendMessageStatus >= 500) {
             throw new Error(msg);
           } else {
             return failure(msg);
           }
         }
+
+        context.log.verbose(
+          `${logPrefix}|CFHASH=${cfHash}|RESPONSE=${sendMessageStatus}`
+        );
+        return success();
       }
-
-      const sendMessageStatus = await sendMessage(
-        fiscalCode,
-        makeNewMessage(content)
-      );
-
-      if (sendMessageStatus !== 201) {
-        const msg = `${logPrefix}|CFHASH=${cfHash}|ERROR=${sendMessageStatus}`;
-        if (sendMessageStatus >= 500) {
-          throw new Error(msg);
-        } else {
-          return failure(msg);
-        }
-      }
-
-      context.log.verbose(
-        `${logPrefix}|CFHASH=${cfHash}|RESPONSE=${sendMessageStatus}`
-      );
-      return success();
-    }
+    )
   );
 };

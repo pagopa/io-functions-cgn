@@ -1,6 +1,6 @@
-/* tslint:disable: no-any */
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import * as TE from "fp-ts/lib/TaskEither";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
 import { StatusEnum } from "../../generated/definitions/CardPending";
 import {
@@ -8,10 +8,10 @@ import {
   getEnqueueEycaActivationActivityHandler
 } from "../handler";
 
-const enqueueEycaActivationMock = jest.fn().mockReturnValue(taskEither.of({}));
+const enqueueEycaActivationMock = jest.fn().mockReturnValue(TE.of({}));
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
-const upsertMock = jest.fn().mockImplementation(() => taskEither.of({}));
+const upsertMock = jest.fn().mockImplementation(() => TE.of({}));
 const userCgnModelMock = {
   upsert: upsertMock
 };
@@ -32,7 +32,7 @@ describe("EnqueueEycaActivationActivity", () => {
     );
 
     enqueueEycaActivationMock.mockReturnValueOnce(
-      fromLeft(new Error("Error while enqueuing message"))
+      TE.left(new Error("Error while enqueuing message"))
     );
     const response = await enqueueEycaActivationActivityHandler(
       context,
@@ -47,7 +47,7 @@ describe("EnqueueEycaActivationActivity", () => {
     );
 
     upsertMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Error upserting"))
+      TE.left(new Error("Error upserting"))
     );
     const response = await enqueueEycaActivationActivityHandler(
       context,

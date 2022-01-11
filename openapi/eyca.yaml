@@ -229,17 +229,17 @@ parameters:
 
 definitions:
   Timestamp:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/Timestamp"
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v21.0.1/openapi/definitions.yaml#/Timestamp"
   FiscalCode:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/FiscalCode"
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v21.0.1/openapi/definitions.yaml#/FiscalCode"
   ProblemJson:
-    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v17.3.0/openapi/definitions.yaml#/ProblemJson"
+    $ref: "https://raw.githubusercontent.com/pagopa/io-functions-commons/v21.0.1/openapi/definitions.yaml#/ProblemJson"
   
   ShortDate:
     type: string
     format: DateFromString
     description: A date field in short format.
-    x-import: italia-ts-commons/lib/dates
+    x-import: "@pagopa/ts-commons/lib/dates"
     example: "2018-10-13"
 
   CcdbNumber:

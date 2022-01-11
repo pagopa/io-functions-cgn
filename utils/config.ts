@@ -4,15 +4,18 @@
  * Single point of access for the application confguration. Handles validation on required environment variables.
  * The configuration is evaluate eagerly at the first access to the module. The module exposes convenient methods to access such value.
  */
+/* eslint-disable sort-keys */
 
 import {
   IntegerFromString,
   NonNegativeInteger
 } from "@pagopa/ts-commons/lib/numbers";
-import { fromNullable } from "fp-ts/lib/Option";
+import { readableReport } from "@pagopa/ts-commons/lib/reporters";
+import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import * as E from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
+import * as O from "fp-ts/lib/Option";
 import * as t from "io-ts";
-import { readableReport } from "italia-ts-commons/lib/reporters";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
 
 export const RedisParams = t.intersection([
   t.interface({
@@ -66,23 +69,34 @@ export const IConfig = t.intersection([
 // No need to re-evaluate this object for each call
 const errorOrConfig: t.Validation<IConfig> = IConfig.decode({
   ...process.env,
-  CGN_UPPER_BOUND_AGE: IntegerFromString.decode(process.env.CGN_UPPER_BOUND_AGE)
-    .map(_ => _ as NonNegativeInteger)
-    .getOrElse(DEFAULT_CGN_UPPER_BOUND_AGE),
-  EYCA_UPPER_BOUND_AGE: IntegerFromString.decode(
-    process.env.EYCA_UPPER_BOUND_AGE
-  )
-    .map(_ => _ as NonNegativeInteger)
-    .getOrElse(DEFAULT_EYCA_UPPER_BOUND_AGE),
-  OTP_TTL_IN_SECONDS: IntegerFromString.decode(
-    process.env.OTP_TTL_IN_SECONDS
-  ).getOrElse(600 as NonNegativeInteger),
-  REDIS_CLUSTER_ENABLED: fromNullable(process.env.REDIS_CLUSTER_ENABLED)
-    .map(_ => _.toLowerCase() === "true")
-    .toUndefined(),
-  REDIS_TLS_ENABLED: fromNullable(process.env.REDIS_TLS_ENABLED)
-    .map(_ => _.toLowerCase() === "true")
-    .toUndefined(),
+  CGN_UPPER_BOUND_AGE: pipe(
+    process.env.CGN_UPPER_BOUND_AGE,
+    IntegerFromString.decode,
+    E.map(_ => _ as NonNegativeInteger),
+    E.getOrElse(() => DEFAULT_CGN_UPPER_BOUND_AGE)
+  ),
+  EYCA_UPPER_BOUND_AGE: pipe(
+    process.env.EYCA_UPPER_BOUND_AGE,
+    IntegerFromString.decode,
+    E.map(_ => _ as NonNegativeInteger),
+    E.getOrElse(() => DEFAULT_EYCA_UPPER_BOUND_AGE)
+  ),
+  OTP_TTL_IN_SECONDS: pipe(
+    process.env.OTP_TTL_IN_SECONDS,
+    IntegerFromString.decode,
+    E.map(_ => _ as NonNegativeInteger),
+    E.getOrElse(() => 600 as NonNegativeInteger)
+  ),
+  REDIS_CLUSTER_ENABLED: pipe(
+    O.fromNullable(process.env.REDIS_CLUSTER_ENABLED),
+    O.map(_ => _.toLowerCase() === "true"),
+    O.toUndefined
+  ),
+  REDIS_TLS_ENABLED: pipe(
+    O.fromNullable(process.env.REDIS_TLS_ENABLED),
+    O.map(_ => _.toLowerCase() === "true"),
+    O.toUndefined
+  ),
   isProduction: process.env.NODE_ENV === "production"
 });
 
@@ -92,9 +106,7 @@ const errorOrConfig: t.Validation<IConfig> = IConfig.decode({
  *
  * @returns either the configuration values or a list of validation errors
  */
-export function getConfig(): t.Validation<IConfig> {
-  return errorOrConfig;
-}
+export const getConfig = (): t.Validation<IConfig> => errorOrConfig;
 
 /**
  * Read the application configuration and check for invalid values.
@@ -103,8 +115,10 @@ export function getConfig(): t.Validation<IConfig> {
  * @returns the configuration values
  * @throws validation errors found while parsing the application configuration
  */
-export function getConfigOrThrow(): IConfig {
-  return errorOrConfig.getOrElseL(errors => {
-    throw new Error(`Invalid configuration: ${readableReport(errors)}`);
-  });
-}
+export const getConfigOrThrow = (): IConfig =>
+  pipe(
+    errorOrConfig,
+    E.getOrElseW(errors => {
+      throw new Error(`Invalid configuration: ${readableReport(errors)}`);
+    })
+  );

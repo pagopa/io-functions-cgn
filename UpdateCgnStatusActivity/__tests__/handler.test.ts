@@ -1,8 +1,8 @@
-/* tslint:disable: no-any */
-import { none, some } from "fp-ts/lib/Option";
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { toCosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { toCosmosErrorResponse } from "@pagopa/io-functions-commons/dist/src/utils/cosmosdb_model";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 import { context } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
@@ -57,7 +57,7 @@ describe("UpdateCgnStatusActivity", () => {
   });
   it("should return failure if an error occurs during UserCgn retrieve", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      fromLeft(toCosmosErrorResponse(new Error("query error")))
+      TE.left(toCosmosErrorResponse(new Error("query error")))
     );
     const updateCgnStatusActivityHandler = getUpdateCgnStatusActivityHandler(
       userCgnModelMock as any
@@ -75,9 +75,7 @@ describe("UpdateCgnStatusActivity", () => {
   });
 
   it("should return failure if no UserCgn was found", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(O.none));
     const updateCgnStatusActivityHandler = getUpdateCgnStatusActivityHandler(
       userCgnModelMock as any
     );
@@ -94,10 +92,10 @@ describe("UpdateCgnStatusActivity", () => {
   });
   it("should return failure if userCgn' s update fails", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(aRevokedUserCgn))
+      TE.of(O.some(aRevokedUserCgn))
     );
     updateMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Cannot update userCgn"))
+      TE.left(new Error("Cannot update userCgn"))
     );
     const updateCgnStatusActivityHandler = getUpdateCgnStatusActivityHandler(
       userCgnModelMock as any
@@ -114,9 +112,9 @@ describe("UpdateCgnStatusActivity", () => {
 
   it("should return success if userCgn' s update success", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aRevokedUserCgn, card: aUserCardPending }))
+      TE.of(O.some({ ...aRevokedUserCgn, card: aUserCardPending }))
     );
-    updateMock.mockImplementationOnce(() => taskEither.of(aRevokedUserCgn));
+    updateMock.mockImplementationOnce(() => TE.of(aRevokedUserCgn));
     const updateCgnStatusActivityHandler = getUpdateCgnStatusActivityHandler(
       userCgnModelMock as any
     );

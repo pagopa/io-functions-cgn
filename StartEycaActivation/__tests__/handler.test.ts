@@ -1,9 +1,9 @@
-/* tslint:disable: no-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { addYears } from "date-fns";
-import { left, right } from "fp-ts/lib/Either";
-import { none, some } from "fp-ts/lib/Option";
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import * as E from "fp-ts/lib/Either";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 import { mockGetStatus, mockStartNew } from "../../__mocks__/durable-functions";
 import {
   CardActivated,
@@ -16,13 +16,11 @@ import { UserEycaCard } from "../../models/user_eyca_card";
 import * as checks from "../../utils/cgn_checks";
 import * as orchUtils from "../../utils/orchestrators";
 
-import { ResponseSuccessAccepted } from "italia-ts-commons/lib/responses";
+import { ResponseSuccessAccepted } from "@pagopa/ts-commons/lib/responses";
 import { CcdbNumber } from "../../generated/definitions/CcdbNumber";
 import * as cgn_checks from "../../utils/cgn_checks";
 import { DEFAULT_EYCA_UPPER_BOUND_AGE } from "../../utils/config";
 import { ReturnTypes, StartEycaActivationHandler } from "../handler";
-
-import * as df from "durable-functions";
 
 const aFiscalCode = "RODFDS89S10H501T" as FiscalCode;
 const anEycaCardNumber = "A123-A123-A123-A123" as CcdbNumber;
@@ -53,31 +51,31 @@ const aUserEycaCard: UserEycaCard = {
 
 const findLastVersionByModelIdMock = jest
   .fn()
-  .mockImplementation(() => taskEither.of(some(anActivatedUserCgn)));
+  .mockImplementation(() => TE.of(O.some(anActivatedUserCgn)));
 const userCgnModelMock = {
   findLastVersionByModelId: findLastVersionByModelIdMock
 };
 
 const extractEycaExpirationDateMock = jest
   .spyOn(cgn_checks, "extractEycaExpirationDate")
-  .mockImplementation(() => right(addYears(new Date(), 5)));
+  .mockImplementation(() => E.right(addYears(new Date(), 5)));
 
 const findLastVersionEycaByModelIdMock = jest
   .fn()
-  .mockImplementation(() => taskEither.of(none));
-const upsertMock = jest.fn().mockImplementation(() => taskEither.of({}));
+  .mockImplementation(() => TE.of(O.none));
+const upsertMock = jest.fn().mockImplementation(() => TE.of({}));
 const userEycaCardModelMock = {
   findLastVersionByModelId: findLastVersionEycaByModelIdMock,
   upsert: upsertMock
 };
 const checkUpdateCardIsRunningMock = jest
   .fn()
-  .mockImplementation(() => taskEither.of(false));
+  .mockImplementation(() => TE.of(false));
 jest
   .spyOn(orchUtils, "checkUpdateCardIsRunning")
   .mockImplementation(checkUpdateCardIsRunningMock);
 
-const isEycaEligibleMock = jest.fn().mockImplementation(() => right(true));
+const isEycaEligibleMock = jest.fn().mockImplementation(() => E.right(true));
 jest.spyOn(checks, "isEycaEligible").mockImplementation(isEycaEligibleMock);
 
 const startHandler = (): Promise<ReturnTypes> => {
@@ -91,14 +89,12 @@ const startHandler = (): Promise<ReturnTypes> => {
 
 describe("StartEycaActivation", () => {
   beforeEach(() => {
-    (df.getClient as any).mockClear();
-    (df as any).mockStartNew.mockClear();
     jest.clearAllMocks();
   });
 
   it("should return an Internal Error if it is not possible to perform eyca eligibility check", async () => {
     isEycaEligibleMock.mockImplementationOnce(() =>
-      left(new Error("Cannot recognize eligibility for EYCA"))
+      E.left(new Error("Cannot recognize eligibility for EYCA"))
     );
     const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -106,29 +102,27 @@ describe("StartEycaActivation", () => {
 
   it("should return an Internal Error if it is not possible to get CGN info", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Cannot read CGN info"))
+      TE.left(new Error("Cannot read CGN info"))
     );
     const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorInternal");
   });
 
   it("should return Unauthorized the user is not eligible for EYCA", async () => {
-    isEycaEligibleMock.mockImplementationOnce(() => right(false));
+    isEycaEligibleMock.mockImplementationOnce(() => E.right(false));
     const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
   });
   it("should return Unauthorized if the user does not have a related CGN", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(O.none));
     const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorForbiddenNotAuthorized");
   });
 
   it("should return Unauthorized if the user does not have an ACTIVATED CGN", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(
-        some({
+      TE.of(
+        O.some({
           ...anActivatedUserCgn,
           card: { status: PendingStatusEnum.PENDING }
         })
@@ -140,7 +134,7 @@ describe("StartEycaActivation", () => {
 
   it("should return an Internal Error if it is not possible to get EYCA Card info", async () => {
     findLastVersionEycaByModelIdMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Cannot read EYCA info"))
+      TE.left(new Error("Cannot read EYCA info"))
     );
     const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorInternal");
@@ -148,7 +142,7 @@ describe("StartEycaActivation", () => {
 
   it("should return an Internal Error if it is not possible to calculate Expiration Date from FiscalCode", async () => {
     extractEycaExpirationDateMock.mockImplementationOnce(() =>
-      left(new Error("Cannot extract date"))
+      E.left(new Error("Cannot extract date"))
     );
 
     const response = await startHandler();
@@ -163,7 +157,7 @@ describe("StartEycaActivation", () => {
 
   it("should return a Conflict Error if an EYCA Card is already activated", async () => {
     findLastVersionEycaByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some(aUserEycaCard))
+      TE.of(O.some(aUserEycaCard))
     );
     const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorConflict");
@@ -171,8 +165,8 @@ describe("StartEycaActivation", () => {
 
   it("should return an Internal Error if it is not possible to get EYCA Card activation status info", async () => {
     findLastVersionEycaByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(
-        some({
+      TE.of(
+        O.some({
           ...aUserEycaCard,
           card: { status: PendingStatusEnum.PENDING }
         })
@@ -185,23 +179,23 @@ describe("StartEycaActivation", () => {
 
   it("should return an Internal Error if EYCA Card upsert fails", async () => {
     findLastVersionEycaByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(
-        some({
+      TE.of(
+        O.some({
           ...aUserEycaCard,
           card: { status: PendingStatusEnum.PENDING }
         })
       )
     );
     upsertMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Cannot upsert EYCA card"))
+      TE.left(new Error("Cannot upsert EYCA card"))
     );
     const response = await startHandler();
     expect(response.kind).toBe("IResponseErrorInternal");
   });
   it("should return an Internal Error if EYCA Card activation's orchestrator start fails", async () => {
     findLastVersionEycaByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(
-        some({
+      TE.of(
+        O.some({
           ...aUserEycaCard,
           card: { status: PendingStatusEnum.PENDING }
         })
@@ -216,7 +210,7 @@ describe("StartEycaActivation", () => {
       DEFAULT_EYCA_UPPER_BOUND_AGE
     );
     const response = await startEycaActivationHandler(
-      // tslint:disable-next-line: no-console
+      // eslint-disable-next-line no-console
       { log: { error: console.log } } as any,
       aFiscalCode
     );
@@ -230,7 +224,7 @@ describe("StartEycaActivation", () => {
 
   it("should return an Accepted response if there is another orchestrator running with the same id", async () => {
     checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
-      fromLeft(ResponseSuccessAccepted())
+      TE.left(ResponseSuccessAccepted())
     );
     const response = await startHandler();
     expect(response.kind).toBe("IResponseSuccessAccepted");

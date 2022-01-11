@@ -1,16 +1,15 @@
 import nodeFetch from "node-fetch";
 import { Client, createClient } from "../generated/eyca-api/client";
 
-export function EycaAPIClient(
+export const EycaAPIClient = (
   baseUrl: string,
-  // tslint:disable-next-line: no-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fetchApi: typeof fetch = (nodeFetch as any) as typeof fetch
-): Client {
-  return createClient({
+): Client =>
+  createClient({
     basePath: "",
     baseUrl,
     fetchApi
   });
-}
 
 export type EycaAPIClient = typeof EycaAPIClient;

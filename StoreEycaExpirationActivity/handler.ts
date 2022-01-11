@@ -1,9 +1,9 @@
 import { Context } from "@azure/functions";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { TableService } from "azure-storage";
-import { identity } from "fp-ts/lib/function";
-import { fromEither } from "fp-ts/lib/TaskEither";
+import { pipe } from "fp-ts/lib/function";
+import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { ActivityResult, failure, success } from "../utils/activity";
 import { errorsToError } from "../utils/conversions";
@@ -27,15 +27,26 @@ export const getStoreEycaExpirationActivityHandler = (
     tableService,
     eycaExpirationTableName
   );
-  return fromEither(ActivityInput.decode(input))
-    .mapLeft(errs => fail(errorsToError(errs), "Cannot decode Activity Input"))
-    .chain(activityInput =>
-      insertEycaExpirationTask(
-        activityInput.fiscalCode,
-        activityInput.activationDate,
-        activityInput.expirationDate
-      ).bimap(err => fail(err, "Cannot insert Eyca expiration tuple"), success)
-    )
-    .fold<ActivityResult>(identity, identity)
-    .run();
+  return pipe(
+    input,
+    ActivityInput.decode,
+    TE.fromEither,
+    TE.mapLeft(errs =>
+      fail(errorsToError(errs), "Cannot decode Activity Input")
+    ),
+    TE.chain(activityInput =>
+      pipe(
+        insertEycaExpirationTask(
+          activityInput.fiscalCode,
+          activityInput.activationDate,
+          activityInput.expirationDate
+        ),
+        TE.bimap(
+          err => fail(err, "Cannot insert Eyca expiration tuple"),
+          success
+        )
+      )
+    ),
+    TE.toUnion
+  )();
 };

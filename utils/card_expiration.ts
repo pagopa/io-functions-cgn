@@ -1,7 +1,8 @@
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { TableService } from "azure-storage";
-import { toError } from "fp-ts/lib/Either";
-import { taskEither, tryCatch } from "fp-ts/lib/TaskEither";
+import * as E from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
+import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import {
@@ -35,30 +36,30 @@ const withExpiredCardRowFromEntry = (f: (s: ExpiredCardRowKey) => void) => (
 /**
  * Fetches all user hashed returned by the provided paged query
  */
-export async function queryUsers(
+export const queryUsers = async (
   pagedQuery: PagedQuery
-): Promise<ReadonlySet<ExpiredCardRowKey>> {
+): Promise<ReadonlySet<ExpiredCardRowKey>> => {
   const entries = new Set<ExpiredCardRowKey>();
   const addToSet = withExpiredCardRowFromEntry(s => entries.add(s));
   for await (const page of iterateOnPages(pagedQuery)) {
     page.forEach(addToSet);
   }
   return entries;
-}
+};
 
 export const getExpiredCardUsers = (
   tableService: TableService,
   expiredCardTableName: string,
   refDate: string
-) =>
+): TE.TaskEither<Error, ReadonlyArray<ExpiredCardRowKey>> =>
   // get a function that can query the expired cgns table
-  taskEither
-    .of<Error, ReturnType<typeof getPagedQuery>>(
-      getPagedQuery(tableService, expiredCardTableName)
-    )
-    .map(pagedQuery => pagedQuery(queryFilterForKey(`${refDate}`)))
-    .chain(cgnExpirationQuery =>
-      tryCatch(() => queryUsers(cgnExpirationQuery), toError).map(readSet =>
-        Array.from(readSet.values())
+  pipe(
+    TE.of(getPagedQuery(tableService, expiredCardTableName)),
+    TE.map(pagedQuery => pagedQuery(queryFilterForKey(`${refDate}`))),
+    TE.chain(cgnExpirationQuery =>
+      pipe(
+        TE.tryCatch(() => queryUsers(cgnExpirationQuery), E.toError),
+        TE.map(readSet => Array.from(readSet.values()))
       )
-    );
+    )
+  );

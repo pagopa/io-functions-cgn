@@ -1,12 +1,11 @@
-/* tslint:disable: no-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
+import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import * as date_fns from "date-fns";
 import { OrchestrationRuntimeStatus } from "durable-functions/lib/src/classes";
-import { some } from "fp-ts/lib/Option";
-import { none } from "fp-ts/lib/Option";
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 import { now } from "../../__mocks__/mock";
 import {
   CardActivated,
@@ -56,7 +55,7 @@ const aUserCgn: UserCgn = {
 const findLastVersionByModelIdMock = jest
   .fn()
   .mockImplementation(() =>
-    taskEither.of(some({ ...aUserCgn, card: anActivatedCgn }))
+    TE.of(O.some({ ...aUserCgn, card: anActivatedCgn }))
   );
 const userCgnModelMock = {
   findLastVersionByModelId: findLastVersionByModelIdMock
@@ -65,7 +64,7 @@ const userCgnModelMock = {
 const getOrchestratorStatusMock = jest
   .fn()
   .mockImplementation((_, __) =>
-    taskEither.of({ instanceId: anInstanceId, customStatus: "UPDATED" })
+    TE.of({ instanceId: anInstanceId, customStatus: "UPDATED" })
   );
 jest
   .spyOn(orchUtils, "getOrchestratorStatus")
@@ -74,13 +73,13 @@ jest
 describe("GetCgnActivationHandler", () => {
   it("should return success with ERROR status if orchestrator status is Failed", async () => {
     getOrchestratorStatusMock.mockImplementationOnce(() =>
-      taskEither.of({
+      TE.of({
         instanceId: anInstanceId,
         runtimeStatus: OrchestrationRuntimeStatus.Failed
       })
     );
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aUserCgn }))
+      TE.of(O.some({ ...aUserCgn }))
     );
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
@@ -95,13 +94,13 @@ describe("GetCgnActivationHandler", () => {
 
   it("should return success with RUNNING status if orchestrator status is Running", async () => {
     getOrchestratorStatusMock.mockImplementationOnce(() =>
-      taskEither.of({
+      TE.of({
         instanceId: anInstanceId,
         runtimeStatus: OrchestrationRuntimeStatus.Running
       })
     );
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aUserCgn }))
+      TE.of(O.some({ ...aUserCgn }))
     );
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
@@ -124,7 +123,7 @@ describe("GetCgnActivationHandler", () => {
 
   it("should return success if an orchestrator's custom status is COMPLETED", async () => {
     getOrchestratorStatusMock.mockImplementationOnce(() =>
-      taskEither.of({ instanceId: anInstanceId, customStatus: "COMPLETED" })
+      TE.of({ instanceId: anInstanceId, customStatus: "COMPLETED" })
     );
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
@@ -135,11 +134,9 @@ describe("GetCgnActivationHandler", () => {
   });
 
   it("should return an internal error if there are errors to retrieve a UserCgn", async () => {
-    getOrchestratorStatusMock.mockImplementationOnce(() =>
-      taskEither.of(undefined)
-    );
+    getOrchestratorStatusMock.mockImplementationOnce(() => TE.of(undefined));
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Query Error"))
+      TE.left(new Error("Query Error"))
     );
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
@@ -147,12 +144,8 @@ describe("GetCgnActivationHandler", () => {
   });
 
   it("should return Not found if infos about orchestrator status and UserCgn are missing", async () => {
-    getOrchestratorStatusMock.mockImplementationOnce(() =>
-      taskEither.of(undefined)
-    );
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
+    getOrchestratorStatusMock.mockImplementationOnce(() => TE.of(undefined));
+    findLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(O.none));
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorNotFound");
@@ -160,23 +153,19 @@ describe("GetCgnActivationHandler", () => {
 
   it("should return Not found if infos about orchestrator status are not recognized and UserCgn are missing", async () => {
     getOrchestratorStatusMock.mockImplementationOnce(() =>
-      taskEither.of({
+      TE.of({
         instanceId: anInstanceId,
         runtimeStatus: OrchestrationRuntimeStatus.Canceled
       })
     );
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(O.none));
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseErrorNotFound");
   });
 
   it("should return success with COMPLETED status if orchestrator infos are missing and userCgn is already activated", async () => {
-    getOrchestratorStatusMock.mockImplementationOnce(() =>
-      taskEither.of(undefined)
-    );
+    getOrchestratorStatusMock.mockImplementationOnce(() => TE.of(undefined));
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
     expect(response.kind).toBe("IResponseSuccessJson");
@@ -187,7 +176,7 @@ describe("GetCgnActivationHandler", () => {
 
   it("should return success with COMPLETED status if orchestrator check status raise an error but userCgn is already activated", async () => {
     getOrchestratorStatusMock.mockImplementationOnce(() =>
-      fromLeft(new Error("Cannot recognize orchestrator status"))
+      TE.left(new Error("Cannot recognize orchestrator status"))
     );
 
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
@@ -199,11 +188,9 @@ describe("GetCgnActivationHandler", () => {
   });
 
   it("should return success with PENDING status if orchestrator infos are missing and userCgn is PENDING", async () => {
-    getOrchestratorStatusMock.mockImplementationOnce(() =>
-      taskEither.of(undefined)
-    );
+    getOrchestratorStatusMock.mockImplementationOnce(() => TE.of(undefined));
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aUserCgn }))
+      TE.of(O.some({ ...aUserCgn }))
     );
     const handler = GetCgnActivationHandler(userCgnModelMock as any);
     const response = await handler({} as any, aFiscalCode);
@@ -218,7 +205,7 @@ describe("GetCgnActivationHandler", () => {
 
   it("should return success with COMPLETED status if the orchestrator is terminated and userCgn is ACTIVATED", async () => {
     getOrchestratorStatusMock.mockImplementationOnce(() =>
-      taskEither.of({
+      TE.of({
         instanceId: anInstanceId,
         runtimeStatus: OrchestrationRuntimeStatus.Terminated
       })
@@ -237,7 +224,7 @@ describe("GetCgnActivationHandler", () => {
 
   it("should return success with COMPLETED status if custom status is UPDATED and userCgn is ACTIVATED", async () => {
     getOrchestratorStatusMock.mockImplementationOnce(() =>
-      taskEither.of({
+      TE.of({
         customStatus: "UPDATED",
         instanceId: anInstanceId,
         runtimeStatus: OrchestrationRuntimeStatus.Running

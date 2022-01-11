@@ -1,5 +1,5 @@
 import { addYears } from "date-fns";
-import { left, right } from "fp-ts/lib/Either";
+import * as E from "fp-ts/lib/Either";
 import { context, mockStartNew } from "../../__mocks__/durable-functions";
 import { aFiscalCode } from "../../__mocks__/mock";
 import * as cgn_checks from "../../utils/cgn_checks";
@@ -8,7 +8,7 @@ import { ContinueEycaActivationHandler } from "../handler";
 
 const extractEycaExpirationDateMock = jest
   .spyOn(cgn_checks, "extractEycaExpirationDate")
-  .mockImplementation(() => right(addYears(new Date(), 5)));
+  .mockImplementation(() => E.right(addYears(new Date(), 5)));
 
 describe("ContinueEycaActivation", () => {
   beforeEach(() => {
@@ -26,7 +26,7 @@ describe("ContinueEycaActivation", () => {
 
   it("should return an Internal Error if it is not possible to calculate Expiration Date from FiscalCode", async () => {
     extractEycaExpirationDateMock.mockImplementationOnce(() =>
-      left(new Error("Cannot extract date"))
+      E.left(new Error("Cannot extract date"))
     );
     const result = ContinueEycaActivationHandler(
       context,

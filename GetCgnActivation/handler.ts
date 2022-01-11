@@ -1,25 +1,12 @@
 import * as express from "express";
 
 import { Context } from "@azure/functions";
-import * as df from "durable-functions";
-import { DurableOrchestrationClient } from "durable-functions/lib/src/classes";
-import { fromOption, toError } from "fp-ts/lib/Either";
-import { identity } from "fp-ts/lib/function";
-import { fromNullable } from "fp-ts/lib/Option";
-import {
-  fromEither,
-  TaskEither,
-  taskEither,
-  tryCatch
-} from "fp-ts/lib/TaskEither";
-import { fromLeft } from "fp-ts/lib/TaskEither";
-import { ContextMiddleware } from "io-functions-commons/dist/src/utils/middlewares/context_middleware";
-import { RequiredParamMiddleware } from "io-functions-commons/dist/src/utils/middlewares/required_param";
+import { ContextMiddleware } from "@pagopa/io-functions-commons/dist/src/utils/middlewares/context_middleware";
+import { RequiredParamMiddleware } from "@pagopa/io-functions-commons/dist/src/utils/middlewares/required_param";
 import {
   withRequestMiddlewares,
   wrapRequestHandler
-} from "io-functions-commons/dist/src/utils/request_middleware";
-import * as t from "io-ts";
+} from "@pagopa/io-functions-commons/dist/src/utils/request_middleware";
 import {
   IResponseErrorInternal,
   IResponseErrorNotFound,
@@ -27,8 +14,15 @@ import {
   ResponseErrorInternal,
   ResponseErrorNotFound,
   ResponseSuccessJson
-} from "italia-ts-commons/lib/responses";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+} from "@pagopa/ts-commons/lib/responses";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+
+import * as df from "durable-functions";
+import { DurableOrchestrationClient } from "durable-functions/lib/src/classes";
+import * as E from "fp-ts/lib/Either";
+import { flow, pipe } from "fp-ts/lib/function";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 import {
   CardActivated,
   StatusEnum as ActivatedStatusEnum
@@ -56,37 +50,29 @@ type IGetCgnActivationHandler = (
   fiscalCode: FiscalCode
 ) => Promise<ResponseTypes>;
 
-const ActivationStatusWithOrchestratorCustomStatus = t.interface({
-  activationDetail: CgnActivationDetail,
-  customStatus: t.string
-});
-
-type ActivationStatusWithOrchestratorCustomStatus = t.TypeOf<
-  typeof ActivationStatusWithOrchestratorCustomStatus
->;
-
 const terminateOrchestratorTask = (
   client: DurableOrchestrationClient,
   orchestratorId: NonEmptyString,
   activationDetail: CgnActivationDetail,
   customStatus: string
-): TaskEither<IResponseErrorInternal, CgnActivationDetail> =>
-  tryCatch(
-    () => client.terminate(orchestratorId, "Async flow not necessary"),
-    toError
-  ).foldTaskEither(
-    () => taskEither.of(activationDetail),
-    () =>
-      taskEither.of({
-        ...activationDetail,
-        status:
-          customStatus === "ERROR" ? StatusEnum.ERROR : StatusEnum.COMPLETED
-      })
+): TE.TaskEither<unknown, CgnActivationDetail> =>
+  pipe(
+    TE.tryCatch(
+      () => client.terminate(orchestratorId, "Async flow not necessary"),
+      E.toError
+    ),
+    TE.map(() => ({
+      ...activationDetail,
+      status: customStatus === "ERROR" ? StatusEnum.ERROR : StatusEnum.COMPLETED
+    })),
+    TE.orElse(() => TE.of(activationDetail))
   );
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function GetCgnActivationHandler(
   userCgnModel: UserCgnModel
 ): IGetCgnActivationHandler {
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   return async (context, fiscalCode) => {
     const client = df.getClient(context);
     const orchestratorId = makeUpdateCgnOrchestratorId(
@@ -96,19 +82,22 @@ export function GetCgnActivationHandler(
     const instanceId = {
       id: orchestratorId
     } as InstanceId;
-    // first check if an activation process is running
-    return retrieveUserCgn(userCgnModel, fiscalCode)
-      .map(_ => _.card)
-      .chain(cgn =>
-        getOrchestratorStatus(client, orchestratorId)
-          .mapLeft<IResponseErrorInternal | IResponseErrorNotFound>(() =>
+
+    return pipe(
+      retrieveUserCgn(userCgnModel, fiscalCode),
+      TE.map(_ => _.card),
+      TE.chainW(cgn =>
+        pipe(
+          getOrchestratorStatus(client, orchestratorId),
+          TE.mapLeft(() =>
             ResponseErrorInternal("Cannot retrieve activation status")
-          )
-          .chain<ActivationStatusWithOrchestratorCustomStatus>(
-            maybeOrchestrationStatus =>
-              fromNullable(maybeOrchestrationStatus).foldL(
+          ),
+          TE.chainW(
+            flow(
+              O.fromNullable,
+              O.fold(
                 () =>
-                  fromLeft(
+                  TE.left(
                     ResponseErrorNotFound(
                       "Cannot find any activation process",
                       "Orchestrator instance not found"
@@ -116,65 +105,63 @@ export function GetCgnActivationHandler(
                   ),
                 orchestrationStatus =>
                   // now try to map orchestrator status
-                  fromEither(
-                    fromOption(
+                  pipe(
+                    getActivationStatus(orchestrationStatus),
+                    TE.fromOption(() =>
                       ResponseErrorNotFound(
                         "Not Found",
                         "User's CGN status not found"
                       )
-                    )(getActivationStatus(orchestrationStatus))
-                  ).map(
-                    _ =>
-                      ({
-                        activationDetail: {
-                          created_at: orchestrationStatus.createdTime,
-                          instance_id: instanceId,
-                          last_updated_at: orchestrationStatus.lastUpdatedTime,
-                          status: _
-                        },
-                        customStatus: orchestrationStatus.customStatus
-                      } as ActivationStatusWithOrchestratorCustomStatus)
+                    ),
+                    TE.map(_ => ({
+                      activationDetail: {
+                        created_at: orchestrationStatus.createdTime,
+                        instance_id: instanceId,
+                        last_updated_at: orchestrationStatus.lastUpdatedTime,
+                        status: _
+                      },
+                      customStatus: orchestrationStatus.customStatus
+                    }))
                   )
               )
-          )
-          .foldTaskEither<
-            IResponseErrorInternal | IResponseErrorNotFound,
-            CgnActivationDetail
-          >(
-            () =>
-              // It's not possible to map any activation status
-              // check for CGN status on cosmos
-              taskEither
-                .of<
-                  IResponseErrorInternal | IResponseErrorNotFound,
-                  StatusEnum
-                >(
-                  CardActivated.is(cgn)
-                    ? StatusEnum.COMPLETED
-                    : StatusEnum.PENDING
+            )
+          ),
+          TE.chainW(({ activationDetail, customStatus }) =>
+            // if CGN is already updated to ACTIVATED while orchestrator is still running
+            // we can try to terminate running orchestrator in fire&forget to allow sync flow
+            // i.e UPDATED status means that the orchestrator is running and userCgn status' update is performed.
+            // Otherwise we return the original orchestrator status
+            (customStatus === "UPDATED" && CardActivated.is(cgn)) ||
+            customStatus === "ERROR"
+              ? terminateOrchestratorTask(
+                  client,
+                  orchestratorId,
+                  activationDetail,
+                  customStatus
                 )
-                .map(_ => ({ instance_id: instanceId, status: _ })),
-            ({ activationDetail, customStatus }) =>
-              // if CGN is already updated to ACTIVATED while orchestrator is still running
-              // we can try to terminate running orchestrator in fire&forget to allow sync flow
-              // i.e UPDATED status means that the orchestrator is running and userCgn status' update is performed.
-              // Otherwise we return the original orchestrator status
-              (customStatus === "UPDATED" && CardActivated.is(cgn)) ||
-              customStatus === "ERROR"
-                ? terminateOrchestratorTask(
-                    client,
-                    orchestratorId,
-                    activationDetail,
-                    customStatus
-                  )
-                : taskEither.of(activationDetail)
+              : TE.of(activationDetail)
+          ),
+          TE.orElse(() =>
+            // It's not possible to map any activation status
+            // check for CGN status on cosmos
+            pipe(
+              TE.of(
+                CardActivated.is(cgn)
+                  ? StatusEnum.COMPLETED
+                  : StatusEnum.PENDING
+              ),
+              TE.map(_ => ({ instance_id: instanceId, status: _ }))
+            )
           )
-      )
-      .fold<ResponseTypes>(identity, _ => ResponseSuccessJson(_))
-      .run();
+        )
+      ),
+      TE.map(ResponseSuccessJson),
+      TE.toUnion
+    )();
   };
 }
 
+// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function GetCgnActivation(
   userCgnModel: UserCgnModel
 ): express.RequestHandler {

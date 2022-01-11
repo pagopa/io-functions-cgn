@@ -1,11 +1,12 @@
 ﻿import { Context } from "@azure/functions";
+import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { ExponentialRetryPolicyFilter, TableService } from "azure-storage";
 import * as date_fns from "date-fns";
 import * as df from "durable-functions";
-import { array, chunksOf } from "fp-ts/lib/Array";
-import { isLeft, toError } from "fp-ts/lib/Either";
-import { taskEither, tryCatch } from "fp-ts/lib/TaskEither";
-import { NonEmptyString } from "italia-ts-commons/lib/strings";
+import * as A from "fp-ts/lib/Array";
+import * as E from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
+import * as TE from "fp-ts/lib/TaskEither";
 import { StatusEnum as CardActivatedStatusEnum } from "../generated/definitions/CardActivated";
 import { StatusEnum as CardExpiredStatusEnum } from "../generated/definitions/CardExpired";
 import { StatusEnum as CardRevokedStatusEnum } from "../generated/definitions/CardRevoked";
@@ -17,7 +18,7 @@ import {
   terminateUpdateCgnOrchestratorTask
 } from "../utils/orchestrators";
 
-const finish = () => Promise.resolve(void 0);
+const finish = (): Promise<void> => Promise.resolve(void 0);
 
 initTelemetryClient();
 const ORCHESTRATION_TERMINATION_REASON = "An highest priority CGN update orchestrator needs to start" as NonEmptyString;
@@ -34,14 +35,14 @@ export const getUpdateExpiredCgnHandler = (
     tableService.withFilter(new ExponentialRetryPolicyFilter(5)),
     cgnExpirationTableName,
     today
-  ).run();
+  )();
 
-  if (isLeft(errorOrExpiredCgnUsers)) {
+  if (E.isLeft(errorOrExpiredCgnUsers)) {
     context.log.verbose(
-      `${logPrefix}|ERROR=${errorOrExpiredCgnUsers.value.message}`
+      `${logPrefix}|ERROR=${errorOrExpiredCgnUsers.left.message}`
     );
     trackException({
-      exception: errorOrExpiredCgnUsers.value,
+      exception: errorOrExpiredCgnUsers.left,
       properties: {
         id: `${today}.cgn.expiration`,
         name: "cgn.expiration.error"
@@ -51,7 +52,7 @@ export const getUpdateExpiredCgnHandler = (
     return finish();
   }
 
-  const expiredCgnUsers = errorOrExpiredCgnUsers.value;
+  const expiredCgnUsers = errorOrExpiredCgnUsers.right;
   context.log.info(
     `${logPrefix}|Processing ${expiredCgnUsers.length} expired CGNs`
   );
@@ -62,21 +63,22 @@ export const getUpdateExpiredCgnHandler = (
   const tasks = expiredCgnUsers.map(
     ({ fiscalCode, activationDate, expirationDate }) =>
       // first we terminate other possible Cgn update orchestrators
-      terminateUpdateCgnOrchestratorTask(
-        client,
-        fiscalCode,
-        CardActivatedStatusEnum.ACTIVATED,
-        ORCHESTRATION_TERMINATION_REASON
-      )
-        .chain(() =>
+      pipe(
+        terminateUpdateCgnOrchestratorTask(
+          client,
+          fiscalCode,
+          CardActivatedStatusEnum.ACTIVATED,
+          ORCHESTRATION_TERMINATION_REASON
+        ),
+        TE.chain(() =>
           terminateUpdateCgnOrchestratorTask(
             client,
             fiscalCode,
             CardRevokedStatusEnum.REVOKED,
             ORCHESTRATION_TERMINATION_REASON
           )
-        )
-        .chain(() => {
+        ),
+        TE.chain(() => {
           context.log.info(
             `${logPrefix}| Starting new expire orchestrator for fiscalCode=${fiscalCode.substr(
               0,
@@ -84,7 +86,7 @@ export const getUpdateExpiredCgnHandler = (
             )}`
           );
           // Now we try to start Expire operation
-          return tryCatch(
+          return TE.tryCatch(
             () =>
               client.startNew(
                 "UpdateCgnOrchestrator",
@@ -101,10 +103,10 @@ export const getUpdateExpiredCgnHandler = (
                   }
                 })
               ),
-            toError
+            E.toError
           );
-        })
-        .mapLeft(err => {
+        }),
+        TE.mapLeft(err => {
           context.log.error(
             `${logPrefix}|Error while starting CGN expiration for fiscalCode=${fiscalCode.substr(
               0,
@@ -121,17 +123,16 @@ export const getUpdateExpiredCgnHandler = (
           });
           return err;
         })
+      )
   );
 
-  // tslint:disable-next-line: readonly-array
+  // eslint-disable-next-line functional/prefer-readonly-type
   const results = [];
-  const tasksChunks = chunksOf(tasks, 100);
+  const tasksChunks = A.chunksOf(100)(tasks);
   for (const tasksChunk of tasksChunks) {
-    results.push(
-      await array
-        .sequence(taskEither)(tasksChunk)
-        .run()
-    );
+    // eslint-disable-next-line functional/prefer-readonly-type
+    // eslint-disable-next-line functional/immutable-data
+    results.push(await A.sequence(TE.ApplicativePar)(tasksChunk)());
   }
   return results;
 };

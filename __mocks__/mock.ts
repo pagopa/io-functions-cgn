@@ -1,6 +1,6 @@
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { addYears } from "date-fns";
-import { CosmosResource } from "io-functions-commons/dist/src/utils/cosmosdb_model";
+import { CosmosResource } from "@pagopa/io-functions-commons/dist/src/utils/cosmosdb_model";
 
 export const now = new Date();
 

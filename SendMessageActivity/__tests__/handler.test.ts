@@ -1,6 +1,8 @@
-import { MessageContent } from "io-functions-commons/dist/generated/definitions/MessageContent";
-import { readableReport } from "italia-ts-commons/lib/reporters";
-import { FiscalCode } from "italia-ts-commons/lib/strings";
+import { MessageContent } from "@pagopa/io-functions-commons/dist/generated/definitions/MessageContent";
+import { readableReport } from "@pagopa/ts-commons/lib/reporters";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
+import * as E from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
 import { context } from "../../__mocks__/durable-functions";
 import { getSendMessageActivityHandler } from "../handler";
 
@@ -16,22 +18,25 @@ const mockGetProfile = jest.fn(async () => profileOkStatusCode);
 const mockSendMessage = jest.fn(async () => messageOkStatusCode);
 const aFiscalCode = "AAABBB80A01C123D" as FiscalCode;
 
-const aMessageContent = MessageContent.decode({
-  due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 /* +3gg */),
-  markdown:
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed eu dolor nec metus.",
-  payment_data: {
-    amount: 100,
-    invalid_after_due_date: true,
-    notice_number: "012345678901234567"
-  },
-  prescription_data: {
-    nre: "Lorem ipsum et."
-  },
-  subject: "a fake subject"
-}).getOrElseL(e => {
-  throw new Error(readableReport(e));
-});
+const aMessageContent = pipe(
+  MessageContent.decode({
+    due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 /* +3gg */),
+    markdown:
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed eu dolor nec metus.",
+    payment_data: {
+      amount: 100,
+      invalid_after_due_date: true,
+      notice_number: "012345678901234567"
+    },
+    prescription_data: {
+      nre: "Lorem ipsum et."
+    },
+    subject: "a fake subject"
+  }),
+  E.getOrElseW(e => {
+    throw new Error(readableReport(e));
+  })
+);
 
 describe("getSendMessageActivityHandler", () => {
   beforeEach(() => {

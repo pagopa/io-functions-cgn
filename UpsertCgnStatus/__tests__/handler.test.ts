@@ -1,13 +1,12 @@
-/* tslint:disable: no-any */
-import { some } from "fp-ts/lib/Option";
-import { none } from "fp-ts/lib/Option";
-import { fromLeft, taskEither } from "fp-ts/lib/TaskEither";
-import { toCosmosErrorResponse } from "io-functions-commons/dist/src/utils/cosmosdb_model";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { toCosmosErrorResponse } from "@pagopa/io-functions-commons/dist/src/utils/cosmosdb_model";
 import {
   ResponseErrorInternal,
   ResponseSuccessAccepted
-} from "italia-ts-commons/lib/responses";
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+} from "@pagopa/ts-commons/lib/responses";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import * as O from "fp-ts/lib/Option";
+import * as TE from "fp-ts/lib/TaskEither";
 import { mockStartNew } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
@@ -66,7 +65,7 @@ describe("UpsertCgnStatus", () => {
 
   it("should return an Internal Error if an error occurs during UserCgn retrieve", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      fromLeft(toCosmosErrorResponse(new Error("query error")))
+      TE.left(toCosmosErrorResponse(new Error("query error")))
     );
     const upsertCgnStatusHandler = UpsertCgnStatusHandler(
       userCgnModelMock as any
@@ -80,9 +79,7 @@ describe("UpsertCgnStatus", () => {
   });
 
   it("should return Not Found if no UserCgn was found for the provided fiscal code", async () => {
-    findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(none)
-    );
+    findLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(O.none));
     const upsertCgnStatusHandler = UpsertCgnStatusHandler(
       userCgnModelMock as any
     );
@@ -96,10 +93,10 @@ describe("UpsertCgnStatus", () => {
 
   it("should return an Internal Error if it is not possible to check status of an other orchestrator with the same id", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aRevokedUserCgn, card: aUserCardPending }))
+      TE.of(O.some({ ...aRevokedUserCgn, card: aUserCardPending }))
     );
     checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
-      fromLeft(ResponseErrorInternal("Error"))
+      TE.left(ResponseErrorInternal("Error"))
     );
     const upsertCgnStatusHandler = UpsertCgnStatusHandler(
       userCgnModelMock as any
@@ -114,10 +111,10 @@ describe("UpsertCgnStatus", () => {
 
   it("should return an Accepted response if there is another orchestrator running with the same id", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aRevokedUserCgn, card: aUserCardPending }))
+      TE.of(O.some({ ...aRevokedUserCgn, card: aUserCardPending }))
     );
     checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
-      fromLeft(ResponseSuccessAccepted())
+      TE.left(ResponseSuccessAccepted())
     );
     const upsertCgnStatusHandler = UpsertCgnStatusHandler(
       userCgnModelMock as any
@@ -132,11 +129,9 @@ describe("UpsertCgnStatus", () => {
 
   it("should start a new orchestrator if there aren' t conflict on the same id", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
-      taskEither.of(some({ ...aRevokedUserCgn, card: aUserCardPending }))
+      TE.of(O.some({ ...aRevokedUserCgn, card: aUserCardPending }))
     );
-    checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
-      taskEither.of(false)
-    );
+    checkUpdateCardIsRunningMock.mockImplementationOnce(() => TE.of(false));
     const upsertCgnStatusHandler = UpsertCgnStatusHandler(
       userCgnModelMock as any
     );

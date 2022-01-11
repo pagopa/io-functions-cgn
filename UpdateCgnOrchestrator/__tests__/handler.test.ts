@@ -1,6 +1,6 @@
-// tslint:disable: object-literal-sort-keys no-any
+// eslint-disable sort-keys, @typescript-eslint/no-explicit-any
 
-import { FiscalCode, NonEmptyString } from "italia-ts-commons/lib/strings";
+import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { context as contextMock } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import {
@@ -75,7 +75,7 @@ describe("UpdateCgnOrchestrator", () => {
       .mockReturnValueOnce(anUpdateCgnStatusResult)
       // 4 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
-    // tslint:disable-next-line: no-any no-useless-cast
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unnecessary-type-assertion
     const orchestrator = UpdateCgnOrchestratorHandler(
       contextMockWithDf as any,
       DEFAULT_EYCA_UPPER_BOUND_AGE
@@ -130,7 +130,7 @@ describe("UpdateCgnOrchestrator", () => {
       .mockReturnValueOnce(anUpdateCgnStatusResult)
       // 5 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
-    // tslint:disable-next-line: no-any no-useless-cast
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unnecessary-type-assertion
     const orchestrator = UpdateCgnOrchestratorHandler(
       contextMockWithDf as any,
       DEFAULT_EYCA_UPPER_BOUND_AGE
@@ -182,7 +182,7 @@ describe("UpdateCgnOrchestrator", () => {
       .mockReturnValueOnce(anUpdateCgnStatusResult)
       // 5 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
-    // tslint:disable-next-line: no-any no-useless-cast
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unnecessary-type-assertion
     const orchestrator = UpdateCgnOrchestratorHandler(
       contextMockWithDf as any,
       DEFAULT_EYCA_UPPER_BOUND_AGE
