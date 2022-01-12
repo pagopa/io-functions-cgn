@@ -93,8 +93,5 @@ describe("DeleteCgnActivity", () => {
     expect(findAllMock).toBeCalledWith(anActivityInput.fiscalCode);
     expect(deleteVersionMock).toBeCalledTimes(1);
     expect(response.kind).toBe("SUCCESS");
-    if (response.kind === "SUCCESS") {
-      expect(response.cards).toEqual(anArrayOfCardResults);
-    }
   });
 });

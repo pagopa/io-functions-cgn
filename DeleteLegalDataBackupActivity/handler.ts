@@ -42,7 +42,7 @@ export const getDeleteLegalDataBackupActivityHandler = (
           cardsDataBackupBlobService,
           cardsDataBackupContainerName,
           activityInput.backupFolder,
-          "${fiscalCode}.json" as NonEmptyString,
+          `${activityInput.fiscalCode}.json` as NonEmptyString,
           activityInput
         ),
         TE.bimap(

@@ -88,49 +88,64 @@ describe("DeleteCgnOrchestrator", () => {
       fiscalCode: aFiscalCode
     }));
     mockCallActivityWithRetry
-      // 1 Delete Cgn Expiration Data
+      // 1 RetrieveLegalBackupData
+      .mockReturnValueOnce({
+        kind: "SUCCESS",
+        cgnCards: someUserDeletableCards,
+        eycaCards: undefined
+      })
+      // 2 DeleteLegalDataBackupActivity
       .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 2 Delete Cgn Card
-      .mockReturnValueOnce({ kind: "SUCCESS", cards: someUserDeletableCards })
-      // 3 DeleteLegalDataBackupActivity
+      // 3 Delete Cgn Expiration Data
       .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 4 SendMessageActivity
+      // 4 Delete Cgn Card
+      .mockReturnValueOnce({ kind: "SUCCESS" })
+      // 5 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = DeleteCgnOrchestratorHandler(contextMockWithDf as any);
 
-    // 1 Delete Cgn Expiration Data
+    // 1 RetrieveLegalBackupData
     const res1 = orchestrator.next();
     expect(res1.value).toEqual({
+      kind: "SUCCESS",
+      cgnCards: someUserDeletableCards,
+      eycaCards: undefined
+    });
+
+    // 2 DeleteLegalDataBackupActivity
+    const res2 = orchestrator.next(res1.value);
+    expect(res2.value).toEqual({
       kind: "SUCCESS"
     });
 
-    // 2 Delete Cgn Card
-    const res2 = orchestrator.next(res1.value);
-    expect(res2.value).toEqual({
-      kind: "SUCCESS",
-      cards: someUserDeletableCards
+    // 3 Delete Cgn Expiration Data
+    const res3 = orchestrator.next(res2.value);
+    expect(res3.value).toEqual({
+      kind: "SUCCESS"
     });
 
-    // 3 DeleteLegalDataBackupActivity
-    const res3 = orchestrator.next(res2.value);
-    expect(res3.value).toEqual({ kind: "SUCCESS" });
-
-    // 4 CreateTimer
+    // 4 Delete Cgn Card
     const res4 = orchestrator.next(res3.value);
-    expect(res4.value).toEqual("CreateTimer");
+    expect(res4.value).toEqual({
+      kind: "SUCCESS"
+    });
 
-    // 5 SendMessage
+    // 5 CreateTimer
     const res5 = orchestrator.next(res4.value);
-    expect(res5.value).toEqual("SendMessageActivity");
+    expect(res5.value).toEqual("CreateTimer");
+
+    // 6 SendMessage
+    const res6 = orchestrator.next(res5.value);
+    expect(res6.value).toEqual("SendMessageActivity");
 
     // Complete the orchestrator execution
     orchestrator.next();
 
     expect(
-      contextMockWithDf.df.callActivityWithRetry.mock.calls[3][2].content
+      contextMockWithDf.df.callActivityWithRetry.mock.calls[4][2].content
     ).toEqual(MESSAGES.CardDeleted());
-    expect(contextMockWithDf.df.callActivityWithRetry.mock.calls[2][2]).toEqual(
+    expect(contextMockWithDf.df.callActivityWithRetry.mock.calls[1][2]).toEqual(
       {
         backupFolder: "cgn" as NonEmptyString,
         cgnCards: someUserDeletableCards,
@@ -159,77 +174,86 @@ describe("DeleteCgnOrchestrator", () => {
       eycaCardNumber: aUserEycaCardNumber
     }));
     mockCallActivityWithRetry
-      // 1 DeleteEycaRemoteActivity
-      .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 2 DeleteEycaExpirationActivity
-      .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 3 DeleteEycaActivity
+      // 1 RetrieveLegalBackupData
       .mockReturnValueOnce({
         kind: "SUCCESS",
-        cards: someUserEycaDeletableCards
+        cgnCards: someUserDeletableCards,
+        eycaCards: someUserEycaDeletableCards
       })
-      // 4 Delete Cgn Expiration Data
+      // 2 DeleteLegalDataBackupActivity
       .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 5 Delete Cgn Card
-      .mockReturnValueOnce({ kind: "SUCCESS", cards: someUserDeletableCards })
-      // 6 DeleteLegalDataBackupActivity
+      // 3 DeleteEycaRemoteActivity
       .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 7 SendMessageActivity
+      // 4 DeleteEycaExpirationActivity
+      .mockReturnValueOnce({ kind: "SUCCESS" })
+      // 5 DeleteEycaActivity
+      .mockReturnValueOnce({
+        kind: "SUCCESS"
+      })
+      // 6 Delete Cgn Expiration Data
+      .mockReturnValueOnce({ kind: "SUCCESS" })
+      // 7 Delete Cgn Card
+      .mockReturnValueOnce({ kind: "SUCCESS" })
+      // 8 SendMessageActivity
       .mockReturnValueOnce("SendMessageActivity");
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = DeleteCgnOrchestratorHandler(contextMockWithDf as any);
 
-    // 1 DeleteEycaRemoteActivity
+    // 1 RetrieveLegalBackupData
     const res1 = orchestrator.next();
     expect(res1.value).toEqual({
-      kind: "SUCCESS"
+      kind: "SUCCESS",
+      cgnCards: someUserDeletableCards,
+      eycaCards: someUserEycaDeletableCards
     });
 
-    // 2 DeleteEycaExpirationActivity
+    // 2 DeleteLegalDataBackupActivity
     const res2 = orchestrator.next(res1.value);
     expect(res2.value).toEqual({
       kind: "SUCCESS"
     });
 
-    // 3 DeleteEycaActivity
+    // 3 DeleteEycaRemoteActivity
     const res3 = orchestrator.next(res2.value);
     expect(res3.value).toEqual({
-      kind: "SUCCESS",
-      cards: someUserEycaDeletableCards
+      kind: "SUCCESS"
     });
 
-    // 4 Delete Cgn Expiration Data
+    // 4 DeleteEycaExpirationActivity
     const res4 = orchestrator.next(res3.value);
     expect(res4.value).toEqual({
       kind: "SUCCESS"
     });
 
-    // 5 Delete Cgn Card
+    // 5 DeleteEycaActivity
     const res5 = orchestrator.next(res4.value);
     expect(res5.value).toEqual({
-      kind: "SUCCESS",
-      cards: someUserDeletableCards
+      kind: "SUCCESS"
     });
 
-    // 6 DeleteLegalDataBackupActivity
+    // 6 Delete Cgn Expiration Data
     const res6 = orchestrator.next(res5.value);
     expect(res6.value).toEqual({ kind: "SUCCESS" });
 
-    // 7 CreateTimer
+    // 7 Delete Cgn Card
     const res7 = orchestrator.next(res6.value);
-    expect(res7.value).toEqual("CreateTimer");
+    expect(res7.value).toEqual({ kind: "SUCCESS" });
 
-    // 8 SendMessage
+    // 8 CreateTimer
     const res8 = orchestrator.next(res7.value);
-    expect(res8.value).toEqual("SendMessageActivity");
+    expect(res8.value).toEqual("CreateTimer");
+
+    // 9 SendMessage
+    const res9 = orchestrator.next(res8.value);
+    expect(res9.value).toEqual("SendMessageActivity");
 
     // Complete the orchestrator execution
     orchestrator.next();
 
     expect(
-      contextMockWithDf.df.callActivityWithRetry.mock.calls[6][2].content
+      contextMockWithDf.df.callActivityWithRetry.mock.calls[7][2].content
     ).toEqual(MESSAGES.CardDeleted());
-    expect(contextMockWithDf.df.callActivityWithRetry.mock.calls[5][2]).toEqual(
+    expect(contextMockWithDf.df.callActivityWithRetry.mock.calls[1][2]).toEqual(
       {
         backupFolder: "cgn" as NonEmptyString,
         cgnCards: someUserDeletableCards,

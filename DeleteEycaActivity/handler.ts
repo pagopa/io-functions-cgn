@@ -4,15 +4,8 @@ import { pipe } from "fp-ts/lib/function";
 import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
-import {
-  RetrievedUserEycaCard,
-  UserEycaCardModel
-} from "../models/user_eyca_card";
-import {
-  ActivityResultFailure,
-  ActivityResultSuccess as CommonActivityResultSuccess,
-  failure
-} from "../utils/activity";
+import { UserEycaCardModel } from "../models/user_eyca_card";
+import { ActivityResult, failure, success } from "../utils/activity";
 import { errorsToError } from "../utils/conversions";
 
 export const ActivityInput = t.interface({
@@ -21,33 +14,13 @@ export const ActivityInput = t.interface({
 
 export type ActivityInput = t.TypeOf<typeof ActivityInput>;
 
-export const DeleteEycaActivityResultSuccess = t.intersection([
-  CommonActivityResultSuccess,
-  t.interface({
-    cards: t.readonlyArray(RetrievedUserEycaCard)
-  })
-]);
-
-export type DeleteEycaActivityResultSuccess = t.TypeOf<
-  typeof DeleteEycaActivityResultSuccess
->;
-
-export const DeleteEycaActivityResult = t.union(
-  [DeleteEycaActivityResultSuccess, ActivityResultFailure],
-  "kind"
-);
-
-export type DeleteEycaActivityResult = t.TypeOf<
-  typeof DeleteEycaActivityResult
->;
-
 /*
  * have to read the expire data first and then have to return this data for bakcup
  */
 export const getDeleteEycaActivityHandler = (
   userEycaModel: UserEycaCardModel,
   logPrefix: string = "DeleteEycaActivity"
-) => (context: Context, input: unknown): Promise<DeleteEycaActivityResult> => {
+) => (context: Context, input: unknown): Promise<ActivityResult> => {
   const fail = failure(context, logPrefix);
 
   return pipe(
@@ -71,10 +44,7 @@ export const getDeleteEycaActivityHandler = (
           )
         ),
         TE.mapLeft(_ => fail(_, "Cannot delete eyca version")),
-        TE.map(() => ({
-          cards,
-          kind: "SUCCESS" as const
-        }))
+        TE.map(() => success())
       )
     ),
     TE.toUnion

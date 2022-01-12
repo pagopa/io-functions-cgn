@@ -4,12 +4,8 @@ import { pipe } from "fp-ts/lib/function";
 import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
-import { RetrievedUserCgn, UserCgnModel } from "../models/user_cgn";
-import {
-  ActivityResultFailure,
-  ActivityResultSuccess as CommonActivityResultSuccess,
-  failure
-} from "../utils/activity";
+import { UserCgnModel } from "../models/user_cgn";
+import { ActivityResult, failure, success } from "../utils/activity";
 import { errorsToError } from "../utils/conversions";
 
 export const ActivityInput = t.interface({
@@ -18,29 +14,13 @@ export const ActivityInput = t.interface({
 
 export type ActivityInput = t.TypeOf<typeof ActivityInput>;
 
-export const DeleteCgnActivityResultSuccess = t.intersection([
-  CommonActivityResultSuccess,
-  t.interface({ cards: t.readonlyArray(RetrievedUserCgn) })
-]);
-
-export type DeleteCgnActivityResultSuccess = t.TypeOf<
-  typeof DeleteCgnActivityResultSuccess
->;
-
-export const DeleteCgnActivityResult = t.taggedUnion("kind", [
-  DeleteCgnActivityResultSuccess,
-  ActivityResultFailure
-]);
-
-export type DeleteCgnActivityResult = t.TypeOf<typeof DeleteCgnActivityResult>;
-
 /*
  * have to read the expire data first and then have to return this data for bakcup
  */
 export const getDeleteCgnActivityHandler = (
   userCgnModel: UserCgnModel,
   logPrefix: string = "DeleteCgnActivity"
-) => (context: Context, input: unknown): Promise<DeleteCgnActivityResult> => {
+) => (context: Context, input: unknown): Promise<ActivityResult> => {
   const fail = failure(context, logPrefix);
 
   return pipe(
@@ -53,7 +33,7 @@ export const getDeleteCgnActivityHandler = (
     TE.chainW(activityInput =>
       pipe(
         userCgnModel.findAll(activityInput.fiscalCode),
-        TE.mapLeft(_ => fail(_, "Cannot retriew all cgn card"))
+        TE.mapLeft(_ => fail(_, "Cannot retrieve all cgn card"))
       )
     ),
     TE.chainW(cards =>
@@ -65,10 +45,7 @@ export const getDeleteCgnActivityHandler = (
         ),
         TE.bimap(
           _ => fail(_, "Cannot delete cgn version"),
-          () => ({
-            cards,
-            kind: "SUCCESS" as const
-          })
+          () => success()
         )
       )
     ),

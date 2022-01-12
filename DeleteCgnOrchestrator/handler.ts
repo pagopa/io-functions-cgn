@@ -5,16 +5,16 @@ import * as E from "fp-ts/lib/Either";
 import * as t from "io-ts";
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { pipe } from "fp-ts/lib/function";
-import {
-  ActivityInput as DeleteCgnActivityInput,
-  DeleteCgnActivityResult
-} from "../DeleteCgnActivity/handler";
+import { ActivityInput as DeleteCgnActivityInput } from "../DeleteCgnActivity/handler";
 import { ActivityInput as DeleteCgnExpirationActivityInput } from "../DeleteCgnExpirationActivity/handler";
-import { DeleteEycaActivityResult } from "../DeleteEycaActivity/handler";
 import { ActivityInput as DeleteEycaActivityInput } from "../DeleteEycaActivity/handler";
 import { ActivityInput as DeleteEycaExpirationActivityInput } from "../DeleteEycaExpirationActivity/handler";
 import { ActivityInput as DeleteEycaRemoteActivityInput } from "../DeleteEycaRemoteActivity/handler";
 import { ActivityInput as DeleteLegalDataBackupActivityInput } from "../DeleteLegalDataBackupActivity/handler";
+import {
+  ActivityInput as RetrieveLegalDataBackupActivityInput,
+  RetrieveLegalDataBackupActivityResult
+} from "../RetrieveLegalDataBackupActivity/handler";
 import { CcdbNumber } from "../generated/definitions/CcdbNumber";
 import { ActivityInput as SendMessageActivityInput } from "../SendMessageActivity/handler";
 import { ActivityResult } from "../utils/activity";
@@ -69,14 +69,64 @@ export const DeleteCgnOrchestratorHandler = function*(
     "ai.operation.parentId": fiscalCode
   };
 
-  // eslint-disable-next-line functional/no-let
-  let eycaDataToBackup;
-
-  // eslint-disable-next-line functional/no-let
-  let cgnDataToBackup;
-
   try {
     try {
+      // First get legal data backup without deleting them
+      const retrieveLegalDataBackupResult = yield context.df.callActivityWithRetry(
+        "RetrieveLegalDataBackupActivity",
+        internalRetryOptions,
+        RetrieveLegalDataBackupActivityInput.encode({
+          fiscalCode
+        })
+      );
+      const decodedRetrieveLegalDataBackupResult = pipe(
+        retrieveLegalDataBackupResult,
+        RetrieveLegalDataBackupActivityResult.decode,
+        E.getOrElseW(e =>
+          trackExAndThrowWithError(
+            e,
+            "cgn.delete.exception.decode.retrieveLegalDataBackup"
+          )
+        )
+      );
+      if (decodedRetrieveLegalDataBackupResult.kind !== "SUCCESS") {
+        trackExAndThrowWithError(
+          new Error("Cannot retrieve legal data backup"),
+          "cgn.delete.exception.failure.retrieveLegalDataBackup"
+        );
+      } else {
+        const { cgnCards, eycaCards } = decodedRetrieveLegalDataBackupResult;
+        // Backup all data for legal issue
+        const legalDataToBackup: DeleteLegalDataBackupActivityInput = {
+          backupFolder: "cgn" as NonEmptyString,
+          cgnCards,
+          eycaCards,
+          fiscalCode
+        };
+
+        const legalDataBackupResult = yield context.df.callActivityWithRetry(
+          "DeleteLegalDataBackupActivity",
+          internalRetryOptions,
+          legalDataToBackup
+        );
+        const decodedLegalDataBackupResult = pipe(
+          legalDataBackupResult,
+          ActivityResult.decode,
+          E.getOrElseW(e =>
+            trackExAndThrowWithError(
+              e,
+              "cgn.delete.exception.decode.legalDataBackupUpdate"
+            )
+          )
+        );
+        if (decodedLegalDataBackupResult.kind !== "SUCCESS") {
+          trackExAndThrowWithError(
+            new Error("Cannot backup deleted data for legal issue"),
+            "cgn.delete.exception.failure.deleteLegalDataBackupActivityOutput"
+          );
+        }
+      }
+
       if (eycaCardNumber !== undefined) {
         // Delete EYCA Card by remote API system on eyca.org
         const deleteEycaRemoteResult = yield context.df.callActivityWithRetry(
@@ -134,7 +184,7 @@ export const DeleteCgnOrchestratorHandler = function*(
         );
         const decodedDeleteEycaResult = pipe(
           deleteEycaResult,
-          DeleteEycaActivityResult.decode,
+          ActivityResult.decode,
           E.getOrElseW(e =>
             trackExAndThrowWithError(
               e,
@@ -147,8 +197,6 @@ export const DeleteCgnOrchestratorHandler = function*(
             new Error("Cannot delete EYCard"),
             "cgn.delete.exception.failure.eycaActivityOutput"
           );
-        } else {
-          eycaDataToBackup = decodedDeleteEycaResult.cards;
         }
       }
 
@@ -183,7 +231,7 @@ export const DeleteCgnOrchestratorHandler = function*(
       );
       const decodedDeleteCgnResult = pipe(
         deleteCgnResult,
-        DeleteCgnActivityResult.decode,
+        ActivityResult.decode,
         E.getOrElseW(e =>
           trackExAndThrowWithError(e, "cgn.delete.exception.decode.cgnOutput")
         )
@@ -193,41 +241,7 @@ export const DeleteCgnOrchestratorHandler = function*(
           new Error("Cannot delete CGN"),
           "cgn.delete.exception.failure.cgnActivityOutput"
         );
-      } else {
-        cgnDataToBackup = decodedDeleteCgnResult.cards;
-
-        // Backup all data for legal issue
-        const legalDataToBackup: DeleteLegalDataBackupActivityInput = {
-          backupFolder: "cgn" as NonEmptyString,
-          cgnCards: cgnDataToBackup,
-          eycaCards: eycaDataToBackup,
-          fiscalCode
-        };
-
-        const legalDataBackupResult = yield context.df.callActivityWithRetry(
-          "DeleteLegalDataBackupActivity",
-          internalRetryOptions,
-          legalDataToBackup
-        );
-        const decodedLegalDataBackupResult = pipe(
-          legalDataBackupResult,
-          ActivityResult.decode,
-          E.getOrElseW(e =>
-            trackExAndThrowWithError(
-              e,
-              "cgn.delete.exception.decode.legalDataBackupUpdate"
-            )
-          )
-        );
-        if (decodedLegalDataBackupResult.kind !== "SUCCESS") {
-          trackExAndThrowWithError(
-            new Error("Cannot backup deleted data for legal issue"),
-            "cgn.delete.exception.failure.deleteLegalDataBackupActivityOutput"
-          );
-        }
       }
-
-      // tslint:disable-next-line: no-useless-catch
     } catch (err) {
       // CGN Delete is failed so we try to send error message if sync flow is stopped
       yield context.df.createTimer(
