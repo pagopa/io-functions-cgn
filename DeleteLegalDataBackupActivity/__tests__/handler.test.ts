@@ -43,7 +43,7 @@ const anActivatedCgn: RetrievedUserCgn = {
 };
 const anArrayOfCardResults: ReadonlyArray<RetrievedUserCgn> = [anActivatedCgn];
 
-const legatDataToBackup: ActivityInput = {
+const legalDataToBackup: ActivityInput = {
   backupFolder: "cgn" as NonEmptyString,
   cgnCards: anArrayOfCardResults,
   fiscalCode: aFiscalCode
@@ -88,7 +88,7 @@ describe("Deleted Card Data to backup to legal reasons", () => {
 
     const response = await deleteLegalDataBackupActivityHandler(
       context,
-      legatDataToBackup
+      legalDataToBackup
     );
 
     expect(response.kind).toBe("FAILURE");
@@ -103,11 +103,11 @@ describe("Deleted Card Data to backup to legal reasons", () => {
       messageContentContainerName
     );
 
-    saveDataToBlobMock.mockImplementationOnce(() => TE.of(legatDataToBackup));
+    saveDataToBlobMock.mockImplementationOnce(() => TE.of(legalDataToBackup));
 
     const response = await deleteLegalDataBackupActivityHandler(
       context,
-      legatDataToBackup
+      legalDataToBackup
     );
 
     expect(response.kind).toBe("SUCCESS");

@@ -43,7 +43,7 @@ describe("DeleteEycaActivity", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
-  it("should return failure if an error occurs during eyca retrieve", async () => {
+  it("should return failure if an error occurs during input decoding", async () => {
     const deleteEycaActivityHandler = getDeleteEycaActivityHandler(
       userEycaModelMock as any
     );

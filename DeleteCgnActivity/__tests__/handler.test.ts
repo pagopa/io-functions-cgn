@@ -40,7 +40,7 @@ describe("DeleteCgnActivity", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
-  it("should return failure if an error occurs during UserCgn retrieve", async () => {
+  it("should return failure if an error occurs during input decode", async () => {
     const deleteCgnActivityHandler = getDeleteCgnActivityHandler(
       userCgnModelMock as any
     );

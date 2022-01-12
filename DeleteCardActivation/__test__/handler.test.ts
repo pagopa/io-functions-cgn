@@ -198,7 +198,7 @@ describe("DeleteCardActivationHandler", () => {
     expect(response.kind).toBe("IResponseSuccessAccepted");
   });
 
-  it("should start a new orchestrator if there aren' t conflict on the same id", async () => {
+  it("should start a new orchestrator if there aren't conflict on the same id", async () => {
     cgnFindLastVersionByModelIdMock.mockImplementationOnce(() =>
       TE.of(some(anActivatedUserCgn))
     );
