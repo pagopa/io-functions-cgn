@@ -11,10 +11,10 @@ import { getConfigOrThrow } from "../utils/config";
 
 const config = getConfigOrThrow();
 
-export const servicesBaseUrl = config.SERVICES_API_URL;
-export const cgnSubscriptionKey = config.SERVICES_API_KEY;
+const servicesBaseUrl = config.SERVICES_API_URL;
+const cgnSubscriptionKey = config.SERVICES_API_KEY;
 
-// 5 seconds timeout by default
+// 10 seconds timeout by default
 const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
 
 // Must be an https endpoint so we use an https agent

@@ -22,7 +22,7 @@
     "predeploy": "npm-run-all generate build dist:*",
     "generate:definitions": "shx rm -rf generated/definitions && gen-api-models --api-spec openapi/index.yaml --out-dir generated/definitions",
     "generate:api-eyca": "shx rm -rf generated/eyca-api && gen-api-models --api-spec openapi/eyca.yaml --no-strict --out-dir generated/eyca-api --request-types --response-decoders --client",
-    "generate:api-services": "shx rm -rf generated/services-api && gen-api-models --api-spec https://raw.githubusercontent.com/pagopa/io-functions-services/master/openapi/index.yaml --no-strict --out-dir generated/services-api --request-types --response-decoders --client",
+    "generate:api-services": "shx rm -rf generated/services-api && gen-api-models --api-spec https://raw.githubusercontent.com/pagopa/io-functions-services/v3.3.0/openapi/index.yaml --no-strict --out-dir generated/services-api --request-types --response-decoders --client",
     "generate": "npm-run-all generate:*",
     "preversion": "auto-changelog  --config .auto-changelog.json --unreleased --commit-limit false --stdout --template preview.hbs",
     "version": "auto-changelog -p --config .auto-changelog.json --unreleased && git add CHANGELOG.md"

@@ -35,6 +35,40 @@ export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 const NOTIFICATION_DELAY_SECONDS = 10;
 
+const upsertSpecialServiceGenerator = (
+  context: IOrchestrationFunctionContext
+) =>
+  function*(
+    activityInput: UpsertSpecialServiceActivationActivityInput,
+    trackExAndThrowWithError: ReturnType<
+      typeof getTrackExceptionAndThrowWithErrorStatus
+    >
+  ): Generator {
+    return pipe(
+      yield context.df.callActivityWithRetry(
+        "UpsertSpecialServiceActivationActivity",
+        internalRetryOptions,
+        activityInput
+      ),
+      ActivityResult.decode,
+      E.getOrElseW(e =>
+        trackExAndThrowWithError(
+          e,
+          "cgn.update.exception.upsertSpecialServicePending.activityOutput"
+        )
+      ),
+      E.fromPredicate(
+        upsertSpecialServiceResult =>
+          upsertSpecialServiceResult.kind === "SUCCESS",
+        () =>
+          trackExAndThrowWithError(
+            new Error("Cannot upsert CGN Special service activation"),
+            "cgn.update.exception.failure.upsertSpecialService.activityOutput"
+          )
+      )
+    );
+  };
+
 // eslint-disable-next-line sonarjs/cognitive-complexity
 export const UpdateCgnOrchestratorHandler = function*(
   context: IOrchestrationFunctionContext,
@@ -52,6 +86,9 @@ export const UpdateCgnOrchestratorHandler = function*(
     context.df.setCustomStatus("RUNNING");
   }
 
+  const callUpsertSpecialServiceActivity = upsertSpecialServiceGenerator(
+    context
+  );
   const input = context.df.getInput();
   const decodedInput = pipe(
     input,
@@ -75,29 +112,12 @@ export const UpdateCgnOrchestratorHandler = function*(
           }
         );
 
-        const upsertSpecialServiceResult = pipe(
-          yield context.df.callActivityWithRetry(
-            "UpsertSpecialServiceActivationActivity",
-            internalRetryOptions,
-            upsertSpecialServicePendingActivityInput
-          ),
-          ActivityResult.decode,
-          E.getOrElseW(e =>
-            trackExAndThrowWithError(
-              e,
-              "cgn.update.exception.upsertSpecialServicePending.activityOutput"
-            )
-          )
+        yield* callUpsertSpecialServiceActivity(
+          upsertSpecialServicePendingActivityInput,
+          trackExAndThrowWithError
         );
 
-        if (upsertSpecialServiceResult.kind !== "SUCCESS") {
-          trackExAndThrowWithError(
-            new Error("Cannot upsert CGN Special service activation"),
-            "cgn.update.exception.failure.upsertSpecialService.activityOutput"
-          );
-        }
-
-        const decodedStoreCgnExpirationResult = pipe(
+        pipe(
           yield context.df.callActivityWithRetry(
             "StoreCgnExpirationActivity",
             internalRetryOptions,
@@ -113,22 +133,24 @@ export const UpdateCgnOrchestratorHandler = function*(
               e,
               "cgn.update.exception.decode.storeCgnExpirationActivityOutput"
             )
+          ),
+          E.fromPredicate(
+            decodedStoreCgnExpirationResult =>
+              decodedStoreCgnExpirationResult.kind === "SUCCESS",
+            () =>
+              trackExAndThrowWithError(
+                new Error("Cannot store CGN Expiration"),
+                "cgn.update.exception.failure.storeCgnExpirationActivityOutput"
+              )
           )
         );
-
-        if (decodedStoreCgnExpirationResult.kind !== "SUCCESS") {
-          trackExAndThrowWithError(
-            new Error("Cannot store CGN Expiration"),
-            "cgn.update.exception.failure.storeCgnExpirationActivityOutput"
-          );
-        }
       }
       const updateCgnStatusActivityInput = ActivityInput.encode({
         card: newStatusCard,
         fiscalCode
       });
 
-      const updateCgnResult = pipe(
+      pipe(
         yield context.df.callActivityWithRetry(
           "UpdateCgnStatusActivity",
           internalRetryOptions,
@@ -140,15 +162,17 @@ export const UpdateCgnOrchestratorHandler = function*(
             e,
             "cgn.update.exception.decode.activityOutput"
           )
+        ),
+        E.fromPredicate(
+          updateCgnResult => updateCgnResult.kind === "SUCCESS",
+          () =>
+            trackExAndThrowWithError(
+              new Error("Cannot update CGN Status"),
+              "cgn.update.exception.failure.activityOutput"
+            )
         )
       );
 
-      if (updateCgnResult.kind !== "SUCCESS") {
-        trackExAndThrowWithError(
-          new Error("Cannot update CGN Status"),
-          "cgn.update.exception.failure.activityOutput"
-        );
-      }
       if (newStatusCard.status === ActivatedStatusEnum.ACTIVATED) {
         const upsertSpecialServiceActiveActivityInput = UpsertSpecialServiceActivationActivityInput.encode(
           {
@@ -157,27 +181,10 @@ export const UpdateCgnOrchestratorHandler = function*(
           }
         );
 
-        const upsertSpecialServiceResult = pipe(
-          yield context.df.callActivityWithRetry(
-            "UpsertSpecialServiceActivationActivity",
-            internalRetryOptions,
-            upsertSpecialServiceActiveActivityInput
-          ),
-          ActivityResult.decode,
-          E.getOrElseW(e =>
-            trackExAndThrowWithError(
-              e,
-              "cgn.update.exception.upsertSpecialServiceActive.activityOutput"
-            )
-          )
+        yield* callUpsertSpecialServiceActivity(
+          upsertSpecialServiceActiveActivityInput,
+          trackExAndThrowWithError
         );
-
-        if (upsertSpecialServiceResult.kind !== "SUCCESS") {
-          trackExAndThrowWithError(
-            new Error("Cannot upsert CGN Special service activation"),
-            "cgn.update.exception.failure.upsertSpecialService.activityOutput"
-          );
-        }
       }
     } catch (err) {
       if (newStatusCard.status === ActivatedStatusEnum.ACTIVATED) {
@@ -226,7 +233,7 @@ export const UpdateCgnOrchestratorHandler = function*(
           }
         );
 
-        const enqueueEycaActivationOutput = pipe(
+        pipe(
           yield context.df.callActivityWithRetry(
             "EnqueueEycaActivationActivity",
             internalRetryOptions,
@@ -238,19 +245,21 @@ export const UpdateCgnOrchestratorHandler = function*(
               e,
               "cgn.update.exception.eyca.activation.activityOutput"
             )
+          ),
+          E.fromPredicate(
+            enqueueEycaActivationOutput =>
+              enqueueEycaActivationOutput.kind === "SUCCESS",
+            () =>
+              trackExIfNotReplaying({
+                exception: new Error("Cannot enqueue an EYCA Card activation"),
+                properties: {
+                  id: fiscalCode,
+                  name: "cgn.update.eyca.activation.error"
+                },
+                tagOverrides
+              })
           )
         );
-
-        if (enqueueEycaActivationOutput.kind !== "SUCCESS") {
-          trackExIfNotReplaying({
-            exception: new Error("Cannot enqueue an EYCA Card activation"),
-            properties: {
-              id: fiscalCode,
-              name: "cgn.update.eyca.activation.error"
-            },
-            tagOverrides
-          });
-        }
       }
     }
 

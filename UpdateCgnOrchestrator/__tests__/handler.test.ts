@@ -118,9 +118,6 @@ describe("UpdateCgnOrchestrator", () => {
     // Complete the orchestrator execution
     orchestrator.next();
 
-    console.log(
-      JSON.stringify(contextMockWithDf.df.callActivityWithRetry.mock)
-    );
     expect(
       contextMockWithDf.df.callActivityWithRetry.mock.calls[4][2].content
     ).toEqual(MESSAGES.CardActivated());
