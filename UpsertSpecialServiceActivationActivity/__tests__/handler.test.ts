@@ -1,19 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { toCosmosErrorResponse } from "@pagopa/io-functions-commons/dist/src/utils/cosmosdb_model";
-import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
-import * as O from "fp-ts/lib/Option";
+import * as E from "fp-ts/lib/Either";
 import * as TE from "fp-ts/lib/TaskEither";
 import { context } from "../../__mocks__/durable-functions";
-import { aFiscalCode, cgnActivatedDates } from "../../__mocks__/mock";
-import {
-  CardPending,
-  StatusEnum
-} from "../../generated/definitions/CardPending";
-import {
-  CardRevoked,
-  StatusEnum as RevokedStatusEnum
-} from "../../generated/definitions/CardRevoked";
-import { UserCgn } from "../../models/user_cgn";
+import { aFiscalCode } from "../../__mocks__/mock";
 import {
   ActivityInput,
   getUpsertSpecialServiceActivationActivityHandler
@@ -22,6 +11,8 @@ import { Activation } from "../../generated/services-api/Activation";
 import { ServiceId } from "../../generated/services-api/ServiceId";
 import { ActivationStatusEnum } from "../../generated/services-api/ActivationStatus";
 import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
+import { Failure } from "../../utils/errors";
+import { pipe } from "fp-ts/lib/function";
 
 const aServiceId = "SERVICE_ID" as ServiceId;
 const aSpecialServiceActivation: Activation = {
@@ -50,17 +41,23 @@ describe("UpsertSpecialServiceActivationActivity", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
-  it("should return failure if an error occurs during input decode retrieve", async () => {
+  it("should throw if an error occurs during input decode retrieve", async () => {
     const upsertSpecialServiceActivationActivity = getUpsertSpecialServiceActivationActivityHandler(
       servicesClientMock
     );
-    const response = await upsertSpecialServiceActivationActivity(context, {
-      aaa: "wrongActivityInput"
-    });
-    expect(response.kind).toBe("FAILURE");
+    await pipe(
+      TE.tryCatch(
+        () =>
+          upsertSpecialServiceActivationActivity(context, {
+            aaa: "wrongActivityInput"
+          }),
+        E.toError
+      ),
+      TE.mapLeft(ex => expect(ex).toBeDefined())
+    )();
   });
 
-  it("should return failure if an error occurs during special service activation's upsert call", async () => {
+  it("should return a transient failure if an error occurs during special service activation's upsert call", async () => {
     upsertServiceActivationMock.mockImplementationOnce(() =>
       Promise.reject("Connectivity Error")
     );
@@ -71,39 +68,77 @@ describe("UpsertSpecialServiceActivationActivity", () => {
       context,
       anActivityInput
     );
-    expect(response.kind).toBe("FAILURE");
-    if (response.kind === "FAILURE") {
-      expect(response.reason).toBe("Connectivity Error");
+    expect(response.kind).toBe("TRANSIENT");
+    if (response.kind === "TRANSIENT") {
+      expect(response.reason).toBe(
+        "TRANSIENT FAILURE|ERROR=Connectivity Error"
+      );
     }
   });
 
   it.each`
     error                      | expectedResponse
-    ${"Not Found"}             | ${aNotFoundResponse}
     ${"Too many requests"}     | ${{ status: 429 }}
-    ${"Unauthorized"}          | ${{ status: 401 }}
-    ${"Forbidden"}             | ${{ status: 403 }}
     ${"Internal Server error"} | ${{ status: 500 }}
-    ${"Unhandled Error"}       | ${{ status: 599 }}
   `(
-    "should return failure if special service activation's upsert returns $error",
-    async ({ expectedResponse }) => {
+    "should return a TRANSIENT FAILURE if special service activation's upsert returns $error",
+    async ({ expectedResponse, failureType }) => {
       upsertServiceActivationMock.mockImplementationOnce(() =>
         TE.of(expectedResponse)()
       );
       const upsertSpecialServiceActivationActivity = getUpsertSpecialServiceActivationActivityHandler(
         servicesClientMock
       );
-      const response = await upsertSpecialServiceActivationActivity(
-        context,
-        anActivityInput
+
+      await pipe(
+        TE.tryCatch(
+          () =>
+            upsertSpecialServiceActivationActivity(context, anActivityInput),
+          () => fail("Cannot throw")
+        ),
+        TE.map(response => {
+          expect(response.kind).toBe("TRANSIENT");
+          if (Failure.is(response)) {
+            expect(response.reason).toBe(
+              `TRANSIENT FAILURE|ERROR=Cannot upsert service activation with response code ${expectedResponse.status}`
+            );
+          }
+        })
+      )();
+    }
+  );
+
+  it.each`
+    error                | expectedResponse
+    ${"Not Found"}       | ${aNotFoundResponse}
+    ${"Unauthorized"}    | ${{ status: 401 }}
+    ${"Forbidden"}       | ${{ status: 403 }}
+    ${"Unhandled Error"} | ${{ status: 599 }}
+  `(
+    "should throw if special service activation's upsert returns $error PERMANENT error",
+    async ({ expectedResponse, failureType }) => {
+      upsertServiceActivationMock.mockImplementationOnce(() =>
+        TE.of(expectedResponse)()
       );
-      expect(response.kind).toBe("FAILURE");
-      if (response.kind === "FAILURE") {
-        expect(response.reason).toBe(
-          `Cannot upsert service activation with response code ${expectedResponse.status}`
-        );
-      }
+      const upsertSpecialServiceActivationActivity = getUpsertSpecialServiceActivationActivityHandler(
+        servicesClientMock
+      );
+
+      await pipe(
+        TE.tryCatch(
+          () =>
+            upsertSpecialServiceActivationActivity(context, anActivityInput),
+          _ => {
+            const ex = E.toError(_);
+            expect(ex).toEqual(
+              expect.objectContaining({
+                message: `PERMANENT FAILURE|ERROR=Cannot upsert service activation with response code ${expectedResponse.status}`
+              })
+            );
+          }
+        ),
+        TE.map(() => fail("Cannot return a response"))
+      )();
     }
   );
 
