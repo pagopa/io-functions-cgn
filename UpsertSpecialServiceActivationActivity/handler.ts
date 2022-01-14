@@ -91,29 +91,24 @@ export const getUpsertSpecialServiceActivationActivityHandler = (
         activityInput.fiscalCode
       )
     ),
-    TE.bimap(
-      err => {
-        const error = TransientFailure.is(err)
-          ? `${logPrefix}|TRANSIENT_ERROR=${err.reason}`
-          : `${logPrefix}|FATAL|PERMANENT_ERROR=${err.reason}`;
-        trackException({
-          exception: new Error(error),
-          properties: {
-            // In case the the input (message from queue) cannot be decoded
-            // we mark this as a FATAL error since the lock on user's family won't be relased
-            detail: err.kind,
-            fatal: PermanentFailure.is(err).toString(),
-            isSuccess: false,
-            name: "cgn.exception.upsertSpecialService.failure"
-          }
-        });
-        context.log.error(error);
-        if (PermanentFailure.is(err)) {
-          throw new Error(err.reason);
+    TE.bimap(err => {
+      const error = TransientFailure.is(err)
+        ? `${logPrefix}|TRANSIENT_ERROR=${err.reason}`
+        : `${logPrefix}|FATAL|PERMANENT_ERROR=${err.reason}`;
+      trackException({
+        exception: new Error(error),
+        properties: {
+          detail: err.kind,
+          fatal: PermanentFailure.is(err).toString(),
+          isSuccess: false,
+          name: "cgn.exception.upsertSpecialService.failure"
         }
-        return err;
-      },
-      () => success()
-    ),
+      });
+      context.log.error(error);
+      if (TransientFailure.is(err)) {
+        throw new Error(err.reason);
+      }
+      return err;
+    }, success),
     TE.toUnion
   )();

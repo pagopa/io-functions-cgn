@@ -54,7 +54,9 @@ const upsertSpecialServiceGenerator = (
       E.getOrElseW(e =>
         trackExAndThrowWithError(
           e,
-          "cgn.update.exception.upsertSpecialServicePending.activityOutput"
+          `cgn.update.exception.upsertSpecialService.${activityInput.activationStatus
+            .toString()
+            .toLowerCase()}.activityOutput`
         )
       ),
       E.fromPredicate(
@@ -63,7 +65,9 @@ const upsertSpecialServiceGenerator = (
         () =>
           trackExAndThrowWithError(
             new Error("Cannot upsert CGN Special service activation"),
-            "cgn.update.exception.failure.upsertSpecialService.activityOutput"
+            `cgn.update.exception.failure.upsertSpecialService.${activityInput.activationStatus
+              .toString()
+              .toLowerCase()}.activityOutput`
           )
       )
     );

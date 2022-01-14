@@ -41,7 +41,7 @@ describe("UpsertSpecialServiceActivationActivity", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
-  it("should throw if an error occurs during input decode retrieve", async () => {
+  it("should return a PERMANENT failure if any error occurs during input decode", async () => {
     const upsertSpecialServiceActivationActivity = getUpsertSpecialServiceActivationActivityHandler(
       servicesClientMock
     );
@@ -53,7 +53,10 @@ describe("UpsertSpecialServiceActivationActivity", () => {
           }),
         E.toError
       ),
-      TE.mapLeft(ex => expect(ex).toBeDefined())
+      TE.bimap(
+        () => fail("Unexpected value"),
+        response => expect(response.kind).toBe("PERMANENT")
+      )
     )();
   });
 
@@ -64,16 +67,23 @@ describe("UpsertSpecialServiceActivationActivity", () => {
     const upsertSpecialServiceActivationActivity = getUpsertSpecialServiceActivationActivityHandler(
       servicesClientMock
     );
-    const response = await upsertSpecialServiceActivationActivity(
-      context,
-      anActivityInput
-    );
-    expect(response.kind).toBe("TRANSIENT");
-    if (response.kind === "TRANSIENT") {
-      expect(response.reason).toBe(
-        "TRANSIENT FAILURE|ERROR=Connectivity Error"
-      );
-    }
+
+    await pipe(
+      TE.tryCatch(
+        () => upsertSpecialServiceActivationActivity(context, anActivityInput),
+        E.toError
+      ),
+      TE.bimap(
+        ex => {
+          expect(ex).toEqual(
+            expect.objectContaining({
+              message: `TRANSIENT FAILURE|ERROR=Connectivity Error`
+            })
+          );
+        },
+        () => fail("Unexpected value")
+      )
+    )();
   });
 
   it.each`
@@ -81,7 +91,7 @@ describe("UpsertSpecialServiceActivationActivity", () => {
     ${"Too many requests"}     | ${{ status: 429 }}
     ${"Internal Server error"} | ${{ status: 500 }}
   `(
-    "should return a TRANSIENT FAILURE if special service activation's upsert returns $error",
+    "should throw if special service activation's upsert returns $error TRANSIENT error",
     async ({ expectedResponse, failureType }) => {
       upsertServiceActivationMock.mockImplementationOnce(() =>
         TE.of(expectedResponse)()
@@ -94,16 +104,18 @@ describe("UpsertSpecialServiceActivationActivity", () => {
         TE.tryCatch(
           () =>
             upsertSpecialServiceActivationActivity(context, anActivityInput),
-          () => fail("Cannot throw")
+          E.toError
         ),
-        TE.map(response => {
-          expect(response.kind).toBe("TRANSIENT");
-          if (Failure.is(response)) {
-            expect(response.reason).toBe(
-              `TRANSIENT FAILURE|ERROR=Cannot upsert service activation with response code ${expectedResponse.status}`
+        TE.bimap(
+          ex => {
+            expect(ex).toEqual(
+              expect.objectContaining({
+                message: `TRANSIENT FAILURE|ERROR=Cannot upsert service activation with response code ${expectedResponse.status}`
+              })
             );
-          }
-        })
+          },
+          () => fail("Unexpected value")
+        )
       )();
     }
   );
@@ -115,8 +127,8 @@ describe("UpsertSpecialServiceActivationActivity", () => {
     ${"Forbidden"}       | ${{ status: 403 }}
     ${"Unhandled Error"} | ${{ status: 599 }}
   `(
-    "should throw if special service activation's upsert returns $error PERMANENT error",
-    async ({ expectedResponse, failureType }) => {
+    "return a PERMANENT FAILURE if special service activation's upsert returns $error",
+    async ({ expectedResponse }) => {
       upsertServiceActivationMock.mockImplementationOnce(() =>
         TE.of(expectedResponse)()
       );
@@ -128,16 +140,16 @@ describe("UpsertSpecialServiceActivationActivity", () => {
         TE.tryCatch(
           () =>
             upsertSpecialServiceActivationActivity(context, anActivityInput),
-          _ => {
-            const ex = E.toError(_);
-            expect(ex).toEqual(
-              expect.objectContaining({
-                message: `PERMANENT FAILURE|ERROR=Cannot upsert service activation with response code ${expectedResponse.status}`
-              })
+          () => fail("Cannot return a response")
+        ),
+        TE.map(response => {
+          expect(response.kind).toBe("PERMANENT");
+          if (response.kind === "PERMANENT") {
+            expect(response.reason).toEqual(
+              `PERMANENT FAILURE|ERROR=Cannot upsert service activation with response code ${expectedResponse.status}`
             );
           }
-        ),
-        TE.map(() => fail("Cannot return a response"))
+        })
       )();
     }
   );
