@@ -1,4 +1,3 @@
-import { getRequiredStringEnv } from "@pagopa/io-functions-commons/dist/src/utils/env";
 import { agent } from "@pagopa/ts-commons";
 import {
   AbortableFetch,
@@ -9,6 +8,7 @@ import { IntegerFromString } from "@pagopa/ts-commons/lib/numbers";
 import { Millisecond } from "@pagopa/ts-commons/lib/units";
 import * as E from "fp-ts/lib/Either";
 import { pipe } from "fp-ts/lib/function";
+import { getConfigOrThrow } from "../utils/config";
 import { getGetProfile, getSendMessage } from "../utils/notifications";
 import { getSendMessageActivityHandler } from "./handler";
 
@@ -19,9 +19,10 @@ const SERVICES_REQUEST_TIMEOUT_MS = pipe(
   E.getOrElse(() => 10000)
 );
 
+const config = getConfigOrThrow();
 // Needed to call notifications API
-const servicesApiUrl = getRequiredStringEnv("SERVICES_API_URL");
-const servicesApiKey = getRequiredStringEnv("SERVICES_API_KEY");
+const servicesApiUrl = config.SERVICES_API_URL;
+const servicesApiKey = config.SERVICES_API_KEY;
 
 // HTTP-only fetch with optional keepalive agent
 // @see https://github.com/pagopa/io-ts-commons/blob/master/src/agent.ts#L10
