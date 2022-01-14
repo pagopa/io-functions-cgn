@@ -1,13 +1,18 @@
 import { Context } from "@azure/functions";
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { toError } from "fp-ts/lib/Either";
-import { pipe } from "fp-ts/lib/function";
+import { flow, pipe } from "fp-ts/lib/function";
 import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { StatusEnum } from "../generated/definitions/CardPending";
 import { UserEycaCardModel } from "../models/user_eyca_card";
-import { ActivityResult, failure, success } from "../utils/activity";
+import { ActivityResult, success } from "../utils/activity";
 import { errorsToError } from "../utils/conversions";
+import {
+  toPermanentFailure,
+  toTransientFailure,
+  trackFailure
+} from "../utils/errors";
 import { EnqueueEycaActivationT } from "../utils/models";
 
 export const ActivityInput = t.interface({
@@ -21,13 +26,15 @@ export const getEnqueueEycaActivationActivityHandler = (
   enqueueEycaActivation: EnqueueEycaActivationT,
   logPrefix: string = "EnqueueEycaActivationActivity"
 ) => (context: Context, input: unknown): Promise<ActivityResult> => {
-  const fail = failure(context, logPrefix);
+  const fail = trackFailure(context, logPrefix);
   return pipe(
     input,
     ActivityInput.decode,
     TE.fromEither,
-    TE.mapLeft(errs =>
-      fail(errorsToError(errs), "Cannot decode Activity Input")
+    TE.mapLeft(
+      flow(errorsToError, e =>
+        toPermanentFailure(e, "Cannot decode activity input")
+      )
     ),
     TE.chain(({ fiscalCode }) =>
       pipe(
@@ -36,18 +43,22 @@ export const getEnqueueEycaActivationActivityHandler = (
           fiscalCode,
           kind: "INewUserEycaCard"
         }),
-        TE.mapLeft(err =>
-          fail(toError(err), "Cannot insert EYCA Pending status")
+        TE.mapLeft(
+          flow(toError, e =>
+            toTransientFailure(e, "Cannot insert EYCA Pending status")
+          )
         ),
         TE.chain(() =>
           pipe(
             enqueueEycaActivation({ fiscalCode }),
-            TE.mapLeft(err => fail(err, "Cannot enqueue EYCA activation"))
+            TE.mapLeft(err =>
+              toTransientFailure(err, "Cannot enqueue EYCA activation")
+            )
           )
         )
       )
     ),
-    TE.map(success),
+    TE.bimap(fail, success),
     TE.toUnion
   )();
 };
