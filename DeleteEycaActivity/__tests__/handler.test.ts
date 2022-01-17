@@ -2,12 +2,14 @@
 import * as TE from "fp-ts/lib/TaskEither";
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
-import { cgnActivatedDates } from "../../__mocks__/mock";
+import { cgnActivatedDates, testFail } from "../../__mocks__/mock";
 import { Card } from "../../generated/definitions/Card";
 import { StatusEnum as RevokedStatusEnum } from "../../generated/definitions/CardRevoked";
 import { EycaCardRevoked } from "../../generated/definitions/EycaCardRevoked";
 import { CcdbNumber } from "../../generated/eyca-api/CcdbNumber";
 import { ActivityInput, getDeleteEycaActivityHandler } from "../handler";
+import { toError } from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
 
 const now = new Date();
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
@@ -51,20 +53,27 @@ describe("DeleteEycaActivity", () => {
     expect(response.kind).toBe("FAILURE");
   });
 
-  it("should return failure if an error occurs during findAll", async () => {
+  it("should throw if an error occurs during findAll", async () => {
     findAllMock.mockImplementationOnce(() =>
       TE.left(new Error("Cannot retrieve data"))
     );
     const deleteEycaActivityHandler = getDeleteEycaActivityHandler(
       userEycaModelMock as any
     );
-    const response = await deleteEycaActivityHandler(context, anActivityInput);
-    expect(findAllMock).toBeCalledTimes(1);
-    expect(findAllMock).toBeCalledWith(anActivityInput.fiscalCode);
-    expect(response.kind).toBe("FAILURE");
-    if (response.kind === "FAILURE") {
-      expect(response.reason).toEqual("Cannot retrieve data");
-    }
+    await pipe(
+      TE.tryCatch(
+        () => deleteEycaActivityHandler(context, anActivityInput),
+        toError
+      ),
+      TE.bimap(e => {
+        expect(findAllMock).toBeCalledTimes(1);
+        expect(findAllMock).toBeCalledWith(anActivityInput.fiscalCode);
+        expect(e).toBeDefined();
+        expect(e.message).toContain(
+          "TRANSIENT FAILURE|ERROR=Cannot retriew all eyca card"
+        );
+      }, testFail)
+    )();
   });
 
   it("should return failure if an error occurs during deleteVersion", async () => {
@@ -77,14 +86,21 @@ describe("DeleteEycaActivity", () => {
     const deleteEycaActivityHandler = getDeleteEycaActivityHandler(
       userEycaModelMock as any
     );
-    const response = await deleteEycaActivityHandler(context, anActivityInput);
-    expect(findAllMock).toBeCalledTimes(1);
-    expect(findAllMock).toBeCalledWith(anActivityInput.fiscalCode);
-    expect(deleteVersionMock).toBeCalledTimes(2);
-    expect(response.kind).toBe("FAILURE");
-    if (response.kind === "FAILURE") {
-      expect(response.reason).toEqual("Cannot delete version");
-    }
+    await pipe(
+      TE.tryCatch(
+        () => deleteEycaActivityHandler(context, anActivityInput),
+        toError
+      ),
+      TE.bimap(e => {
+        expect(findAllMock).toBeCalledTimes(1);
+        expect(findAllMock).toBeCalledWith(anActivityInput.fiscalCode);
+        expect(deleteVersionMock).toBeCalledTimes(2);
+        expect(e).toBeDefined();
+        expect(e.message).toContain(
+          "TRANSIENT FAILURE|ERROR=Cannot delete eyca version"
+        );
+      }, testFail)
+    )();
   });
 
   it("should return success if all versions are deleted", async () => {

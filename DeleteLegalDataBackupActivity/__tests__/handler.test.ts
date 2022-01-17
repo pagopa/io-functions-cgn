@@ -6,7 +6,7 @@ import { CosmosResource } from "@pagopa/io-functions-commons/dist/src/utils/cosm
 import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
-import { cgnActivatedDates } from "../../__mocks__/mock";
+import { cgnActivatedDates, testFail } from "../../__mocks__/mock";
 import {
   CardActivated,
   StatusEnum as ActivatedStatusEnum
@@ -27,6 +27,8 @@ import { Card } from "../../generated/definitions/Card";
 import { EycaCardRevoked } from "../../generated/definitions/EycaCardRevoked";
 import { RetrievedUserEycaCard } from "../../models/user_eyca_card";
 import { EycaCard } from "../../generated/definitions/EycaCard";
+import { pipe } from "fp-ts/lib/function";
+import { toError } from "fp-ts/lib/Either";
 
 // MessageContentBlobService
 const messageContentBlobService = ({} as unknown) as BlobService;
@@ -142,7 +144,7 @@ describe("Deleted Card Data to backup to legal reasons", () => {
     expect(response.kind).toBe("FAILURE");
   });
 
-  it("should return a failure if a data backup fails", async () => {
+  it("should throw if a data backup fails", async () => {
     const deleteLegalDataBackupActivityHandler = getDeleteLegalDataBackupActivityHandler(
       messageContentBlobService,
       messageContentContainerName,
@@ -159,18 +161,22 @@ describe("Deleted Card Data to backup to legal reasons", () => {
       )
     );
 
-    const response = await deleteLegalDataBackupActivityHandler(
-      context,
-      activityInput
-    );
-
-    expect(response.kind).toBe("FAILURE");
-    if (response.kind === "FAILURE") {
-      expect(response.reason).toEqual("Blob failure test");
-    }
+    await pipe(
+      TE.tryCatch(
+        () => deleteLegalDataBackupActivityHandler(context, activityInput),
+        toError
+      ),
+      TE.bimap(e => {
+        expect(e).toBeDefined();
+        expect(saveDataToBlobMock).toHaveBeenCalled();
+        expect(e.message).toContain(
+          "TRANSIENT FAILURE|ERROR=Cannot backup CGN data"
+        );
+      }, testFail)
+    )();
   });
 
-  it("should return a failure if cgn data retrieve fails", async () => {
+  it("should throw if cgn data retrieve fails", async () => {
     const deleteLegalDataBackupActivityHandler = getDeleteLegalDataBackupActivityHandler(
       messageContentBlobService,
       messageContentContainerName,
@@ -181,19 +187,22 @@ describe("Deleted Card Data to backup to legal reasons", () => {
     cgnFindAllMock.mockImplementationOnce(() =>
       TE.left(new Error("Cannot query cgn cards"))
     );
-
-    const response = await deleteLegalDataBackupActivityHandler(
-      context,
-      activityInput
-    );
-
-    expect(response.kind).toBe("FAILURE");
-    if (response.kind === "FAILURE") {
-      expect(response.reason).toEqual("Cannot query cgn cards");
-    }
+    await pipe(
+      TE.tryCatch(
+        () => deleteLegalDataBackupActivityHandler(context, activityInput),
+        toError
+      ),
+      TE.bimap(e => {
+        expect(cgnFindAllMock).toHaveBeenCalled();
+        expect(e).toBeDefined();
+        expect(e.message).toContain(
+          "TRANSIENT FAILURE|ERROR=Cannot retrieve all cgn cards"
+        );
+      }, testFail)
+    )();
   });
 
-  it("should return a failure if eyca data retrieve fails", async () => {
+  it("should throw if eyca data retrieve fails", async () => {
     const deleteLegalDataBackupActivityHandler = getDeleteLegalDataBackupActivityHandler(
       messageContentBlobService,
       messageContentContainerName,
@@ -205,15 +214,20 @@ describe("Deleted Card Data to backup to legal reasons", () => {
       TE.left(new Error("Cannot query eyca cards"))
     );
 
-    const response = await deleteLegalDataBackupActivityHandler(
-      context,
-      activityInput
-    );
-
-    expect(response.kind).toBe("FAILURE");
-    if (response.kind === "FAILURE") {
-      expect(response.reason).toEqual("Cannot query eyca cards");
-    }
+    await pipe(
+      TE.tryCatch(
+        () => deleteLegalDataBackupActivityHandler(context, activityInput),
+        toError
+      ),
+      TE.bimap(e => {
+        expect(cgnFindAllMock).toHaveBeenCalled();
+        expect(eycaFindAllMock).toHaveBeenCalled();
+        expect(e).toBeDefined();
+        expect(e.message).toContain(
+          "TRANSIENT FAILURE|ERROR=Cannot retrieve all eyca cards"
+        );
+      }, testFail)
+    )();
   });
 
   it("should return success after backup saved to blob storage", async () => {

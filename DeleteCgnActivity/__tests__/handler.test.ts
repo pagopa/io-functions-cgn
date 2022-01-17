@@ -2,13 +2,15 @@
 import * as TE from "fp-ts/lib/TaskEither";
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
-import { cgnActivatedDates } from "../../__mocks__/mock";
+import { cgnActivatedDates, testFail } from "../../__mocks__/mock";
 import { Card } from "../../generated/definitions/Card";
 import {
   CardRevoked,
   StatusEnum as RevokedStatusEnum
 } from "../../generated/definitions/CardRevoked";
 import { ActivityInput, getDeleteCgnActivityHandler } from "../handler";
+import { pipe } from "fp-ts/lib/function";
+import { toError } from "fp-ts/lib/Either";
 
 const now = new Date();
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
@@ -48,23 +50,30 @@ describe("DeleteCgnActivity", () => {
     expect(response.kind).toBe("FAILURE");
   });
 
-  it("should return failure if an error occurs during findAll", async () => {
+  it("should throw if an error occurs during findAll", async () => {
     findAllMock.mockImplementationOnce(() =>
       TE.left(new Error("Cannot retrieve data"))
     );
     const deleteCgnActivityHandler = getDeleteCgnActivityHandler(
       userCgnModelMock as any
     );
-    const response = await deleteCgnActivityHandler(context, anActivityInput);
-    expect(findAllMock).toBeCalledTimes(1);
-    expect(findAllMock).toBeCalledWith(anActivityInput.fiscalCode);
-    expect(response.kind).toBe("FAILURE");
-    if (response.kind === "FAILURE") {
-      expect(response.reason).toEqual("Cannot retrieve data");
-    }
+    await pipe(
+      TE.tryCatch(
+        () => deleteCgnActivityHandler(context, anActivityInput),
+        toError
+      ),
+      TE.bimap(e => {
+        expect(findAllMock).toBeCalledTimes(1);
+        expect(findAllMock).toBeCalledWith(anActivityInput.fiscalCode);
+        expect(e).toBeDefined();
+        expect(e.message).toContain(
+          "TRANSIENT FAILURE|ERROR=Cannot retrieve all cgn card"
+        );
+      }, testFail)
+    )();
   });
 
-  it("should return failure if an error occurs during deleteVersion", async () => {
+  it("should throw if an error occurs during deleteVersion", async () => {
     findAllMock.mockImplementationOnce(() =>
       TE.of([...anArrayOfCardResults, anArrayOfCardResults])
     );
@@ -74,14 +83,21 @@ describe("DeleteCgnActivity", () => {
     const deleteCgnActivityHandler = getDeleteCgnActivityHandler(
       userCgnModelMock as any
     );
-    const response = await deleteCgnActivityHandler(context, anActivityInput);
-    expect(findAllMock).toBeCalledTimes(1);
-    expect(findAllMock).toBeCalledWith(anActivityInput.fiscalCode);
-    expect(deleteVersionMock).toBeCalledTimes(2);
-    expect(response.kind).toBe("FAILURE");
-    if (response.kind === "FAILURE") {
-      expect(response.reason).toEqual("Cannot delete version");
-    }
+    await pipe(
+      TE.tryCatch(
+        () => deleteCgnActivityHandler(context, anActivityInput),
+        toError
+      ),
+      TE.bimap(e => {
+        expect(findAllMock).toBeCalledTimes(1);
+        expect(findAllMock).toBeCalledWith(anActivityInput.fiscalCode);
+        expect(deleteVersionMock).toBeCalledTimes(2);
+        expect(e).toBeDefined();
+        expect(e.message).toContain(
+          "TRANSIENT FAILURE|ERROR=Cannot delete cgn version"
+        );
+      }, testFail)
+    )();
   });
 
   it("should return success if all versions are deleted", async () => {

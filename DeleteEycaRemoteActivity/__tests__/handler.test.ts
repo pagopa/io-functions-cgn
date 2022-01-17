@@ -5,6 +5,9 @@ import { context } from "../../__mocks__/durable-functions";
 import { CcdbNumber } from "../../generated/eyca-api/CcdbNumber";
 import * as eycaUtils from "../../utils/eyca";
 import { ActivityInput, getDeleteEycaRemoteActivityHandler } from "../handler";
+import { pipe } from "fp-ts/lib/function";
+import { toError } from "fp-ts/lib/Either";
+import { testFail } from "../../__mocks__/mock";
 
 const anActivityInput: ActivityInput = {
   cardNumber: "A234-B333-C222-D444" as CcdbNumber
@@ -37,22 +40,50 @@ describe("DeleteEycaRemoteActivity", () => {
     expect(response.kind).toBe("FAILURE");
   });
 
-  it("should return failure if an error occurs during deleteCard", async () => {
-    deleteCardMock.mockImplementationOnce(() => TE.left(new Error("Error")));
+  it("should throw if a transient failure occurs during deleteCard", async () => {
+    deleteCardMock.mockImplementationOnce(() =>
+      TE.left({ kind: "TRANSIENT", reason: "Cannot delete card" })
+    );
     const deleteEycaRemoteActivityHandler = getDeleteEycaRemoteActivityHandler(
       {} as any,
       {} as any,
       anEycaUsername,
       anEycaPassword
     );
-    const response = await deleteEycaRemoteActivityHandler(
-      context,
-      anActivityInput
+    await pipe(
+      TE.tryCatch(
+        () => deleteEycaRemoteActivityHandler(context, anActivityInput),
+        toError
+      ),
+      TE.bimap(e => {
+        expect(e).toBeDefined();
+        expect(e.message).toEqual("Cannot delete card");
+      }, testFail)
+    )();
+  });
+
+  it("should return a failure if permanent failure occurs during deleteCard", async () => {
+    deleteCardMock.mockImplementationOnce(() =>
+      TE.left({ kind: "PERMANENT", reason: "Cannot delete card" })
     );
-    expect(response.kind).toBe("FAILURE");
-    if (response.kind === "FAILURE") {
-      expect(response.reason).toBe("Error");
-    }
+    const deleteEycaRemoteActivityHandler = getDeleteEycaRemoteActivityHandler(
+      {} as any,
+      {} as any,
+      anEycaUsername,
+      anEycaPassword
+    );
+    await pipe(
+      TE.tryCatch(
+        () => deleteEycaRemoteActivityHandler(context, anActivityInput),
+        toError
+      ),
+      TE.bimap(testFail, response => {
+        expect(response).toEqual({
+          kind: "FAILURE",
+          reason: "Cannot delete card"
+        });
+      })
+    )();
   });
 
   it("should return success if a delete of Eyca Card succeded", async () => {
