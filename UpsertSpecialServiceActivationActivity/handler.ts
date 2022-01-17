@@ -8,10 +8,15 @@ import * as t from "io-ts";
 import { ServicesAPIClient } from "../clients/services";
 import { Activation } from "../generated/services-api/Activation";
 import { ActivationStatus } from "../generated/services-api/ActivationStatus";
-import { ActivityResultSuccess, success } from "../utils/activity";
+import { ActivityResult, success } from "../utils/activity";
 import { trackException } from "../utils/appinsights";
 import { errorsToError } from "../utils/conversions";
-import { Failure, TransientFailure, PermanentFailure } from "../utils/errors";
+import {
+  Failure,
+  TransientFailure,
+  PermanentFailure,
+  trackFailure
+} from "../utils/errors";
 
 export const ActivityInput = t.interface({
   activationStatus: ActivationStatus,
@@ -75,11 +80,9 @@ const upsertServiceActivation = (
 export const getUpsertSpecialServiceActivationActivityHandler = (
   servicesClient: ServicesAPIClient,
   logPrefix: string = "UpsertSpecialServiceActivationActivity"
-) => (
-  context: Context,
-  input: unknown
-): Promise<Failure | ActivityResultSuccess> =>
-  pipe(
+) => (context: Context, input: unknown): Promise<ActivityResult> => {
+  const fail = trackFailure(context, logPrefix);
+  return pipe(
     input,
     ActivityInput.decode,
     TE.fromEither,
@@ -108,7 +111,8 @@ export const getUpsertSpecialServiceActivationActivityHandler = (
       if (TransientFailure.is(err)) {
         throw new Error(err.reason);
       }
-      return err;
+      return fail(err);
     }, success),
     TE.toUnion
   )();
+};
