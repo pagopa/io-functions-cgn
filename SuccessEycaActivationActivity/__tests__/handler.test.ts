@@ -5,7 +5,7 @@ import * as date_fns from "date-fns";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
 import { context } from "../../__mocks__/durable-functions";
-import { now } from "../../__mocks__/mock";
+import { now, testFail } from "../../__mocks__/mock";
 import { StatusEnum as ActivatedStatusEnum } from "../../generated/definitions/CardActivated";
 import {
   CardPending,
@@ -19,6 +19,8 @@ import {
   ActivityInput,
   getSuccessEycaActivationActivityHandler
 } from "../handler";
+import { toError } from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
 
 const aFiscalCode = "RODFDS92S10H501T" as FiscalCode;
 const aUserEycaCardNumber = "X321-Y321-Z321-W321" as CcdbNumber;
@@ -91,7 +93,7 @@ describe("SuccessEycaActivationActivity", () => {
     expect(response.kind).toBe("SUCCESS");
   });
 
-  it("should return failure if an error occurs during UserEycaCard retrieve", async () => {
+  it("should throw if an error occurs during UserEycaCard retrieve", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       TE.left(toCosmosErrorResponse(new Error("query error")))
     );
@@ -102,13 +104,15 @@ describe("SuccessEycaActivationActivity", () => {
       anEycaApiPassword,
       userEycaCardModelMock as any
     );
-    const response = await handler(context, anActivityInput);
-    expect(response.kind).toBe("FAILURE");
-    if (response.kind === "FAILURE") {
-      expect(response.reason).toBe(
-        "Cannot retrieve EYCA card for the provided fiscalCode"
-      );
-    }
+    await pipe(
+      TE.tryCatch(() => handler(context, anActivityInput), toError),
+      TE.bimap(e => {
+        expect(e).toBeDefined();
+        expect(e.message).toEqual(
+          "TRANSIENT FAILURE|ERROR=Cannot retrieve EYCA card for the provided fiscalCode"
+        );
+      }, testFail)
+    )();
   });
 
   it("should return failure if no UserEycaCard was found", async () => {
@@ -124,14 +128,14 @@ describe("SuccessEycaActivationActivity", () => {
     expect(response.kind).toBe("FAILURE");
     if (response.kind === "FAILURE") {
       expect(response.reason).toBe(
-        "No EYCA card found for the provided fiscalCode"
+        "PERMANENT FAILURE|ERROR=No EYCA card found for the provided fiscalCode"
       );
     }
   });
 
-  it("should return failure if EYCA card code retrieve fails", async () => {
+  it("should throw if EYCA card code retrieve fails", async () => {
     preIssueCardMock.mockImplementationOnce(() =>
-      TE.left("Error on PreIssueCard")
+      TE.left({ kind: "TRANSIENT", reason: "Error on PreIssueCard" })
     );
     const handler = getSuccessEycaActivationActivityHandler(
       {} as any,
@@ -140,12 +144,19 @@ describe("SuccessEycaActivationActivity", () => {
       anEycaApiPassword,
       userEycaCardModelMock as any
     );
-    const response = await handler(context, anActivityInput);
-    expect(response.kind).toBe("FAILURE");
+    await pipe(
+      TE.tryCatch(() => handler(context, anActivityInput), toError),
+      TE.bimap(e => {
+        expect(e).toBeDefined();
+        expect(e.message).toEqual("Error on PreIssueCard");
+      }, testFail)
+    )();
   });
 
-  it("should return failure if EYCA card update API fails", async () => {
-    updateCardMock.mockImplementationOnce(() => TE.left("Error on UpdateCard"));
+  it("should throw if EYCA card update API fails", async () => {
+    updateCardMock.mockImplementationOnce(() =>
+      TE.left({ kind: "TRANSIENT", reason: "Error on UpdateCard" })
+    );
     const handler = getSuccessEycaActivationActivityHandler(
       {} as any,
       {} as any,
@@ -153,12 +164,17 @@ describe("SuccessEycaActivationActivity", () => {
       anEycaApiPassword,
       userEycaCardModelMock as any
     );
-    const response = await handler(context, anActivityInput);
-    expect(response.kind).toBe("FAILURE");
+    await pipe(
+      TE.tryCatch(() => handler(context, anActivityInput), toError),
+      TE.bimap(e => {
+        expect(e).toBeDefined();
+        expect(e.message).toEqual("Error on UpdateCard");
+      }, testFail)
+    )();
   });
 
-  it("should return failure if EYCA card update fails", async () => {
-    updateMock.mockImplementationOnce(() => TE.left("Cannot update EYCA card"));
+  it("should throw if EYCA card update fails", async () => {
+    updateMock.mockImplementationOnce(() => TE.left("Cannot update EYCA Card"));
     const handler = getSuccessEycaActivationActivityHandler(
       {} as any,
       {} as any,
@@ -166,7 +182,12 @@ describe("SuccessEycaActivationActivity", () => {
       anEycaApiPassword,
       userEycaCardModelMock as any
     );
-    const response = await handler(context, anActivityInput);
-    expect(response.kind).toBe("FAILURE");
+    await pipe(
+      TE.tryCatch(() => handler(context, anActivityInput), toError),
+      TE.bimap(e => {
+        expect(e).toBeDefined();
+        expect(e.message).toContain("TRANSIENT FAILURE");
+      }, testFail)
+    )();
   });
 });

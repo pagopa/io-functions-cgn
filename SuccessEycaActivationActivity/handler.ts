@@ -2,7 +2,7 @@
 import { Context } from "@azure/functions";
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import * as E from "fp-ts/lib/Either";
-import { pipe } from "fp-ts/lib/function";
+import { flow, pipe } from "fp-ts/lib/function";
 import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { RedisClient } from "redis";
@@ -10,8 +10,13 @@ import { EycaAPIClient } from "../clients/eyca";
 import { StatusEnum } from "../generated/definitions/CardActivated";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { UserEycaCardModel } from "../models/user_eyca_card";
-import { ActivityResult, failure, success } from "../utils/activity";
+import { ActivityResult, success } from "../utils/activity";
 import { errorsToError } from "../utils/conversions";
+import {
+  toPermanentFailure,
+  toTransientFailure,
+  trackFailure
+} from "../utils/errors";
 import { preIssueCard, updateCard } from "../utils/eyca";
 
 export const ActivityInput = t.interface({
@@ -30,19 +35,21 @@ export const getSuccessEycaActivationActivityHandler = (
   userEycaCardModel: UserEycaCardModel,
   logPrefix: string = "SuccessEycaActivationActivityHandler"
 ) => (context: Context, input: unknown): Promise<ActivityResult> => {
-  const fail = failure(context, logPrefix);
+  const fail = trackFailure(context, logPrefix);
   return pipe(
     input,
     ActivityInput.decode,
     TE.fromEither,
-    TE.mapLeft(errs =>
-      fail(errorsToError(errs), "Cannot decode Activity Input")
+    TE.mapLeft(
+      flow(errorsToError, e =>
+        toPermanentFailure(e, "Cannot decode Activity Input")
+      )
     ),
     TE.chain(({ fiscalCode, activationDate, expirationDate }) =>
       pipe(
         userEycaCardModel.findLastVersionByModelId([fiscalCode]),
         TE.mapLeft(() =>
-          fail(
+          toTransientFailure(
             new Error("Cannot retrieve EYCA card for the provided fiscalCode")
           )
         ),
@@ -50,7 +57,9 @@ export const getSuccessEycaActivationActivityHandler = (
           pipe(
             maybeEycaCard,
             TE.fromOption(() =>
-              fail(new Error("No EYCA card found for the provided fiscalCode"))
+              toPermanentFailure(
+                new Error("No EYCA card found for the provided fiscalCode")
+              )
             )
           )
         ),
@@ -70,8 +79,7 @@ export const getSuccessEycaActivationActivityHandler = (
                 expiration_date: expirationDate,
                 status: StatusEnum.ACTIVATED
               }
-            })),
-            TE.mapLeft(fail)
+            }))
           )
         )
       )
@@ -86,16 +94,19 @@ export const getSuccessEycaActivationActivityHandler = (
           _.card.card_number,
           _.card.expiration_date
         ),
-        TE.mapLeft(fail),
         TE.chain(() =>
           pipe(
             userEycaCardModel.update(_),
-            TE.mapLeft(err => fail(E.toError(err), "Cannot update EYCA card"))
+            TE.mapLeft(
+              flow(E.toError, e =>
+                toTransientFailure(e, "Cannot update EYCA card")
+              )
+            )
           )
         )
       )
     ),
-    TE.map(() => success()),
+    TE.bimap(fail, success),
     TE.toUnion
   )();
 };

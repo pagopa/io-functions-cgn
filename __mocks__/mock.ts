@@ -18,3 +18,4 @@ export const aCosmosResourceMetadata: Omit<CosmosResource, "id"> = {
   _self: "_self",
   _ts: 1
 };
+export const testFail = () => fail("Unexpected Value");
