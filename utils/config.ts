@@ -16,6 +16,7 @@ import * as E from "fp-ts/lib/Either";
 import { pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/lib/Option";
 import * as t from "io-ts";
+import { ServiceId } from "../generated/services-api/ServiceId";
 
 export const RedisParams = t.intersection([
   t.interface({
@@ -32,6 +33,13 @@ export type RedisParams = t.TypeOf<typeof RedisParams>;
 
 export const DEFAULT_CGN_UPPER_BOUND_AGE = 36 as NonNegativeInteger;
 export const DEFAULT_EYCA_UPPER_BOUND_AGE = 31 as NonNegativeInteger;
+
+export const CgnServiceParams = t.interface({
+  CGN_SERVICE_ID: ServiceId,
+  SERVICES_API_KEY: NonEmptyString,
+  SERVICES_API_URL: NonEmptyString
+});
+export type CgnServiceParams = t.TypeOf<typeof CgnServiceParams>;
 
 // global app configuration
 export type IConfig = t.TypeOf<typeof IConfig>;
@@ -63,7 +71,8 @@ export const IConfig = t.intersection([
     OTP_TTL_IN_SECONDS: NonNegativeInteger,
     isProduction: t.boolean
   }),
-  RedisParams
+  RedisParams,
+  CgnServiceParams
 ]);
 
 // No need to re-evaluate this object for each call
