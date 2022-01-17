@@ -9,3 +9,5 @@ export const cgnActivatedDates = {
 };
 
 export const aFiscalCode = "DNLLSS99S20H501F" as FiscalCode;
+
+export const testFail = () => fail("Unexpected Value");

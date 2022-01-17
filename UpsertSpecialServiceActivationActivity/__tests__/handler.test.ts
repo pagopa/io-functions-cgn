@@ -2,7 +2,7 @@
 import * as E from "fp-ts/lib/Either";
 import * as TE from "fp-ts/lib/TaskEither";
 import { context } from "../../__mocks__/durable-functions";
-import { aFiscalCode } from "../../__mocks__/mock";
+import { aFiscalCode, testFail } from "../../__mocks__/mock";
 import {
   ActivityInput,
   getUpsertSpecialServiceActivationActivityHandler
@@ -53,10 +53,7 @@ describe("UpsertSpecialServiceActivationActivity", () => {
           }),
         E.toError
       ),
-      TE.bimap(
-        () => fail("Unexpected value"),
-        response => expect(response.kind).toBe("PERMANENT")
-      )
+      TE.bimap(testFail, response => expect(response.kind).toBe("FAILURE"))
     )();
   });
 
@@ -73,16 +70,13 @@ describe("UpsertSpecialServiceActivationActivity", () => {
         () => upsertSpecialServiceActivationActivity(context, anActivityInput),
         E.toError
       ),
-      TE.bimap(
-        ex => {
-          expect(ex).toEqual(
-            expect.objectContaining({
-              message: `TRANSIENT FAILURE|ERROR=Connectivity Error`
-            })
-          );
-        },
-        () => fail("Unexpected value")
-      )
+      TE.bimap(ex => {
+        expect(ex).toEqual(
+          expect.objectContaining({
+            message: `TRANSIENT FAILURE|ERROR=Connectivity Error`
+          })
+        );
+      }, testFail)
     )();
   });
 
@@ -106,16 +100,13 @@ describe("UpsertSpecialServiceActivationActivity", () => {
             upsertSpecialServiceActivationActivity(context, anActivityInput),
           E.toError
         ),
-        TE.bimap(
-          ex => {
-            expect(ex).toEqual(
-              expect.objectContaining({
-                message: `TRANSIENT FAILURE|ERROR=Cannot upsert service activation with response code ${expectedResponse.status}`
-              })
-            );
-          },
-          () => fail("Unexpected value")
-        )
+        TE.bimap(ex => {
+          expect(ex).toEqual(
+            expect.objectContaining({
+              message: `TRANSIENT FAILURE|ERROR=Cannot upsert service activation with response code ${expectedResponse.status}`
+            })
+          );
+        }, testFail)
       )();
     }
   );
@@ -140,11 +131,11 @@ describe("UpsertSpecialServiceActivationActivity", () => {
         TE.tryCatch(
           () =>
             upsertSpecialServiceActivationActivity(context, anActivityInput),
-          () => fail("Cannot return a response")
+          testFail
         ),
         TE.map(response => {
-          expect(response.kind).toBe("PERMANENT");
-          if (response.kind === "PERMANENT") {
+          expect(response.kind).toBe("FAILURE");
+          if (response.kind === "FAILURE") {
             expect(response.reason).toEqual(
               `PERMANENT FAILURE|ERROR=Cannot upsert service activation with response code ${expectedResponse.status}`
             );
