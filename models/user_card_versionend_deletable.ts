@@ -33,28 +33,17 @@ export abstract class UserCardVersionedDeletable<
       TE.map(_ => _.item.id)
     );
 
-  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   protected readonly findAll = (
     fiscalCode: FiscalCode,
     cardTableName: string | NonEmptyString,
     cardPkField: string | NonEmptyString
-  ) =>
+  ): TE.TaskEither<Error, ReadonlyArray<TR>> =>
     pipe(
-      TE.tryCatch(
-        () =>
-          asyncIteratorToArray(
-            flattenAsyncIterator(
-              this.getQueryIterator(
-                this.createGetAllCardQuery(
-                  fiscalCode,
-                  cardTableName,
-                  cardPkField
-                )
-              )[Symbol.asyncIterator]()
-            )
-          ),
-        E.toError
-      ),
+      this.createGetAllCardQuery(fiscalCode, cardTableName, cardPkField),
+      querySpec => this.getQueryIterator(querySpec)[Symbol.asyncIterator](),
+      flattenAsyncIterator,
+      queryIterator =>
+        TE.tryCatch(() => asyncIteratorToArray(queryIterator), E.toError),
       TE.map(_ => Array.from(_)),
       TE.map(AR.rights)
     );

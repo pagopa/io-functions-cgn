@@ -10,10 +10,6 @@ import { ActivityInput as DeleteEycaActivityInput } from "../DeleteEycaActivity/
 import { ActivityInput as DeleteEycaExpirationActivityInput } from "../DeleteEycaExpirationActivity/handler";
 import { ActivityInput as DeleteEycaRemoteActivityInput } from "../DeleteEycaRemoteActivity/handler";
 import { ActivityInput as DeleteLegalDataBackupActivityInput } from "../DeleteLegalDataBackupActivity/handler";
-import {
-  ActivityInput as RetrieveLegalDataBackupActivityInput,
-  RetrieveLegalDataBackupActivityResult
-} from "../RetrieveLegalDataBackupActivity/handler";
 import { CcdbNumber } from "../generated/definitions/CcdbNumber";
 import { ActivityResult } from "../utils/activity";
 import {
@@ -62,60 +58,32 @@ export const DeleteCgnOrchestratorHandler = function*(
   };
 
   try {
-    // First get legal data backup without deleting them
-    const retrieveLegalDataBackupResult = yield context.df.callActivityWithRetry(
-      "RetrieveLegalDataBackupActivity",
+    // First Backup all data for legal issue
+    const legalDataToBackup: DeleteLegalDataBackupActivityInput = {
+      backupFolder: "cgn" as NonEmptyString,
+      fiscalCode
+    };
+
+    const legalDataBackupResult = yield context.df.callActivityWithRetry(
+      "DeleteLegalDataBackupActivity",
       internalRetryOptions,
-      RetrieveLegalDataBackupActivityInput.encode({
-        fiscalCode
-      })
+      legalDataToBackup
     );
-    const decodedRetrieveLegalDataBackupResult = pipe(
-      retrieveLegalDataBackupResult,
-      RetrieveLegalDataBackupActivityResult.decode,
+    const decodedLegalDataBackupResult = pipe(
+      legalDataBackupResult,
+      ActivityResult.decode,
       E.getOrElseW(e =>
         trackExAndThrowWithError(
           e,
-          "cgn.delete.exception.decode.retrieveLegalDataBackup"
+          "cgn.delete.exception.decode.legalDataBackupUpdate"
         )
       )
     );
-    if (decodedRetrieveLegalDataBackupResult.kind !== "SUCCESS") {
+    if (decodedLegalDataBackupResult.kind !== "SUCCESS") {
       trackExAndThrowWithError(
-        new Error("Cannot retrieve legal data backup"),
-        "cgn.delete.exception.failure.retrieveLegalDataBackup"
+        new Error("Cannot backup deleted data for legal issue"),
+        "cgn.delete.exception.failure.deleteLegalDataBackupActivityOutput"
       );
-    } else {
-      const { cgnCards, eycaCards } = decodedRetrieveLegalDataBackupResult;
-      // Backup all data for legal issue
-      const legalDataToBackup: DeleteLegalDataBackupActivityInput = {
-        backupFolder: "cgn" as NonEmptyString,
-        cgnCards,
-        eycaCards,
-        fiscalCode
-      };
-
-      const legalDataBackupResult = yield context.df.callActivityWithRetry(
-        "DeleteLegalDataBackupActivity",
-        internalRetryOptions,
-        legalDataToBackup
-      );
-      const decodedLegalDataBackupResult = pipe(
-        legalDataBackupResult,
-        ActivityResult.decode,
-        E.getOrElseW(e =>
-          trackExAndThrowWithError(
-            e,
-            "cgn.delete.exception.decode.legalDataBackupUpdate"
-          )
-        )
-      );
-      if (decodedLegalDataBackupResult.kind !== "SUCCESS") {
-        trackExAndThrowWithError(
-          new Error("Cannot backup deleted data for legal issue"),
-          "cgn.delete.exception.failure.deleteLegalDataBackupActivityOutput"
-        );
-      }
     }
 
     if (eycaCardNumber !== undefined) {

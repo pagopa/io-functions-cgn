@@ -6,8 +6,11 @@ import { CosmosResource } from "@pagopa/io-functions-commons/dist/src/utils/cosm
 import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { context } from "../../__mocks__/durable-functions";
-import { now } from "../../__mocks__/mock";
-import { StatusEnum as ActivatedStatusEnum } from "../../generated/definitions/CardActivated";
+import { cgnActivatedDates } from "../../__mocks__/mock";
+import {
+  CardActivated,
+  StatusEnum as ActivatedStatusEnum
+} from "../../generated/definitions/CardActivated";
 import { RetrievedUserCgn } from "../../models/user_cgn";
 import {
   ActivityInput,
@@ -15,6 +18,15 @@ import {
 } from "../handler";
 import * as blobUtils from "../utils";
 import { BlobCreationFailure } from "../utils";
+import { CcdbNumber } from "../../generated/definitions/CcdbNumber";
+import {
+  CardRevoked,
+  StatusEnum as RevokedStatusEnum
+} from "../../generated/definitions/CardRevoked";
+import { Card } from "../../generated/definitions/Card";
+import { EycaCardRevoked } from "../../generated/definitions/EycaCardRevoked";
+import { RetrievedUserEycaCard } from "../../models/user_eyca_card";
+import { EycaCard } from "../../generated/definitions/EycaCard";
 
 // MessageContentBlobService
 const messageContentBlobService = ({} as unknown) as BlobService;
@@ -29,27 +41,84 @@ const aCosmosResourceMetadata: Omit<CosmosResource, "id"> = {
   _ts: 1
 };
 
-const anActivatedCgn: RetrievedUserCgn = {
+const now = new Date();
+const aUserEycaCardNumber = "X321-Y321-Z321-W321" as CcdbNumber;
+
+const aRevocationRequest = {
+  reason: "aMotivation" as NonEmptyString
+};
+
+const commonRetrievedAttributes = {
   ...aCosmosResourceMetadata,
-  card: {
-    activation_date: now,
-    expiration_date: date_fns.addDays(now, 10),
-    status: ActivatedStatusEnum.ACTIVATED
-  },
   fiscalCode: aFiscalCode,
   id: "123" as NonEmptyString,
-  kind: "IRetrievedUserCgn",
+  kind: "IRetrievedUserCgn" as const,
   version: 0 as NonNegativeInteger
 };
-const anArrayOfCardResults: ReadonlyArray<RetrievedUserCgn> = [anActivatedCgn];
 
-const legalDataToBackup: ActivityInput = {
+const anActivatedCgn: CardActivated = {
+  ...cgnActivatedDates,
+  status: ActivatedStatusEnum.ACTIVATED
+};
+const aCgnUserCardRevoked: CardRevoked = {
+  ...cgnActivatedDates,
+  revocation_date: now,
+  revocation_reason: aRevocationRequest.reason,
+  status: RevokedStatusEnum.REVOKED
+};
+
+const wrapCardWithCommonRetrievedAttributes = (card: Card) => ({
+  ...commonRetrievedAttributes,
+  card
+});
+
+const wrapEycaCardWithCommonRetrievedAttributes = (
+  card: EycaCard
+): RetrievedUserEycaCard => ({
+  ...commonRetrievedAttributes,
+  kind: "IRetrievedUserEycaCard" as const,
+  card
+});
+const anArrayOfCgnCardResults: ReadonlyArray<RetrievedUserCgn> = [
+  wrapCardWithCommonRetrievedAttributes(anActivatedCgn),
+  wrapCardWithCommonRetrievedAttributes(aCgnUserCardRevoked)
+];
+const anEycaUserCardRevoked: EycaCardRevoked = {
+  ...cgnActivatedDates,
+  card_number: aUserEycaCardNumber,
+  revocation_date: now,
+  revocation_reason: aRevocationRequest.reason,
+  status: RevokedStatusEnum.REVOKED
+};
+const anArrayOfEycaCardResults: ReadonlyArray<RetrievedUserEycaCard> = [
+  wrapEycaCardWithCommonRetrievedAttributes(anEycaUserCardRevoked)
+];
+
+const eycaFindAllMock = jest
+  .fn()
+  .mockImplementation(() => TE.of(anArrayOfEycaCardResults));
+
+const cgnFindAllMock = jest
+  .fn()
+  .mockImplementation(() => TE.of(anArrayOfCgnCardResults));
+
+const userEycaModelMock = {
+  findAll: eycaFindAllMock
+};
+
+const userCgnModelMock = {
+  findAll: cgnFindAllMock
+};
+
+const activityInput: ActivityInput = {
   backupFolder: "cgn" as NonEmptyString,
-  cgnCards: anArrayOfCardResults,
   fiscalCode: aFiscalCode
 };
 
-const saveDataToBlobMock = jest.fn();
+const saveDataToBlobMock = jest
+  .fn()
+  .mockImplementation(() => TE.of(activityInput));
+
 jest.spyOn(blobUtils, "saveDataToBlob").mockImplementation(saveDataToBlobMock);
 
 describe("Deleted Card Data to backup to legal reasons", () => {
@@ -60,7 +129,9 @@ describe("Deleted Card Data to backup to legal reasons", () => {
   it("should return a failure if an Activity Input decode fail", async () => {
     const deleteLegalDataBackupActivityHandler = getDeleteLegalDataBackupActivityHandler(
       messageContentBlobService,
-      messageContentContainerName
+      messageContentContainerName,
+      userCgnModelMock as any,
+      userEycaModelMock as any
     );
 
     const response = await deleteLegalDataBackupActivityHandler(
@@ -71,10 +142,12 @@ describe("Deleted Card Data to backup to legal reasons", () => {
     expect(response.kind).toBe("FAILURE");
   });
 
-  it("should return a failure a backup data to save fail", async () => {
+  it("should return a failure if a data backup fails", async () => {
     const deleteLegalDataBackupActivityHandler = getDeleteLegalDataBackupActivityHandler(
       messageContentBlobService,
-      messageContentContainerName
+      messageContentContainerName,
+      userCgnModelMock as any,
+      userEycaModelMock as any
     );
 
     saveDataToBlobMock.mockImplementationOnce(() =>
@@ -88,26 +161,72 @@ describe("Deleted Card Data to backup to legal reasons", () => {
 
     const response = await deleteLegalDataBackupActivityHandler(
       context,
-      legalDataToBackup
+      activityInput
     );
 
     expect(response.kind).toBe("FAILURE");
     if (response.kind === "FAILURE") {
-      expect(response.reason === "Blob failure test");
+      expect(response.reason).toEqual("Blob failure test");
     }
   });
 
-  it("should return a success after backup saved to blob storage", async () => {
+  it("should return a failure if cgn data retrieve fails", async () => {
     const deleteLegalDataBackupActivityHandler = getDeleteLegalDataBackupActivityHandler(
       messageContentBlobService,
-      messageContentContainerName
+      messageContentContainerName,
+      userCgnModelMock as any,
+      userEycaModelMock as any
     );
 
-    saveDataToBlobMock.mockImplementationOnce(() => TE.of(legalDataToBackup));
+    cgnFindAllMock.mockImplementationOnce(() =>
+      TE.left(new Error("Cannot query cgn cards"))
+    );
 
     const response = await deleteLegalDataBackupActivityHandler(
       context,
-      legalDataToBackup
+      activityInput
+    );
+
+    expect(response.kind).toBe("FAILURE");
+    if (response.kind === "FAILURE") {
+      expect(response.reason).toEqual("Cannot query cgn cards");
+    }
+  });
+
+  it("should return a failure if eyca data retrieve fails", async () => {
+    const deleteLegalDataBackupActivityHandler = getDeleteLegalDataBackupActivityHandler(
+      messageContentBlobService,
+      messageContentContainerName,
+      userCgnModelMock as any,
+      userEycaModelMock as any
+    );
+
+    eycaFindAllMock.mockImplementationOnce(() =>
+      TE.left(new Error("Cannot query eyca cards"))
+    );
+
+    const response = await deleteLegalDataBackupActivityHandler(
+      context,
+      activityInput
+    );
+
+    expect(response.kind).toBe("FAILURE");
+    if (response.kind === "FAILURE") {
+      expect(response.reason).toEqual("Cannot query eyca cards");
+    }
+  });
+
+  it("should return success after backup saved to blob storage", async () => {
+    const deleteLegalDataBackupActivityHandler = getDeleteLegalDataBackupActivityHandler(
+      messageContentBlobService,
+      messageContentContainerName,
+      userCgnModelMock as any,
+      userEycaModelMock as any
+    );
+
+    const response = await deleteLegalDataBackupActivityHandler(
+      context,
+      activityInput
     );
 
     expect(response.kind).toBe("SUCCESS");
