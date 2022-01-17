@@ -5,7 +5,7 @@ import { getDeleteLegalDataBackupActivityHandler } from "./handler";
 const config = getConfigOrThrow();
 
 const cardsDataBackupBlobService = createBlobService(
-  config.CgnCardsDataBackupStorageConnection
+  config.CGN_DATA_BACKUP_CONNECTION
 );
 
 const cardsDataBackupContainerName =
