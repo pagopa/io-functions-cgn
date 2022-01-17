@@ -17,7 +17,6 @@ import { CcdbNumber } from "../../generated/definitions/CcdbNumber";
 import { EycaCardActivated } from "../../generated/definitions/EycaCardActivated";
 import { RetrievedUserCgn, UserCgn } from "../../models/user_cgn";
 import { RetrievedUserEycaCard } from "../../models/user_eyca_card";
-import { MESSAGES } from "../../utils/messages";
 import { DeleteCgnOrchestratorHandler } from "../handler";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
@@ -83,7 +82,7 @@ describe("DeleteCgnOrchestrator", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
-  it("should delete only cgn data while eyca is not present", async () => {
+  it("should delete only cgn data when eyca is not present", async () => {
     getInputMock.mockImplementationOnce(() => ({
       fiscalCode: aFiscalCode
     }));
@@ -99,9 +98,7 @@ describe("DeleteCgnOrchestrator", () => {
       // 3 Delete Cgn Expiration Data
       .mockReturnValueOnce({ kind: "SUCCESS" })
       // 4 Delete Cgn Card
-      .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 5 SendMessageActivity
-      .mockReturnValueOnce("SendMessageActivity");
+      .mockReturnValueOnce({ kind: "SUCCESS" });
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = DeleteCgnOrchestratorHandler(contextMockWithDf as any);
 
@@ -131,20 +128,9 @@ describe("DeleteCgnOrchestrator", () => {
       kind: "SUCCESS"
     });
 
-    // 5 CreateTimer
-    const res5 = orchestrator.next(res4.value);
-    expect(res5.value).toEqual("CreateTimer");
-
-    // 6 SendMessage
-    const res6 = orchestrator.next(res5.value);
-    expect(res6.value).toEqual("SendMessageActivity");
-
     // Complete the orchestrator execution
-    orchestrator.next();
+    orchestrator.next(res4.value);
 
-    expect(
-      contextMockWithDf.df.callActivityWithRetry.mock.calls[4][2].content
-    ).toEqual(MESSAGES.CardDeleted());
     expect(contextMockWithDf.df.callActivityWithRetry.mock.calls[1][2]).toEqual(
       {
         backupFolder: "cgn" as NonEmptyString,
@@ -153,7 +139,6 @@ describe("DeleteCgnOrchestrator", () => {
         fiscalCode: aFiscalCode
       }
     );
-    expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
       1,
       "RUNNING"
@@ -193,9 +178,8 @@ describe("DeleteCgnOrchestrator", () => {
       // 6 Delete Cgn Expiration Data
       .mockReturnValueOnce({ kind: "SUCCESS" })
       // 7 Delete Cgn Card
-      .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 8 SendMessageActivity
-      .mockReturnValueOnce("SendMessageActivity");
+      .mockReturnValueOnce({ kind: "SUCCESS" });
+
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = DeleteCgnOrchestratorHandler(contextMockWithDf as any);
 
@@ -239,20 +223,9 @@ describe("DeleteCgnOrchestrator", () => {
     const res7 = orchestrator.next(res6.value);
     expect(res7.value).toEqual({ kind: "SUCCESS" });
 
-    // 8 CreateTimer
-    const res8 = orchestrator.next(res7.value);
-    expect(res8.value).toEqual("CreateTimer");
-
-    // 9 SendMessage
-    const res9 = orchestrator.next(res8.value);
-    expect(res9.value).toEqual("SendMessageActivity");
-
     // Complete the orchestrator execution
-    orchestrator.next();
+    orchestrator.next(res7.value);
 
-    expect(
-      contextMockWithDf.df.callActivityWithRetry.mock.calls[7][2].content
-    ).toEqual(MESSAGES.CardDeleted());
     expect(contextMockWithDf.df.callActivityWithRetry.mock.calls[1][2]).toEqual(
       {
         backupFolder: "cgn" as NonEmptyString,
@@ -261,7 +234,7 @@ describe("DeleteCgnOrchestrator", () => {
         fiscalCode: aFiscalCode
       }
     );
-    expect(contextMockWithDf.df.createTimer).toHaveBeenCalledTimes(1);
+
     expect(contextMockWithDf.df.setCustomStatus).toHaveBeenNthCalledWith(
       1,
       "RUNNING"
