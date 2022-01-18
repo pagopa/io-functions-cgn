@@ -31,6 +31,7 @@ import { StatusEnum as CardExpiredStatusEnum } from "../generated/definitions/Ca
 import { StatusEnum as CardPendingStatusEnum } from "../generated/definitions/CardPending";
 import { StatusEnum as CardRevokedStatusEnum } from "../generated/definitions/CardRevoked";
 import { trackEvent, trackException } from "./appinsights";
+import { toHash } from "./hash";
 
 /**
  * The identifier for UpdateCgnOrchestrator
@@ -41,7 +42,7 @@ import { trackEvent, trackException } from "./appinsights";
 export const makeUpdateCgnOrchestratorId = (
   fiscalCode: FiscalCode,
   cardStatus: string
-): string => `${fiscalCode}-UPDCGN-${cardStatus}`;
+): string => `${toHash(fiscalCode)}-UPDCGN-${cardStatus}`;
 
 /**
  * The identifier for an EYCA related orchestrator
@@ -51,7 +52,7 @@ export const makeUpdateCgnOrchestratorId = (
 export const makeEycaOrchestratorId = (
   fiscalCode: FiscalCode,
   cardStatus: string
-): string => `${fiscalCode}-EYCA-${cardStatus}`;
+): string => `${toHash(fiscalCode)}-EYCA-${cardStatus}`;
 
 export const getOrchestratorStatus = (
   client: DurableOrchestrationClient,
