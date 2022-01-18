@@ -2,7 +2,7 @@
 
 import * as E from "fp-ts/lib/Either";
 import * as t from "io-ts";
-import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import { pipe } from "fp-ts/lib/function";
 import { ActivityInput as DeleteCgnActivityInput } from "../DeleteCgnActivity/handler";
 import { ActivityInput as DeleteCgnExpirationActivityInput } from "../DeleteCgnExpirationActivity/handler";
@@ -60,7 +60,6 @@ export const DeleteCgnOrchestratorHandler = function*(
   try {
     // First Backup all data for legal issue
     const legalDataToBackup: DeleteLegalDataBackupActivityInput = {
-      backupFolder: "cgn" as NonEmptyString,
       fiscalCode
     };
 

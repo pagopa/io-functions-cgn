@@ -33,6 +33,7 @@ import { toError } from "fp-ts/lib/Either";
 // MessageContentBlobService
 const messageContentBlobService = ({} as unknown) as BlobService;
 const messageContentContainerName = "CGN_BACKUP_DATA" as NonEmptyString;
+const messageContentFolderName = "cgn" as NonEmptyString;
 
 const aFiscalCode = "RODFDS89S10H501T" as FiscalCode;
 
@@ -113,7 +114,6 @@ const userCgnModelMock = {
 };
 
 const activityInput: ActivityInput = {
-  backupFolder: "cgn" as NonEmptyString,
   fiscalCode: aFiscalCode
 };
 
@@ -132,6 +132,7 @@ describe("Deleted Card Data to backup to legal reasons", () => {
     const deleteLegalDataBackupActivityHandler = getDeleteLegalDataBackupActivityHandler(
       messageContentBlobService,
       messageContentContainerName,
+      messageContentFolderName,
       userCgnModelMock as any,
       userEycaModelMock as any
     );
@@ -148,6 +149,7 @@ describe("Deleted Card Data to backup to legal reasons", () => {
     const deleteLegalDataBackupActivityHandler = getDeleteLegalDataBackupActivityHandler(
       messageContentBlobService,
       messageContentContainerName,
+      messageContentFolderName,
       userCgnModelMock as any,
       userEycaModelMock as any
     );
@@ -180,6 +182,7 @@ describe("Deleted Card Data to backup to legal reasons", () => {
     const deleteLegalDataBackupActivityHandler = getDeleteLegalDataBackupActivityHandler(
       messageContentBlobService,
       messageContentContainerName,
+      messageContentFolderName,
       userCgnModelMock as any,
       userEycaModelMock as any
     );
@@ -206,6 +209,7 @@ describe("Deleted Card Data to backup to legal reasons", () => {
     const deleteLegalDataBackupActivityHandler = getDeleteLegalDataBackupActivityHandler(
       messageContentBlobService,
       messageContentContainerName,
+      messageContentFolderName,
       userCgnModelMock as any,
       userEycaModelMock as any
     );
@@ -234,6 +238,7 @@ describe("Deleted Card Data to backup to legal reasons", () => {
     const deleteLegalDataBackupActivityHandler = getDeleteLegalDataBackupActivityHandler(
       messageContentBlobService,
       messageContentContainerName,
+      messageContentFolderName,
       userCgnModelMock as any,
       userEycaModelMock as any
     );

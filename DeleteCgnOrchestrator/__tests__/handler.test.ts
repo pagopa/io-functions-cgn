@@ -70,7 +70,6 @@ describe("DeleteCgnOrchestrator", () => {
 
     expect(contextMockWithDf.df.callActivityWithRetry.mock.calls[0][2]).toEqual(
       {
-        backupFolder: "cgn" as NonEmptyString,
         fiscalCode: aFiscalCode
       }
     );
@@ -151,7 +150,6 @@ describe("DeleteCgnOrchestrator", () => {
 
     expect(contextMockWithDf.df.callActivityWithRetry.mock.calls[0][2]).toEqual(
       {
-        backupFolder: "cgn" as NonEmptyString,
         fiscalCode: aFiscalCode
       }
     );

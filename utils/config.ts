@@ -67,6 +67,7 @@ export const IConfig = t.intersection([
     CGN_DATA_BACKUP_CONNECTION: NonEmptyString,
 
     CGN_CARDS_DATA_BACKUP_CONTAINER_NAME: NonEmptyString,
+    CGN_CARDS_DATA_BACKUP_FOLDER_NAME: NonEmptyString,
 
     OTP_TTL_IN_SECONDS: NonNegativeInteger,
     isProduction: t.boolean

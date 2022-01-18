@@ -16,7 +16,6 @@ import {
 import { saveDataToBlob } from "./utils";
 
 export const ActivityInput = t.interface({
-  backupFolder: NonEmptyString,
   fiscalCode: FiscalCode
 });
 export type ActivityInput = t.TypeOf<typeof ActivityInput>;
@@ -24,9 +23,11 @@ export type ActivityInput = t.TypeOf<typeof ActivityInput>;
 export const getDeleteLegalDataBackupActivityHandler = (
   cardsDataBackupBlobService: BlobService,
   cardsDataBackupContainerName: NonEmptyString,
+  cardsDataBackupFolderName: NonEmptyString,
   userCgnModel: UserCgnModel,
   userEycaModel: UserEycaCardModel,
   logPrefix: string = "DeleteLegalDataBackupActivity"
+  // eslint-disable-next-line max-params
 ) => (context: Context, input: unknown): Promise<ActivityResult> => {
   const fail = trackFailure(context, logPrefix);
 
@@ -60,7 +61,7 @@ export const getDeleteLegalDataBackupActivityHandler = (
             saveDataToBlob(
               cardsDataBackupBlobService,
               cardsDataBackupContainerName,
-              activityInput.backupFolder,
+              cardsDataBackupFolderName,
               `${activityInput.fiscalCode}.json` as NonEmptyString,
               retrieveDataOutput
             ),
