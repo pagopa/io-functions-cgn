@@ -38,7 +38,7 @@ describe("DeleteCgnOrchestrator", () => {
       fiscalCode: aFiscalCode
     }));
     mockCallActivityWithRetry
-      // 1 UpsertSpecialServiceActivity
+      // 1 UpsertSpecialServiceActivity pending
       .mockReturnValueOnce({ kind: "SUCCESS" })
       // 2 DeleteLegalDataBackupActivity
       .mockReturnValueOnce({ kind: "SUCCESS" })
@@ -46,7 +46,7 @@ describe("DeleteCgnOrchestrator", () => {
       .mockReturnValueOnce({ kind: "SUCCESS" })
       // 4 Delete Cgn Card
       .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 5 UpsertSpecialServiceActivity
+      // 5 UpsertSpecialServiceActivity inactive
       .mockReturnValueOnce({ kind: "SUCCESS" });
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = DeleteCgnOrchestratorHandler(contextMockWithDf as any);
@@ -109,7 +109,7 @@ describe("DeleteCgnOrchestrator", () => {
       eycaCardNumber: aUserEycaCardNumber
     }));
     mockCallActivityWithRetry
-      // 1 UpsertSpecialServiceActivity
+      // 1 UpsertSpecialServiceActivity pending
       .mockReturnValueOnce({ kind: "SUCCESS" })
       // 2 DeleteLegalDataBackupActivity
       .mockReturnValueOnce({ kind: "SUCCESS" })
@@ -125,7 +125,7 @@ describe("DeleteCgnOrchestrator", () => {
       .mockReturnValueOnce({ kind: "SUCCESS" })
       // 7 Delete Cgn Card
       .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 8 UpsertSpecialServiceActivity
+      // 8 UpsertSpecialServiceActivity inactive
       .mockReturnValueOnce({ kind: "SUCCESS" });
 
     // tslint:disable-next-line: no-any no-useless-cast
