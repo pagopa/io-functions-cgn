@@ -24,7 +24,17 @@ Non sarà più possibile utilizzare la carta né nei punti fisici né online.`
   CardActivated: (): MessageContent =>
     ({
       subject: "La tua Carta Giovani è attiva!",
-      markdown: `Buone notizie! **La tua Carta Giovani Nazionale è attiva** e la potrai trovare all’interno della sezione Portafoglio.
+      markdown: `---
+it:
+    cta_1: 
+        text: "Visualizza la Carta"
+        action: "ioit://CGN_DETAILS"
+en:
+    cta_1: 
+        text: "View Card"
+        action: "ioit://CGN_DETAILS"
+---
+Buone notizie! **La tua Carta Giovani Nazionale è attiva** e la potrai trovare all’interno della sezione Portafoglio.
 
 Ti ricordiamo che solo tu puoi usufruire degli sconti presentando la Carta presso gli esercenti fisici aderenti, oppure inserendo i codici nell’apposito campo presso gli esercenti aderenti online.
 
@@ -67,7 +77,16 @@ La Carta rimane valida per gli acquisti in Italia!`
 export const getErrorMessage = (): MessageContent =>
   ({
     subject: "Abbiamo riscontrato dei problemi",
-    markdown: `
+    markdown: `---
+it:
+    cta_1: 
+        text: "Riprova"
+        action: "ioit://CTA_START_CGN"
+en:
+    cta_1: 
+        text: "Retry"
+        action: "ioit://CTA_START_CGN"
+---
 Purtroppo, non siamo riusciti a emettere la tua Carta.
 Ti chiediamo di riprovare.
 
