@@ -76,7 +76,8 @@ export const DeleteCgnOrchestratorHandler = function*(
       upsertSpecialServicePendingActivityInput,
       trackExAndThrowWithError
     );
-    // First Backup all data for legal issue
+
+    // Backup all data for legal issue
     const legalDataToBackup: DeleteLegalDataBackupActivityInput = {
       fiscalCode
     };
@@ -228,7 +229,7 @@ export const DeleteCgnOrchestratorHandler = function*(
       trackExAndThrowWithError
     );
 
-    // keep tracking of UserCgn update successfully
+    // keep tracking of UserCgn unsubscribe successfully
     context.df.setCustomStatus("UPDATED");
   } catch (err) {
     context.log.error(`${logPrefix}|ERROR|${String(err)}`);
