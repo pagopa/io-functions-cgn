@@ -28,6 +28,16 @@ Non sarà più possibile utilizzare la carta né nei punti fisici né online.`
 Ti ricordiamo che solo tu puoi usufruire degli sconti presentando la Carta presso gli esercenti fisici aderenti, oppure inserendo i codici nell’apposito campo presso gli esercenti aderenti online.
 
 La Carta Giovani Nazionale sarà valida da oggi fino al compimento dei 36 anni. Inizia subito a usarla!
+---
+it:
+    cta_1: 
+        text: "Visualizza la Carta"
+        action: "ioit://CGN_DETAILS"
+en:
+    cta_1: 
+        text: "View the Card"
+        action: "ioit://CGN_DETAILS"
+---
 `
     } as MessageContent),
   CardExpired: (): MessageContent =>
@@ -71,5 +81,15 @@ Purtroppo, non siamo riusciti a emettere la tua Carta.
 Ti chiediamo di riprovare.
 
 Ci scusiamo per il disagio.
+---
+it:
+    cta_1: 
+        text: "Riprova"
+        action: "ioit://CTA_START_CGN"
+en:
+    cta_1: 
+        text: "Retry"
+        action: "ioit://CTA_START_CGN"
+---
 `
   } as MessageContent);
