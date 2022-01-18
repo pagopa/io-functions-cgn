@@ -14,9 +14,6 @@ const cardsDataBackupBlobService = createBlobService(
   config.CGN_DATA_BACKUP_CONNECTION
 );
 
-const cardsDataBackupContainerName =
-  config.CGN_CARDS_DATA_BACKUP_CONTAINER_NAME;
-
 const userCgnsContainer = cosmosdbClient
   .database(config.COSMOSDB_CGN_DATABASE_NAME)
   .container(USER_CGN_COLLECTION_NAME);
@@ -31,7 +28,8 @@ const userEycaCardModel = new UserEycaCardModel(userEycaContainer);
 
 const deleteLegalDataBackupActivityHandler = getDeleteLegalDataBackupActivityHandler(
   cardsDataBackupBlobService,
-  cardsDataBackupContainerName,
+  config.CGN_CARDS_DATA_BACKUP_CONTAINER_NAME,
+  config.CGN_CARDS_DATA_BACKUP_FOLDER_NAME,
   userCgnModel,
   userEycaCardModel
 );
