@@ -213,3 +213,49 @@ export const preIssueCard = (
       )
     )
   );
+
+export const deleteCard = (
+  redisClient: RedisClient,
+  eycaClient: ReturnType<EycaAPIClient>,
+  username: NonEmptyString,
+  password: NonEmptyString,
+  ccdbNumber: CcdbNumber
+): TE.TaskEither<Failure, NonEmptyString> =>
+  pipe(
+    retrieveCcdbSessionId(redisClient, eycaClient, username, password),
+    TE.chain(sessionId =>
+      pipe(
+        TE.tryCatch(
+          () =>
+            eycaClient.deleteCard({
+              ccdb_number: ccdbNumber,
+              session_id: sessionId,
+              type: "json"
+            }),
+          E.toError
+        ),
+        TE.mapLeft(err =>
+          toTransientFailure(err, "Cannot call EYCA deleteCard API")
+        ),
+        TE.chain(
+          flow(
+            TE.fromEither,
+            TE.mapLeft(flow(errorsToError, toPermanentFailure))
+          )
+        ),
+        TE.chainW(res =>
+          res.status !== 200 || ErrorResponse.is(res.value.api_response)
+            ? TE.left(
+                mapResponseToFailure(
+                  res,
+                  new Error(
+                    `Error on EYCA deleteCard API|STATUS=${res.status}`
+                  ),
+                  res.value.api_response.text
+                )
+              )
+            : TE.of(res.value.api_response.text)
+        )
+      )
+    )
+  );

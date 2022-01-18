@@ -125,7 +125,7 @@ export const handler = function*(
   } catch (err) {
     context.log.error(`${logPrefix}|ERROR|${String(err)}`);
     trackExceptionIfNotReplaying({
-      exception: err,
+      exception: E.toError(err),
       properties: {
         id: fiscalCode,
         name: "eyca.activation.error"

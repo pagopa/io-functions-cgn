@@ -1,12 +1,10 @@
 import { Container } from "@azure/cosmos";
-import {
-  CosmosdbModelVersioned,
-  RetrievedVersionedModel
-} from "@pagopa/io-functions-commons/dist/src/utils/cosmosdb_model_versioned";
+import { RetrievedVersionedModel } from "@pagopa/io-functions-commons/dist/src/utils/cosmosdb_model_versioned";
 import { wrapWithKind } from "@pagopa/io-functions-commons/dist/src/utils/types";
 import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 import * as t from "io-ts";
 import { EycaCard } from "../generated/definitions/EycaCard";
+import { UserCardVersionedDeletable } from "./user_card_versionend_deletable";
 
 export const USER_EYCA_CARD_COLLECTION_NAME = "user-eyca-cards";
 export const USER_EYCA_CARD_MODEL_PK_FIELD = "fiscalCode" as const;
@@ -33,7 +31,7 @@ export const RetrievedUserEycaCard = wrapWithKind(
 
 export type RetrievedUserEycaCard = t.TypeOf<typeof RetrievedUserEycaCard>;
 
-export class UserEycaCardModel extends CosmosdbModelVersioned<
+export class UserEycaCardModel extends UserCardVersionedDeletable<
   UserEycaCard,
   NewUserEycaCard,
   RetrievedUserEycaCard,
@@ -53,4 +51,12 @@ export class UserEycaCardModel extends CosmosdbModelVersioned<
       USER_EYCA_CARD_MODEL_PK_FIELD
     );
   }
+
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  public readonly findAll = (fiscalCode: FiscalCode) =>
+    super.findAll(
+      fiscalCode,
+      USER_EYCA_CARD_COLLECTION_NAME,
+      USER_EYCA_CARD_MODEL_PK_FIELD
+    );
 }

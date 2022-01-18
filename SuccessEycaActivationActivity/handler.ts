@@ -17,7 +17,7 @@ import {
   toTransientFailure,
   trackFailure
 } from "../utils/errors";
-import { preIssueCard, updateCard } from "./eyca";
+import { preIssueCard, updateCard } from "../utils/eyca";
 
 export const ActivityInput = t.interface({
   activationDate: Timestamp,

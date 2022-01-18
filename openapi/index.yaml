@@ -24,6 +24,7 @@ paths:
         Get the CGN status details by the provided fiscal code. 
         In case of success the response could be one of:
           - CardPending
+          - CardPendingDelete
           - CardActivated
           - CardRevoked
           - CardExpired
@@ -93,6 +94,7 @@ paths:
         Get the EYCA status details by the provided fiscal code. 
         In case of success the response could be one of:
           - CardPending
+          - EycaCardPendingDelete
           - EycaCardActivated
           - EycaCardRevoked
           - EycaCardExpired
@@ -230,6 +232,42 @@ paths:
           schema:
             $ref: "#/definitions/ProblemJson"
 
+  "/{fiscalcode}/delete":
+    post:
+      operationId: startCgnUnsubscription
+      summary: |
+        Start a CGN unsubscribe process
+      description: |
+        Start an unsubscription process for a CGN
+      parameters:
+        - $ref: "#/parameters/FiscalCode"
+      responses:
+        "201":
+            description: Request created.
+            schema:
+              $ref: "#/definitions/InstanceId"
+            headers:
+              Location:
+                type: string
+                description: |-
+                  Location (URL) of created request resource.
+                  A GET request to this URL returns the request status and details.
+        "202":
+          description: Processing request.
+          schema:
+            $ref: "#/definitions/InstanceId"
+        "401":
+          description: Wrong or missing function key.
+        "403":
+          description: Forbidden.
+        "409":
+          description: |
+            Cannot start an unsubscribe process.
+        "500":
+          description: Service unavailable.
+          schema:
+            $ref: "#/definitions/ProblemJson"
+
   "/otp/{fiscalcode}":
     post:
       operationId: generateOtp
@@ -344,10 +382,22 @@ definitions:
               - EXPIRED
         required:
           - status
+  CardPendingDelete:
+    allOf:
+      - $ref: "#/definitions/CommonCard"
+      - type: object
+        properties:
+          status:
+            type: string
+            x-extensible-enum:
+              - PENDING_DELETE
+        required:
+          - status
   Card:
     x-one-of: true
     allOf:
       - $ref: "#/definitions/CardPending"
+      - $ref: "#/definitions/CardPendingDelete"
       - $ref: "#/definitions/CardActivated"
       - $ref: "#/definitions/CardRevoked"
       - $ref: "#/definitions/CardExpired"
@@ -389,10 +439,20 @@ definitions:
             $ref: "#/definitions/CcdbNumber"
         required:
           - card_number
+  EycaCardPendingDelete:
+    allOf:
+      - $ref: "#/definitions/CardPendingDelete"
+      - type: object
+        properties:
+          card_number:
+            $ref: "#/definitions/CcdbNumber"
+        required:
+          - card_number
   EycaCard:
     x-one-of: true
     allOf:
       - $ref: "#/definitions/CardPending"
+      - $ref: "#/definitions/EycaCardPendingDelete"
       - $ref: "#/definitions/EycaCardActivated"
       - $ref: "#/definitions/EycaCardRevoked"
       - $ref: "#/definitions/EycaCardExpired"

@@ -64,6 +64,11 @@ export const IConfig = t.intersection([
     EYCA_API_PASSWORD: NonEmptyString,
     EYCA_API_USERNAME: NonEmptyString,
 
+    CGN_DATA_BACKUP_CONNECTION: NonEmptyString,
+
+    CGN_CARDS_DATA_BACKUP_CONTAINER_NAME: NonEmptyString,
+    CGN_CARDS_DATA_BACKUP_FOLDER_NAME: NonEmptyString,
+
     OTP_TTL_IN_SECONDS: NonNegativeInteger,
     isProduction: t.boolean
   }),

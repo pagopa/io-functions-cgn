@@ -4,7 +4,6 @@ import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { ExponentialRetryPolicyFilter } from "azure-storage";
 import * as TE from "fp-ts/lib/TaskEither";
 import { context, mockStartNew } from "../../__mocks__/durable-functions";
-import { getClient } from "../../__mocks__/durable-functions";
 import { cgnActivatedDates } from "../../__mocks__/mock";
 import * as aInsights from "../../utils/appinsights";
 import * as tableUtils from "../../utils/card_expiration";

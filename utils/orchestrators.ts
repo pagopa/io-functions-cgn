@@ -29,6 +29,7 @@ import { Card } from "../generated/definitions/Card";
 import { StatusEnum as CardActivatedStatusEnum } from "../generated/definitions/CardActivated";
 import { StatusEnum as CardExpiredStatusEnum } from "../generated/definitions/CardExpired";
 import { StatusEnum as CardPendingStatusEnum } from "../generated/definitions/CardPending";
+import { StatusEnum as CardPendingDeleteStatusEnum } from "../generated/definitions/CardPendingDelete";
 import { StatusEnum as CardRevokedStatusEnum } from "../generated/definitions/CardRevoked";
 import { trackEvent, trackException } from "./appinsights";
 import { toHash } from "./hash";
@@ -86,7 +87,8 @@ const cgnStatuses: ReadonlyArray<string> = [
   CardRevokedStatusEnum.REVOKED.toString(),
   CardActivatedStatusEnum.ACTIVATED.toString(),
   CardExpiredStatusEnum.EXPIRED.toString(),
-  CardPendingStatusEnum.PENDING.toString()
+  CardPendingStatusEnum.PENDING.toString(),
+  CardPendingDeleteStatusEnum.PENDING_DELETE.toString()
 ];
 
 export type CheckUpdateCardIsRunningErrorTypes =

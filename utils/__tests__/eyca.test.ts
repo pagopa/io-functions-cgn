@@ -5,8 +5,8 @@ import { pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
 import { CcdbNumber } from "../../generated/eyca-api/CcdbNumber";
-import * as redis from "../../utils/redis_storage";
 import { preIssueCard, updateCard } from "../eyca";
+import * as redis from "../redis_storage";
 
 const anEycaApiUsername = "USERNAME" as NonEmptyString;
 const anEycaApiPassword = "PASSWORD" as NonEmptyString;
@@ -52,6 +52,7 @@ const authLoginMock = jest.fn().mockImplementation(() =>
 );
 const eycaApiClient = {
   authLogin: authLoginMock,
+  deleteCard: jest.fn(),
   preIssueCard: preIssueCardMock,
   updateCard: updateCardMock
 } as any;

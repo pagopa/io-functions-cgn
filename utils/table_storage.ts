@@ -126,3 +126,22 @@ export const insertCardExpiration = (
     )
   )();
 };
+
+/**
+ * Delete a card expiration into `cardExpirationTableName` table
+ */
+export const deleteCardExpiration = (
+  tableService: TableService,
+  cardExpirationTableName: NonEmptyString
+) => (fiscalCode: FiscalCode): TE.TaskEither<Error, ServiceResponse> => {
+  const eg = TableUtilities.entityGenerator;
+  return TE.taskify<Error, ServiceResponse>(cb =>
+    tableService.deleteEntity(
+      cardExpirationTableName,
+      {
+        RowKey: eg.String(fiscalCode)
+      },
+      cb
+    )
+  )();
+};
