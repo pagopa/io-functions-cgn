@@ -38,37 +38,53 @@ describe("DeleteCgnOrchestrator", () => {
       fiscalCode: aFiscalCode
     }));
     mockCallActivityWithRetry
-      // 1 DeleteLegalDataBackupActivity
+      // 1 UpsertSpecialServiceActivity
       .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 2 Delete Cgn Expiration Data
+      // 2 DeleteLegalDataBackupActivity
       .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 3 Delete Cgn Card
+      // 3 Delete Cgn Expiration Data
+      .mockReturnValueOnce({ kind: "SUCCESS" })
+      // 4 Delete Cgn Card
+      .mockReturnValueOnce({ kind: "SUCCESS" })
+      // 5 UpsertSpecialServiceActivity
       .mockReturnValueOnce({ kind: "SUCCESS" });
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = DeleteCgnOrchestratorHandler(contextMockWithDf as any);
 
-    // 1 RetrieveLegalBackupData
+    // 1 UpsertSpecialServiceActivity
     const res1 = orchestrator.next();
     expect(res1.value).toEqual({
       kind: "SUCCESS"
     });
 
-    // 2 DeleteLegalDataBackupActivity
+    // 2 RetrieveLegalBackupData
     const res2 = orchestrator.next(res1.value);
     expect(res2.value).toEqual({
       kind: "SUCCESS"
     });
 
-    // 3 Delete Cgn Expiration Data
+    // 3 DeleteLegalDataBackupActivity
     const res3 = orchestrator.next(res2.value);
     expect(res3.value).toEqual({
       kind: "SUCCESS"
     });
 
-    // Complete the orchestrator execution
-    orchestrator.next(res3.value);
+    // 4 Delete Cgn Expiration Data
+    const res4 = orchestrator.next(res3.value);
+    expect(res4.value).toEqual({
+      kind: "SUCCESS"
+    });
 
-    expect(contextMockWithDf.df.callActivityWithRetry.mock.calls[0][2]).toEqual(
+    // 5 UpsertSpecialServiceActivity
+    const res5 = orchestrator.next(res4.value);
+    expect(res5.value).toEqual({
+      kind: "SUCCESS"
+    });
+
+    // Complete the orchestrator execution
+    orchestrator.next(res5.value);
+
+    expect(contextMockWithDf.df.callActivityWithRetry.mock.calls[1][2]).toEqual(
       {
         fiscalCode: aFiscalCode
       }
@@ -93,25 +109,29 @@ describe("DeleteCgnOrchestrator", () => {
       eycaCardNumber: aUserEycaCardNumber
     }));
     mockCallActivityWithRetry
-      // 1 DeleteLegalDataBackupActivity
+      // 1 UpsertSpecialServiceActivity
       .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 2 DeleteEycaRemoteActivity
+      // 2 DeleteLegalDataBackupActivity
       .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 3 DeleteEycaExpirationActivity
+      // 3 DeleteEycaRemoteActivity
       .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 4 DeleteEycaActivity
+      // 4 DeleteEycaExpirationActivity
+      .mockReturnValueOnce({ kind: "SUCCESS" })
+      // 5 DeleteEycaActivity
       .mockReturnValueOnce({
         kind: "SUCCESS"
       })
-      // 5 Delete Cgn Expiration Data
+      // 6 Delete Cgn Expiration Data
       .mockReturnValueOnce({ kind: "SUCCESS" })
-      // 6 Delete Cgn Card
+      // 7 Delete Cgn Card
+      .mockReturnValueOnce({ kind: "SUCCESS" })
+      // 8 UpsertSpecialServiceActivity
       .mockReturnValueOnce({ kind: "SUCCESS" });
 
     // tslint:disable-next-line: no-any no-useless-cast
     const orchestrator = DeleteCgnOrchestratorHandler(contextMockWithDf as any);
 
-    // 1 RetrieveLegalBackupData
+    // 1 UpsertSpecialServiceActivity
     const res1 = orchestrator.next();
     expect(res1.value).toEqual({
       kind: "SUCCESS"
@@ -145,10 +165,18 @@ describe("DeleteCgnOrchestrator", () => {
     const res6 = orchestrator.next(res5.value);
     expect(res6.value).toEqual({ kind: "SUCCESS" });
 
+    // 7 Delete Cgn Card
+    const res7 = orchestrator.next(res6.value);
+    expect(res7.value).toEqual({ kind: "SUCCESS" });
+
+    // 8 UpsertSpecialServiceActivity
+    const res8 = orchestrator.next(res7.value);
+    expect(res8.value).toEqual({ kind: "SUCCESS" });
+
     // Complete the orchestrator execution
     orchestrator.next(res6.value);
 
-    expect(contextMockWithDf.df.callActivityWithRetry.mock.calls[0][2]).toEqual(
+    expect(contextMockWithDf.df.callActivityWithRetry.mock.calls[1][2]).toEqual(
       {
         fiscalCode: aFiscalCode
       }
