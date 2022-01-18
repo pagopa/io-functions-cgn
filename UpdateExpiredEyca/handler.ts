@@ -12,6 +12,7 @@ import { StatusEnum as CardExpiredStatusEnum } from "../generated/definitions/Ca
 import { StatusEnum } from "../generated/definitions/CardPending";
 import { initTelemetryClient, trackException } from "../utils/appinsights";
 import { getExpiredCardUsers } from "../utils/card_expiration";
+import { toHash } from "../utils/hash";
 import {
   makeEycaOrchestratorId,
   terminateOrchestratorById
@@ -71,9 +72,8 @@ export const getUpdateExpiredEycaHandler = (
       ),
       TE.chain(() => {
         context.log.info(
-          `${logPrefix}| Starting new EYCA expire orchestrator for fiscalCode=${fiscalCode.substr(
-            0,
-            6
+          `${logPrefix}| Starting new EYCA expire orchestrator for fiscalCode=${toHash(
+            fiscalCode
           )}`
         );
         // Now we try to start Expire operation
@@ -91,9 +91,8 @@ export const getUpdateExpiredEycaHandler = (
       }),
       TE.mapLeft(err => {
         context.log.error(
-          `${logPrefix}|Error while starting EYCA expiration for fiscalCode=${fiscalCode.substr(
-            0,
-            6
+          `${logPrefix}|Error while starting EYCA expiration for fiscalCode=${toHash(
+            fiscalCode
           )}|ERROR=${err.message}`
         );
         trackException({
