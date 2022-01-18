@@ -18,7 +18,7 @@ Ti avvisiamo che la tua Carta Giovani Nazionale è stata revocata il giorno ${fo
         "dd-MM-yyyy"
       )} per ${card.revocation_reason}.
             
-Non sarà più possibile utilizzare la carta nè nei punti fisici nè online.`
+Non sarà più possibile utilizzare la carta né nei punti fisici né online.`
     } as MessageContent),
   CardActivated: (): MessageContent =>
     ({
@@ -35,7 +35,7 @@ La Carta Giovani Nazionale sarà valida da oggi fino al compimento dei 36 anni. 
       subject: "La tua Carta Giovani Nazionale è scaduta",
       markdown: `Ti avvisiamo che da oggi non è più possibile utilizzare la tua Carta Giovani Nazionale.
 
-Grazie per aver partecipato al programma, speriamo tu abbia fatto ottimi acquisti!`
+Grazie per aver partecipato all'iniziativa!`
     } as MessageContent)
 };
 
@@ -67,7 +67,7 @@ export const getErrorMessage = (): MessageContent =>
   ({
     subject: "Abbiamo riscontrato dei problemi",
     markdown: `
-Si è verificato un errore nel processare la tua richiesta di Carta Giovani.
+Purtroppo, non siamo riusciti a emettere la tua Carta.
 Ti chiediamo di riprovare.
 
 Ci scusiamo per il disagio.
