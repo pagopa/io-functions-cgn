@@ -7,9 +7,12 @@ import {
   ResponseSuccessAccepted
 } from "@pagopa/ts-commons/lib/responses";
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import { context, mockStartNew } from "../../__mocks__/durable-functions";
-import { cgnActivatedDates } from "../../__mocks__/mock";
-import { Card } from "../../generated/definitions/Card";
+import {
+  aCosmosResourceMetadata,
+  cgnActivatedDates
+} from "../../__mocks__/mock";
 import {
   CardActivated,
   StatusEnum as ActivatedStatusEnum
@@ -35,6 +38,22 @@ const aRevocationRequest = {
   reason: "aMotivation" as NonEmptyString
 };
 
+const retrievedCard = {
+  ...aCosmosResourceMetadata,
+  fiscalCode: aFiscalCode,
+  id: "id" as NonEmptyString,
+  version: 1 as NonNegativeInteger
+};
+
+const retrievedUserCgn = {
+  ...retrievedCard,
+  kind: "IRetrievedUserCgn"
+};
+
+const retrievedUserEycaCard = {
+  ...retrievedCard,
+  kind: "IRetrievedUserEycaCard"
+};
 const aUserCardRevoked: CardRevoked = {
   ...cgnActivatedDates,
   revocation_date: now,
@@ -74,25 +93,21 @@ const aEycaUserCardRevoked: EycaCardRevoked = {
   revocation_reason: aRevocationRequest.reason,
   status: RevokedStatusEnum.REVOKED
 };
-const anArrayOfCardResults: ReadonlyArray<Card> = [aEycaUserCardRevoked];
-const eycaFindAllMock = jest
-  .fn()
-  .mockImplementation(() => TE.of(anArrayOfCardResults));
-const eycaDeleteVersionMock = jest.fn().mockImplementation(() => TE.of("id"));
+
 const eycaFindLastVersionByModelIdMock = jest.fn();
 
 const userEycaModelMock = {
-  deleteVersion: eycaDeleteVersionMock,
-  findAll: eycaFindAllMock,
   findLastVersionByModelId: eycaFindLastVersionByModelIdMock
 };
 
 const cgnFindLastVersionByModelIdMock = jest
   .fn()
-  .mockImplementation(() => TE.of(some(aUserCardRevoked)));
+  .mockImplementation(() =>
+    TE.of(some({ ...retrievedUserCgn, ...aUserCardRevoked }))
+  );
+
 const cgnUpdateMock = jest.fn();
 const cgnUpsertModelMock = jest.fn();
-
 const userCgnModelMock = {
   findLastVersionByModelId: cgnFindLastVersionByModelIdMock,
   update: cgnUpdateMock,
@@ -123,7 +138,7 @@ describe("DeleteCardActivationHandler", () => {
 
   it("should return an NotAuthorized Error if the user CGN is revoked", async () => {
     cgnFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      TE.of(some(aRevokedUserCgn))
+      TE.of(some({ ...retrievedUserCgn, ...aRevokedUserCgn }))
     );
 
     const deleteCardActivationHandler = DeleteCardActivationHandler(
@@ -136,7 +151,7 @@ describe("DeleteCardActivationHandler", () => {
 
   it("should return an Internal Error if an error occurs during Eyca Card retrieve", async () => {
     cgnFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      TE.of(some(anActivatedUserCgn))
+      TE.of(some({ ...retrievedUserCgn, ...anActivatedUserCgn }))
     );
     eycaFindLastVersionByModelIdMock.mockImplementationOnce(() =>
       TE.left(toCosmosErrorResponse(new Error("query error")))
@@ -151,10 +166,10 @@ describe("DeleteCardActivationHandler", () => {
 
   it("should return an conflict error if there is an active cgn card and a revoked eyca card", async () => {
     cgnFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      TE.of(some(anActivatedUserCgn))
+      TE.of(some({ ...retrievedUserCgn, ...anActivatedUserCgn }))
     );
     eycaFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      TE.of(some(aEycaUserCardRevoked))
+      TE.of(some({ ...retrievedUserEycaCard, card: aEycaUserCardRevoked }))
     );
     const deleteCardActivationHandler = DeleteCardActivationHandler(
       (userEycaModelMock as unknown) as UserEycaCardModel,
@@ -166,7 +181,7 @@ describe("DeleteCardActivationHandler", () => {
 
   it("should return an Internal Error if it is not possible to check status of an other orchestrator with the same id", async () => {
     cgnFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      TE.of(some(anActivatedUserCgn))
+      TE.of(some({ ...retrievedUserCgn, ...anActivatedUserCgn }))
     );
     eycaFindLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(none));
     checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
@@ -182,10 +197,10 @@ describe("DeleteCardActivationHandler", () => {
 
   it("should return an Accepted response if there is another orchestrator running with the same id", async () => {
     cgnFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      TE.of(some(anActivatedUserCgn))
+      TE.of(some({ ...retrievedUserCgn, ...anActivatedUserCgn }))
     );
     eycaFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      TE.of(some(aUserEycaCardActivated))
+      TE.of(some({ ...retrievedUserEycaCard, card: aUserEycaCardActivated }))
     );
     checkUpdateCardIsRunningMock.mockImplementationOnce(() =>
       TE.left(ResponseSuccessAccepted())
@@ -200,10 +215,10 @@ describe("DeleteCardActivationHandler", () => {
 
   it("should start a new orchestrator if there aren't conflict on the same id", async () => {
     cgnFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      TE.of(some(anActivatedUserCgn))
+      TE.of(some({ ...retrievedUserCgn, ...anActivatedUserCgn }))
     );
     eycaFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      TE.of(some(aUserEycaCardActivated))
+      TE.of(some({ ...retrievedUserEycaCard, card: aUserEycaCardActivated }))
     );
     checkUpdateCardIsRunningMock.mockImplementationOnce(() => TE.of(false));
     cgnUpsertModelMock.mockImplementationOnce(() => TE.of({}));
@@ -218,10 +233,10 @@ describe("DeleteCardActivationHandler", () => {
   it("should start an Internal Error if there are errors while inserting a new Cgn in pending delete status", async () => {
     checkUpdateCardIsRunningMock.mockImplementationOnce(() => TE.of(false));
     cgnFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      TE.of(some(anActivatedUserCgn))
+      TE.of(some({ ...retrievedUserCgn, ...anActivatedUserCgn }))
     );
     eycaFindLastVersionByModelIdMock.mockImplementationOnce(() =>
-      TE.of(some(aUserEycaCardActivated))
+      TE.of(some({ ...retrievedUserEycaCard, card: aUserEycaCardActivated }))
     );
     cgnUpsertModelMock.mockImplementationOnce(() =>
       TE.left(new Error("Insert error"))

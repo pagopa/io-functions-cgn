@@ -54,10 +54,6 @@ export class UserEycaCardModel extends UserCardVersionedDeletable<
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   public findAllEycaCards(fiscalCode: FiscalCode) {
-    return this.findAll(
-      fiscalCode,
-      USER_EYCA_CARD_COLLECTION_NAME,
-      USER_EYCA_CARD_MODEL_PK_FIELD
-    );
+    return this.findAll(fiscalCode, USER_EYCA_CARD_MODEL_PK_FIELD);
   }
 }
