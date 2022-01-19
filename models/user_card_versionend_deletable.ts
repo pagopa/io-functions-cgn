@@ -52,11 +52,10 @@ export abstract class UserCardVersionedDeletable<
 
   protected findAll = (
     fiscalCode: FiscalCode,
-    cardTableName: string | NonEmptyString,
     cardPkField: string | NonEmptyString
   ): TE.TaskEither<Error, ReadonlyArray<TR>> =>
     pipe(
-      this.createGetAllCardQuery(fiscalCode, cardTableName, cardPkField),
+      this.createGetAllCardQuery(fiscalCode, cardPkField),
       querySpec => this.getQueryIterator(querySpec)[Symbol.asyncIterator](),
       flattenAsyncIterator,
       queryIterator =>
@@ -67,7 +66,6 @@ export abstract class UserCardVersionedDeletable<
 
   private readonly createGetAllCardQuery = (
     fiscalCode: FiscalCode,
-    cardTableName: string | NonEmptyString,
     cardPkField: string | NonEmptyString
   ): SqlQuerySpec => ({
     parameters: [
@@ -76,6 +74,6 @@ export abstract class UserCardVersionedDeletable<
         value: fiscalCode
       }
     ],
-    query: `select * from ${cardTableName} as c where c.${cardPkField} = @fiscalCode`
+    query: `SELECT * FROM c WHERE c.${cardPkField} = @fiscalCode`
   });
 }
