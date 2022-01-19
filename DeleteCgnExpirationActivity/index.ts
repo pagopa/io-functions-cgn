@@ -8,7 +8,8 @@ const tableService = createTableService(config.CGN_STORAGE_CONNECTION_STRING);
 
 const deleteCgnExpirationActivityHandler = getDeleteCgnExpirationActivityHandler(
   tableService,
-  config.CGN_EXPIRATION_TABLE_NAME
+  config.CGN_EXPIRATION_TABLE_NAME,
+  config.CGN_UPPER_BOUND_AGE
 );
 
 export default deleteCgnExpirationActivityHandler;

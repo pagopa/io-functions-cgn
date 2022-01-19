@@ -4,6 +4,7 @@ import { flow, pipe } from "fp-ts/lib/function";
 import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
+import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import { ActivityResult, success } from "../utils/activity";
 import { errorsToError } from "../utils/conversions";
 import { deleteCardExpiration } from "../utils/table_storage";
@@ -12,6 +13,7 @@ import {
   toTransientFailure,
   trackFailure
 } from "../utils/errors";
+import { extractEycaExpirationDate } from "../utils/cgn_checks";
 
 export const ActivityInput = t.interface({
   fiscalCode: FiscalCode
@@ -26,6 +28,7 @@ export type ActivityInput = t.TypeOf<typeof ActivityInput>;
 export const getDeleteEycaExpirationActivityHandler = (
   tableService: TableService,
   eycaExpirationTableName: NonEmptyString,
+  eycaUpperBoundAge: NonNegativeInteger,
   logPrefix: string = "DeleteCgnExpirationActivity"
 ) => (context: Context, input: unknown): Promise<ActivityResult> => {
   const fail = trackFailure(context, logPrefix);
@@ -44,9 +47,18 @@ export const getDeleteEycaExpirationActivityHandler = (
     ),
     TE.chain(activityInput =>
       pipe(
-        deleteEycaExpirationTask(activityInput.fiscalCode),
-        TE.mapLeft(err =>
-          toTransientFailure(err, "Cannot delete EYCA expiration tuple")
+        extractEycaExpirationDate(activityInput.fiscalCode, eycaUpperBoundAge),
+        TE.fromEither,
+        TE.mapLeft(e =>
+          toPermanentFailure(e, "Cannot extract EYCA expirationDate")
+        ),
+        TE.chain(expirationDate =>
+          pipe(
+            deleteEycaExpirationTask(activityInput.fiscalCode, expirationDate),
+            TE.mapLeft(err =>
+              toTransientFailure(err, "Cannot delete EYCA expiration tuple")
+            )
+          )
         )
       )
     ),

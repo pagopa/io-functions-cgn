@@ -3,6 +3,7 @@ import * as TE from "fp-ts/lib/TaskEither";
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { pipe } from "fp-ts/lib/function";
 import { toError } from "fp-ts/lib/Either";
+import { NonNegativeInteger } from "@pagopa/ts-commons/lib/numbers";
 import { context } from "../../__mocks__/durable-functions";
 import * as tableUtils from "../../utils/table_storage";
 import {
@@ -24,6 +25,8 @@ const anActivityInput: ActivityInput = {
   fiscalCode: aFiscalCode
 };
 
+const anEycaUpperBoundAge = 30 as NonNegativeInteger;
+
 describe("DeleteEycaExpirationActivity", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -31,7 +34,8 @@ describe("DeleteEycaExpirationActivity", () => {
   it("should throw if an error occurs during EycaExpiration delete", async () => {
     const deleteEycaExpirationActivityHandler = getDeleteEycaExpirationActivityHandler(
       tableServiceMock as any,
-      expiredEycaTableName
+      expiredEycaTableName,
+      anEycaUpperBoundAge
     );
 
     deleteEycaExpirationMock.mockImplementationOnce(_ =>
@@ -51,10 +55,33 @@ describe("DeleteEycaExpirationActivity", () => {
     )();
   });
 
+  it("should return a permanent failure if extractExpirationDate fails", async () => {
+    const deleteEycaExpirationActivityHandler = getDeleteEycaExpirationActivityHandler(
+      tableServiceMock as any,
+      expiredEycaTableName,
+      anEycaUpperBoundAge
+    );
+
+    deleteEycaExpirationMock.mockImplementationOnce(_ =>
+      jest.fn(() => TE.of({}))
+    );
+    const response = await deleteEycaExpirationActivityHandler(context, {
+      ...anActivityInput,
+      fiscalCode: "RODFDSL2S10H501T" as FiscalCode
+    });
+    expect(response.kind).toBe("FAILURE");
+    if (response.kind === "FAILURE") {
+      expect(response.reason).toContain(
+        "PERMANENT FAILURE|ERROR=Cannot extract EYCA expirationDate"
+      );
+    }
+  });
+
   it("should return success if a delete of EycaExpiration succeded", async () => {
     const deleteEycaExpirationActivityHandler = getDeleteEycaExpirationActivityHandler(
       tableServiceMock as any,
-      expiredEycaTableName
+      expiredEycaTableName,
+      anEycaUpperBoundAge
     );
 
     deleteEycaExpirationMock.mockImplementationOnce(_ =>
