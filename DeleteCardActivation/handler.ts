@@ -86,13 +86,11 @@ const readLastCgn = (
     TE.chainW(maybeUserCgn =>
       TE.fromOption(() => ResponseErrorForbiddenNotAuthorized)(maybeUserCgn)
     ),
-    TE.chainW(userCgn =>
-      pipe(
-        TE.fromPredicate(
-          CardActivated.is || CardExpired.is,
-          () => ResponseErrorForbiddenNotAuthorized
-        )(userCgn.card),
-        TE.map(_ => userCgn)
+    TE.chainW(
+      TE.fromPredicate(
+        userCgn =>
+          CardActivated.is(userCgn.card) || CardExpired.is(userCgn.card),
+        () => ResponseErrorForbiddenNotAuthorized
       )
     )
   );
@@ -108,8 +106,9 @@ const getEycaCcdbNumber = (
       O.fold(
         () => TE.of(O.none),
         eycaCard =>
-          EycaCardActivated.is(eycaCard) || EycaCardExpired.is(eycaCard)
-            ? TE.of(O.some(eycaCard.card_number))
+          EycaCardActivated.is(eycaCard.card) ||
+          EycaCardExpired.is(eycaCard.card)
+            ? TE.of(O.some(eycaCard.card.card_number))
             : TE.left(
                 ResponseErrorConflict(
                   `Cannot delete an EYCA card that it doesn't match status with cgn card`

@@ -34,6 +34,7 @@ import {
 import { StatusEnum as ExpiredStatusEnum } from "../generated/definitions/CardExpired";
 import { StatusEnum as PendingStatusEnum } from "../generated/definitions/CardPending";
 import { StatusEnum as RevokedStatusEnum } from "../generated/definitions/CardRevoked";
+import { StatusEnum as PendingDeleteStatusEnum } from "../generated/definitions/CardPendingDelete";
 import { InstanceId } from "../generated/definitions/InstanceId";
 import { UserCgnModel } from "../models/user_cgn";
 import { OrchestratorInput } from "../UpdateCgnOrchestrator/handler";
@@ -157,7 +158,8 @@ export function StartCgnActivationHandler(
             [
               ActivatedStatusEnum.ACTIVATED.toString(),
               ExpiredStatusEnum.EXPIRED.toString(),
-              RevokedStatusEnum.REVOKED.toString()
+              RevokedStatusEnum.REVOKED.toString(),
+              PendingDeleteStatusEnum.PENDING_DELETE.toString()
             ].includes(userCgn.card.status)
               ? TE.left<
                   | IResponseErrorConflict

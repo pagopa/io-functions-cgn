@@ -39,7 +39,7 @@ export const getDeleteEycaActivityHandler = (
     ),
     TE.chain(activityInput =>
       pipe(
-        userEycaModel.findAll(activityInput.fiscalCode),
+        userEycaModel.findAllEycaCards(activityInput.fiscalCode),
         TE.mapLeft(_ => toTransientFailure(_, "Cannot retriew all eyca card"))
       )
     ),

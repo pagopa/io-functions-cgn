@@ -76,7 +76,9 @@ export const handler = function*(
 
     if (decodedEycaExpirationActivity.kind !== "SUCCESS") {
       trackExAndThrowWithErrorStatus(
-        new Error("Cannot expire EYCA Card"),
+        new Error(
+          `Cannot expire EYCA Card|DETAIL=${decodedEycaExpirationActivity.reason}`
+        ),
         "eyca.expiration.exception.failure.activityOutput"
       );
     }
