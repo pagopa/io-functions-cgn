@@ -39,7 +39,7 @@ export const getDeleteCgnActivityHandler = (
     ),
     TE.chainW(activityInput =>
       pipe(
-        userCgnModel.findAll(activityInput.fiscalCode),
+        userCgnModel.findAllCgnCards(activityInput.fiscalCode),
         TE.mapLeft(_ => toTransientFailure(_, "Cannot retrieve all cgn card"))
       )
     ),

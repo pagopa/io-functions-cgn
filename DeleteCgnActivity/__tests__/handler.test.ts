@@ -32,7 +32,7 @@ const deleteVersionMock = jest.fn().mockImplementation(() => TE.of("id"));
 
 const userCgnModelMock = {
   deleteVersion: deleteVersionMock,
-  findAll: findAllMock
+  findAllCgnCards: findAllMock
 };
 
 const anActivityInput: ActivityInput = {
