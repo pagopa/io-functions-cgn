@@ -6,7 +6,12 @@ import { ActivityResult } from "./activity";
 import { getTrackExceptionAndThrowWithErrorStatus } from "./orchestrators";
 import { internalRetryOptions } from "./retry_policies";
 
-export const upsertSpecialServiceGenerator = (
+/**
+ * This generator function is used to call UpsertSpecialServiceActivationActivity
+ * into orchestrators that need this step in their workflows.
+ * Since it is called at least 2 times per orchestrator we have extracted it into a utility
+ */
+export const upsertSpecialServiceActivationGenerator = (
   context: IOrchestrationFunctionContext
 ) =>
   function*(

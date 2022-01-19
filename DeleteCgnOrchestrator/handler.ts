@@ -19,7 +19,7 @@ import {
   trackExceptionIfNotReplaying
 } from "../utils/orchestrators";
 import { internalRetryOptions } from "../utils/retry_policies";
-import { upsertSpecialServiceGenerator } from "../utils/special_service";
+import { upsertSpecialServiceActivationGenerator } from "../utils/special_service";
 import { ActivationStatusEnum } from "../generated/services-api/ActivationStatus";
 
 export const OrchestratorInput = t.intersection([
@@ -47,7 +47,7 @@ export const DeleteCgnOrchestratorHandler = function*(
     context.df.setCustomStatus("RUNNING");
   }
 
-  const callUpsertSpecialServiceActivity = upsertSpecialServiceGenerator(
+  const callUpsertSpecialServiceActivity = upsertSpecialServiceActivationGenerator(
     context
   );
 

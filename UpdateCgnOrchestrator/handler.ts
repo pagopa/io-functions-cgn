@@ -26,7 +26,7 @@ import {
 } from "../utils/orchestrators";
 import { internalRetryOptions } from "../utils/retry_policies";
 import { ActivationStatusEnum } from "../generated/services-api/ActivationStatus";
-import { upsertSpecialServiceGenerator } from "../utils/special_service";
+import { upsertSpecialServiceActivationGenerator } from "../utils/special_service";
 
 export const OrchestratorInput = t.interface({
   fiscalCode: FiscalCode,
@@ -53,7 +53,7 @@ export const UpdateCgnOrchestratorHandler = function*(
     context.df.setCustomStatus("RUNNING");
   }
 
-  const callUpsertSpecialServiceActivity = upsertSpecialServiceGenerator(
+  const callUpsertSpecialServiceActivity = upsertSpecialServiceActivationGenerator(
     context
   );
   const input = context.df.getInput();
