@@ -217,6 +217,12 @@ export const DeleteCardActivationHandler = (
                 const instanceId: InstanceId = {
                   id: orchestratorId
                 };
+                /**
+                 * This redirect url actually point to a not existing API.
+                 * We let this unmodified to mantain the semantic of this API:
+                 * - 201 means that this request has been taken in charge
+                 * - 202 means that the request is already in progress.
+                 */
                 return ResponseSuccessRedirectToResource(
                   instanceId,
                   `/api/v1/cgn/${fiscalCode}/delete`,
