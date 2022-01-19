@@ -51,10 +51,11 @@ export class UserCgnModel extends UserCardVersionedDeletable<
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  public readonly findAll = (fiscalCode: FiscalCode) =>
-    super.findAll(
+  public findAllCgnCards(fiscalCode: FiscalCode) {
+    return this.findAll(
       fiscalCode,
       USER_CGN_COLLECTION_NAME,
       USER_CGN_MODEL_PK_FIELD
     );
+  }
 }

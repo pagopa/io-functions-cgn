@@ -1,5 +1,6 @@
+/* eslint-disable functional/prefer-readonly-type */
 /* eslint-disable no-invalid-this */
-import { SqlQuerySpec } from "@azure/cosmos";
+import { Container, ItemDefinition, SqlQuerySpec } from "@azure/cosmos";
 import * as AR from "fp-ts/lib/Array";
 import * as E from "fp-ts/lib/Either";
 import * as TE from "fp-ts/lib/TaskEither";
@@ -13,6 +14,7 @@ import {
 } from "@pagopa/io-functions-commons/dist/src/utils/cosmosdb_model_versioned";
 import { FiscalCode, NonEmptyString } from "@pagopa/ts-commons/lib/strings";
 import { pipe } from "fp-ts/lib/function";
+import * as t from "io-ts";
 
 export abstract class UserCardVersionedDeletable<
   T,
@@ -21,7 +23,22 @@ export abstract class UserCardVersionedDeletable<
   ModelIdKey extends keyof T,
   PartitionKey extends keyof T = ModelIdKey
 > extends CosmosdbModelVersioned<T, TN, TR, ModelIdKey, PartitionKey> {
-  public readonly deleteVersion = (
+  constructor(
+    container: Container,
+    newVersionedItemT: t.Type<TN, ItemDefinition, unknown>,
+    retrievedItemT: t.Type<TR, unknown, unknown>,
+    modelIdKey: ModelIdKey,
+    partitionKey?: PartitionKey | undefined
+  ) {
+    super(
+      container,
+      newVersionedItemT,
+      retrievedItemT,
+      modelIdKey,
+      partitionKey
+    );
+  }
+  public deleteVersion = (
     fiscalCode: FiscalCode,
     documentId: NonEmptyString
   ): TE.TaskEither<Error, string> =>
@@ -33,7 +50,7 @@ export abstract class UserCardVersionedDeletable<
       TE.map(_ => _.item.id)
     );
 
-  protected readonly findAll = (
+  protected findAll = (
     fiscalCode: FiscalCode,
     cardTableName: string | NonEmptyString,
     cardPkField: string | NonEmptyString

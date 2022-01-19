@@ -42,11 +42,11 @@ export const getDeleteLegalDataBackupActivityHandler = (
     ),
     TE.chain(activityInput =>
       pipe(
-        userCgnModel.findAll(activityInput.fiscalCode),
+        userCgnModel.findAllCgnCards(activityInput.fiscalCode),
         TE.mapLeft(_ => toTransientFailure(_, "Cannot retrieve all cgn cards")),
         TE.chain(cgnCards =>
           pipe(
-            userEycaModel.findAll(activityInput.fiscalCode),
+            userEycaModel.findAllEycaCards(activityInput.fiscalCode),
             TE.mapLeft(_ =>
               toTransientFailure(_, "Cannot retrieve all eyca cards")
             ),
