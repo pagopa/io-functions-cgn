@@ -34,7 +34,7 @@ const deleteVersionMock = jest.fn().mockImplementation(() => TE.of("id"));
 
 const userEycaModelMock = {
   deleteVersion: deleteVersionMock,
-  findAll: findAllMock
+  findAllEycaCards: findAllMock
 };
 
 const anActivityInput: ActivityInput = {

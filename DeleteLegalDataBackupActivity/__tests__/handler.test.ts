@@ -106,11 +106,11 @@ const cgnFindAllMock = jest
   .mockImplementation(() => TE.of(anArrayOfCgnCardResults));
 
 const userEycaModelMock = {
-  findAll: eycaFindAllMock
+  findAllEycaCards: eycaFindAllMock
 };
 
 const userCgnModelMock = {
-  findAll: cgnFindAllMock
+  findAllCgnCards: cgnFindAllMock
 };
 
 const activityInput: ActivityInput = {
