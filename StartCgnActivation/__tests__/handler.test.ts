@@ -22,6 +22,7 @@ import {
   CardRevoked,
   StatusEnum as RevokedStatusEnum
 } from "../../generated/definitions/CardRevoked";
+import { StatusEnum as PendingDeleteStatusEnum } from "../../generated/definitions/CardPendingDelete";
 import { UserCgn } from "../../models/user_cgn";
 import { DEFAULT_CGN_UPPER_BOUND_AGE } from "../../utils/config";
 import * as orchUtils from "../../utils/orchestrators";
@@ -131,6 +132,26 @@ describe("StartCgnActivation", () => {
   it("should return a Conflict Error if a CGN is already ACTIVATED", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() =>
       TE.of(O.some(anActivatedUserCgn))
+    );
+    const startCgnActivationHandler = StartCgnActivationHandler(
+      userCgnModelMock as any,
+      DEFAULT_CGN_UPPER_BOUND_AGE
+    );
+    const response = await startCgnActivationHandler(context, aFiscalCode);
+    expect(response.kind).toBe("IResponseErrorConflict");
+  });
+
+  it("should return a Conflict Error if a CGN is PENDING_DELETE", async () => {
+    findLastVersionByModelIdMock.mockImplementationOnce(() =>
+      TE.of(
+        O.some({
+          ...anActivatedUserCgn,
+          card: {
+            ...aUserCardActivated,
+            status: PendingDeleteStatusEnum.PENDING_DELETE
+          }
+        })
+      )
     );
     const startCgnActivationHandler = StartCgnActivationHandler(
       userCgnModelMock as any,
