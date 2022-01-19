@@ -8,7 +8,8 @@ const tableService = createTableService(config.CGN_STORAGE_CONNECTION_STRING);
 
 const deleteEycaExpirationActivityHandler = getDeleteEycaExpirationActivityHandler(
   tableService,
-  config.EYCA_EXPIRATION_TABLE_NAME
+  config.EYCA_EXPIRATION_TABLE_NAME,
+  config.EYCA_UPPER_BOUND_AGE
 );
 
 export default deleteEycaExpirationActivityHandler;
