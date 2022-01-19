@@ -10,6 +10,7 @@ import { ActivityInput as DeleteEycaActivityInput } from "../DeleteEycaActivity/
 import { ActivityInput as DeleteEycaExpirationActivityInput } from "../DeleteEycaExpirationActivity/handler";
 import { ActivityInput as DeleteEycaRemoteActivityInput } from "../DeleteEycaRemoteActivity/handler";
 import { ActivityInput as DeleteLegalDataBackupActivityInput } from "../DeleteLegalDataBackupActivity/handler";
+import { ActivityInput as UpsertSpecialServiceActivationActivityInput } from "../UpsertSpecialServiceActivationActivity/handler";
 import { CcdbNumber } from "../generated/definitions/CcdbNumber";
 import { ActivityResult } from "../utils/activity";
 import {
@@ -18,6 +19,8 @@ import {
   trackExceptionIfNotReplaying
 } from "../utils/orchestrators";
 import { internalRetryOptions } from "../utils/retry_policies";
+import { upsertSpecialServiceActivationGenerator } from "../utils/special_service";
+import { ActivationStatusEnum } from "../generated/services-api/ActivationStatus";
 
 export const OrchestratorInput = t.intersection([
   t.interface({
@@ -44,6 +47,10 @@ export const DeleteCgnOrchestratorHandler = function*(
     context.df.setCustomStatus("RUNNING");
   }
 
+  const callUpsertSpecialServiceActivity = upsertSpecialServiceActivationGenerator(
+    context
+  );
+
   const input = context.df.getInput();
   const decodedInput = pipe(
     input,
@@ -58,7 +65,19 @@ export const DeleteCgnOrchestratorHandler = function*(
   };
 
   try {
-    // First Backup all data for legal issue
+    const upsertSpecialServicePendingActivityInput = UpsertSpecialServiceActivationActivityInput.encode(
+      {
+        activationStatus: ActivationStatusEnum.PENDING,
+        fiscalCode
+      }
+    );
+
+    yield* callUpsertSpecialServiceActivity(
+      upsertSpecialServicePendingActivityInput,
+      trackExAndThrowWithError
+    );
+
+    // Backup all data for legal issue
     const legalDataToBackup: DeleteLegalDataBackupActivityInput = {
       fiscalCode
     };
@@ -198,7 +217,19 @@ export const DeleteCgnOrchestratorHandler = function*(
       );
     }
 
-    // keep tracking of UserCgn update successfully
+    const upsertSpecialServiceInactiveActivityInput = UpsertSpecialServiceActivationActivityInput.encode(
+      {
+        activationStatus: ActivationStatusEnum.INACTIVE,
+        fiscalCode
+      }
+    );
+
+    yield* callUpsertSpecialServiceActivity(
+      upsertSpecialServiceInactiveActivityInput,
+      trackExAndThrowWithError
+    );
+
+    // keep tracking of UserCgn unsubscribe successfully
     context.df.setCustomStatus("UPDATED");
   } catch (err) {
     context.log.error(`${logPrefix}|ERROR|${String(err)}`);

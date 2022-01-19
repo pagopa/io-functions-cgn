@@ -26,6 +26,7 @@ import {
 } from "../utils/orchestrators";
 import { internalRetryOptions } from "../utils/retry_policies";
 import { ActivationStatusEnum } from "../generated/services-api/ActivationStatus";
+import { upsertSpecialServiceActivationGenerator } from "../utils/special_service";
 
 export const OrchestratorInput = t.interface({
   fiscalCode: FiscalCode,
@@ -34,44 +35,6 @@ export const OrchestratorInput = t.interface({
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
 const NOTIFICATION_DELAY_SECONDS = 10;
-
-const upsertSpecialServiceGenerator = (
-  context: IOrchestrationFunctionContext
-) =>
-  function*(
-    activityInput: UpsertSpecialServiceActivationActivityInput,
-    trackExAndThrowWithError: ReturnType<
-      typeof getTrackExceptionAndThrowWithErrorStatus
-    >
-  ): Generator {
-    return pipe(
-      yield context.df.callActivityWithRetry(
-        "UpsertSpecialServiceActivationActivity",
-        internalRetryOptions,
-        activityInput
-      ),
-      ActivityResult.decode,
-      E.getOrElseW(e =>
-        trackExAndThrowWithError(
-          e,
-          `cgn.update.exception.upsertSpecialService.${activityInput.activationStatus
-            .toString()
-            .toLowerCase()}.activityOutput`
-        )
-      ),
-      E.fromPredicate(
-        upsertSpecialServiceResult =>
-          upsertSpecialServiceResult.kind === "SUCCESS",
-        () =>
-          trackExAndThrowWithError(
-            new Error("Cannot upsert CGN Special service activation"),
-            `cgn.update.exception.failure.upsertSpecialService.${activityInput.activationStatus
-              .toString()
-              .toLowerCase()}.activityOutput`
-          )
-      )
-    );
-  };
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
 export const UpdateCgnOrchestratorHandler = function*(
@@ -90,7 +53,7 @@ export const UpdateCgnOrchestratorHandler = function*(
     context.df.setCustomStatus("RUNNING");
   }
 
-  const callUpsertSpecialServiceActivity = upsertSpecialServiceGenerator(
+  const callUpsertSpecialServiceActivity = upsertSpecialServiceActivationGenerator(
     context
   );
   const input = context.df.getInput();
