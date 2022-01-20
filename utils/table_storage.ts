@@ -138,14 +138,23 @@ export const deleteCardExpiration = (
   expirationDate: Date
 ): TE.TaskEither<Error, ServiceResponse> => {
   const eg = TableUtilities.entityGenerator;
-  return TE.taskify<Error, ServiceResponse>(cb =>
-    tableService.deleteEntity(
-      cardExpirationTableName,
-      {
-        PartitionKey: eg.String(date_fns.format(expirationDate, "yyyy-MM-dd")),
-        RowKey: eg.String(fiscalCode)
-      },
-      cb
-    )
-  )();
+  return TE.tryCatch(
+    () =>
+      new Promise((resolve, reject) =>
+        tableService.deleteEntity(
+          cardExpirationTableName,
+          {
+            PartitionKey: eg.String(
+              date_fns.format(expirationDate, "yyyy-MM-dd")
+            ),
+            RowKey: eg.String(fiscalCode)
+          },
+          (error: Error | null, response: ServiceResponse | null) =>
+            error || !response?.isSuccessful
+              ? reject(error?.message || "Unsuccessful response from storage")
+              : resolve(response)
+        )
+      ),
+    E.toError
+  );
 };
