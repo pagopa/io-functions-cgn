@@ -2,7 +2,7 @@
   "bindings": [
     {
         "schedule": "0 0 0 * * *",
-        "name": "updateExpiredCgnTimer",
+        "name": "updateExpiredEycaTimer",
         "type": "timerTrigger",
         "direction": "in"
     },

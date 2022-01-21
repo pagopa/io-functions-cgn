@@ -64,7 +64,7 @@ export const trackFailure = (context: Context, logPrefix: string) => (
       detail: err.kind,
       fatal: PermanentFailure.is(err).toString(),
       isSuccess: false,
-      name: "cgn.exception.upsertSpecialService.failure"
+      name: `cgn.exception.${logPrefix}.failure`
     }
   });
   context.log.error(error);
