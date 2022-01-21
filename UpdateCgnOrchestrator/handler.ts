@@ -34,7 +34,7 @@ export const OrchestratorInput = t.interface({
 });
 export type OrchestratorInput = t.TypeOf<typeof OrchestratorInput>;
 
-const NOTIFICATION_DELAY_SECONDS = 10;
+const NOTIFICATION_DELAY_SECONDS = 60;
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
 export const UpdateCgnOrchestratorHandler = function*(

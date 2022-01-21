@@ -58,7 +58,14 @@ const ccdbLogin = (
       )
     ),
     TE.chain(
-      flow(TE.fromEither, TE.mapLeft(flow(errorsToError, toPermanentFailure)))
+      flow(
+        TE.fromEither,
+        TE.mapLeft(
+          flow(errorsToError, err =>
+            toTransientFailure(err, "Cannot decode EYCA authLogin response")
+          )
+        )
+      )
     ),
     TE.chain(res =>
       res.status !== 200 || ErrorResponse.is(res.value.api_response)
@@ -140,7 +147,14 @@ export const updateCard = (
         TE.chain(
           flow(
             TE.fromEither,
-            TE.mapLeft(flow(errorsToError, toPermanentFailure))
+            TE.mapLeft(
+              flow(errorsToError, err =>
+                toTransientFailure(
+                  err,
+                  "Cannot decode EYCA updateCard response"
+                )
+              )
+            )
           )
         ),
         TE.chain(res =>
@@ -186,7 +200,14 @@ export const preIssueCard = (
         TE.chain(
           flow(
             TE.fromEither,
-            TE.mapLeft(flow(errorsToError, toPermanentFailure))
+            TE.mapLeft(
+              flow(errorsToError, err =>
+                toTransientFailure(
+                  err,
+                  "Cannot decode EYCA preIssueCard response"
+                )
+              )
+            )
           )
         ),
         TE.chain(response =>
@@ -240,7 +261,14 @@ export const deleteCard = (
         TE.chain(
           flow(
             TE.fromEither,
-            TE.mapLeft(flow(errorsToError, toPermanentFailure))
+            TE.mapLeft(
+              flow(errorsToError, err =>
+                toTransientFailure(
+                  err,
+                  "Cannot decode EYCA deleteCard response"
+                )
+              )
+            )
           )
         ),
         TE.chainW(res =>
