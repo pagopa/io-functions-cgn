@@ -39,6 +39,7 @@ import {
   getOrchestratorStatus,
   makeUpdateCgnOrchestratorId
 } from "../utils/orchestrators";
+import { trackException } from "../utils/appinsights";
 
 type ResponseTypes =
   | IResponseSuccessJson<CgnActivationDetail>
@@ -61,10 +62,24 @@ const terminateOrchestratorTask = (
       () => client.terminate(orchestratorId, "Async flow not necessary"),
       E.toError
     ),
-    TE.map(() => ({
-      ...activationDetail,
-      status: customStatus === "ERROR" ? StatusEnum.ERROR : StatusEnum.COMPLETED
-    })),
+    TE.bimap(
+      error => {
+        trackException({
+          exception: error,
+          properties: {
+            detail: error.message,
+            name: "cgn.activation.orchestrator.terminate.failure"
+          },
+          tagOverrides: { samplingEnabled: "false" }
+        });
+        return error;
+      },
+      () => ({
+        ...activationDetail,
+        status:
+          customStatus === "ERROR" ? StatusEnum.ERROR : StatusEnum.COMPLETED
+      })
+    ),
     TE.orElse(() => TE.of(activationDetail))
   );
 
