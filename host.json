@@ -3,6 +3,13 @@
   "logging": {
     "logLevel": {
       "default": "Trace"
+    },
+    "applicationInsights": {
+      "samplingSettings": {
+        "isEnabled": true,
+        "includedTypes": "PageView;Trace;Dependency;Request",
+        "excludedTypes": "Exception;Event;CustomEvent"
+      }
     }
   },
   "extensions": {
