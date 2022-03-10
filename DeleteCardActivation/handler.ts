@@ -192,7 +192,7 @@ export const DeleteCardActivationHandler = (
                     () =>
                       // Starting a new activation process with proper input
                       client.startNew(
-                        "DeleteCgnOrchestrator",
+                        "DeleteCgnOrchestratorV2",
                         orchestratorId,
                         OrchestratorInput.encode({
                           eycaCardNumber,
