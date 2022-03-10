@@ -150,7 +150,7 @@ export const deleteCardExpiration = (
             RowKey: eg.String(fiscalCode)
           },
           (error: Error | null, response: ServiceResponse | null) =>
-            error || !response?.isSuccessful
+            (error || !response?.isSuccessful) && response?.statusCode !== 404
               ? reject(error?.message || "Unsuccessful response from storage")
               : resolve(response)
         )

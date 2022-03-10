@@ -29,7 +29,7 @@ export const getDeleteEycaExpirationActivityHandler = (
   tableService: TableService,
   eycaExpirationTableName: NonEmptyString,
   eycaUpperBoundAge: NonNegativeInteger,
-  logPrefix: string = "DeleteCgnExpirationActivity"
+  logPrefix: string = "DeleteEycaExpirationActivity"
 ) => (context: Context, input: unknown): Promise<ActivityResult> => {
   const fail = trackFailure(context, logPrefix);
   const deleteEycaExpirationTask = deleteCardExpiration(

@@ -70,7 +70,7 @@ describe("DeleteEycaActivity", () => {
         expect(findAllMock).toBeCalledWith(anActivityInput.fiscalCode);
         expect(e).toBeDefined();
         expect(e.message).toContain(
-          "TRANSIENT FAILURE|ERROR=Cannot retriew all eyca card"
+          "TRANSIENT FAILURE|ERROR=Cannot retrieve all eyca card"
         );
       }, testFail)
     )();
