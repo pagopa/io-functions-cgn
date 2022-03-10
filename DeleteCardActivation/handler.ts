@@ -171,7 +171,6 @@ export const DeleteCardActivationHandler = (
             status: CardPendingDeleteStatusEnum.PENDING_DELETE
           } as Card),
           TE.chainW(() =>
-            // We can generate an internal CGN identifier and insert a new CGN in a PENDING status
             pipe(
               userCgnModel.upsert({
                 ...userCgn,
