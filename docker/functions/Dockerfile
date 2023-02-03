@@ -1,4 +1,4 @@
-FROM node:14.16.0
+FROM functions-node-18
 
 WORKDIR /usr/src/app
 
