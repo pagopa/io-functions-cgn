@@ -1,4 +1,4 @@
-FROM functions-node-18
+FROM node:18.13.0
 
 WORKDIR /opt/azurite
 
