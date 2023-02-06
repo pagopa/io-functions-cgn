@@ -37,8 +37,6 @@
     "@types/redis": "^2.8.28",
     "@types/vfile-message": "^2.0.0",
     "auto-changelog": "2.2.1",
-    "danger": "^4.0.2",
-    "danger-plugin-digitalcitizenship": "^0.3.1",
     "dependency-check": "^4.1.0",
     "dotenv-cli": "^3.1.0",
     "eslint-plugin-prettier": "^4.0.0",

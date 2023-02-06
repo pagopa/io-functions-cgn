@@ -16,6 +16,5 @@
     "node_modules",
     "generated",
     "**/__tests__/*",
-    "Dangerfile.ts"
   ]
 }
