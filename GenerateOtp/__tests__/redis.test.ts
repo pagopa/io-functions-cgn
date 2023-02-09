@@ -43,6 +43,7 @@ describe("storeOtpAndRelatedFiscalCode", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
+  
   it("should return an error when otp store fails", async () => {
     setWithExpirationTaskMock.mockImplementationOnce(() =>
       TE.left(new Error("Cannot store OTP"))

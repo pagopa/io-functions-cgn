@@ -6,7 +6,7 @@ import * as E from "fp-ts/lib/Either";
 import { flow, pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
-import { RedisClient } from "redis";
+import { RedisClient } from "../utils/redis";
 import { EycaAPIClient } from "../clients/eyca";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { CcdbNumber } from "../generated/eyca-api/CcdbNumber";

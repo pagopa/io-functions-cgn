@@ -36,20 +36,21 @@ winston.add(contextTransport);
 const app = express();
 secureExpressApp(app);
 
-// Add express route
-app.post(
-  "/api/v1/cgn/otp/:fiscalcode",
-  GetGenerateOtp(userCgnModel, REDIS_CLIENT, config.OTP_TTL_IN_SECONDS)
-);
-
-const azureFunctionHandler = createAzureFunctionHandler(app);
-
 // Binds the express app to an Azure Function handler
-// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
-function httpStart(context: Context): void {
+const httpStart = async (context: Context): Promise<void> => {
+  const redisClient = await REDIS_CLIENT;
+
+  // Add express route
+  app.post(
+    "/api/v1/cgn/otp/:fiscalcode",
+    GetGenerateOtp(userCgnModel, redisClient, config.OTP_TTL_IN_SECONDS)
+  );
+
+  const azureFunctionHandler = createAzureFunctionHandler(app);
+
   logger = context.log;
   setAppContext(app, context);
   azureFunctionHandler(context);
-}
+};
 
 export default httpStart;

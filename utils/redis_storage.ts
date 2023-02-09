@@ -1,8 +1,8 @@
-import { Either, isLeft, left, right, toError } from "fp-ts/lib/Either";
 import { pipe } from "fp-ts/lib/function";
-import { fromNullable, Option } from "fp-ts/lib/Option";
+import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
-import { RedisClient } from "redis";
+import * as E from "fp-ts/lib/Either";
+import { RedisClient } from "./redis";
 
 /**
  * Parse a Redis single string reply.
@@ -12,13 +12,20 @@ import { RedisClient } from "redis";
 export const singleStringReply = (
   err: Error | null,
   reply: "OK" | undefined
-): Either<Error, boolean> => {
+): E.Either<Error, boolean> => {
   if (err) {
-    return left<Error, boolean>(err);
+    return E.left(err);
   }
-
-  return right<Error, boolean>(reply === "OK");
+  return E.right(reply === "OK");
 };
+
+export const singleStringReplyAsync = (
+  command: TE.TaskEither<Error, string | null>
+): TE.TaskEither<Error, boolean> =>
+  pipe(
+    command,
+    TE.map(reply => reply === "OK")
+  );
 
 /**
  * Parse a Redis single string reply.
@@ -28,12 +35,17 @@ export const singleStringReply = (
 export const singleValueReply = (
   err: Error | null,
   reply: string | null
-): Either<Error, Option<string>> => {
+): E.Either<Error, O.Option<string>> => {
   if (err) {
-    return left<Error, Option<string>>(err);
+    return E.left(err);
   }
-  return right<Error, Option<string>>(fromNullable(reply));
+  return E.right(O.fromNullable(reply));
 };
+
+export const singleValueReplyAsync = (
+  command: TE.TaskEither<Error, string | null>
+): TE.TaskEither<Error, O.Option<string>> =>
+  pipe(command, TE.map(O.fromNullable));
 
 /**
  * Parse a Redis integer reply.
@@ -44,26 +56,54 @@ export const integerRepl = (
   err: Error | null,
   reply: unknown,
   expectedReply?: number
-): Either<Error, boolean> => {
+): E.Either<Error, boolean> => {
   if (err) {
-    return left<Error, boolean>(err);
+    return E.left(err);
   }
   if (expectedReply !== undefined && expectedReply !== reply) {
-    return right<Error, boolean>(false);
+    return E.right(false);
   }
-  return right<Error, boolean>(typeof reply === "number");
+  return E.right(typeof reply === "number");
 };
 
+export const integerReplAsync = (expectedReply?: number) => (
+  command: TE.TaskEither<Error, unknown>
+): TE.TaskEither<Error, boolean> =>
+  pipe(
+    command,
+    TE.map(reply => {
+      if (expectedReply !== undefined && expectedReply !== reply) {
+        return false;
+      }
+      return typeof reply === "number";
+    })
+  );
+
+/**
+ * Transform any Redis falsy response to an error
+ *
+ * @param response
+ * @param error
+ * @returns
+ */
 export const falsyResponseToError = (
-  response: Either<Error, boolean>,
+  response: E.Either<Error, boolean>,
   error: Error
-): Either<Error, true> => {
-  if (isLeft(response)) {
+): E.Either<Error, true> => {
+  if (E.isLeft(response)) {
     return response;
   } else {
-    return response.right ? right(true) : left(error);
+    return response.right ? E.right(true) : E.left(error);
   }
 };
+
+export const falsyResponseToErrorAsync = (error: Error) => (
+  response: TE.TaskEither<Error, boolean>
+): TE.TaskEither<Error, true> =>
+  pipe(
+    response,
+    TE.chain(res => (res ? TE.right(res) : TE.left(error)))
+  );
 
 export const setWithExpirationTask = (
   redisClient: RedisClient,
@@ -74,50 +114,22 @@ export const setWithExpirationTask = (
 ): TE.TaskEither<Error, true> =>
   pipe(
     TE.tryCatch(
-      () =>
-        new Promise<Either<Error, true>>(resolve =>
-          // Set key to hold the string value. If key already holds a value, it is overwritten, regardless of its type.
-          // @see https://redis.io/commands/set
-          redisClient.set(
-            key,
-            value,
-            "EX",
-            expirationInSeconds,
-            (err, response) =>
-              resolve(
-                falsyResponseToError(
-                  singleStringReply(err, response),
-                  new Error(
-                    errorMsg
-                      ? errorMsg
-                      : "Error setting key value pair on redis"
-                  )
-                )
-              )
-          )
-        ),
-      toError
+      () => redisClient.setEx(key, expirationInSeconds, value),
+      E.toError
     ),
-    TE.chain(TE.fromEither)
+    singleStringReplyAsync,
+    falsyResponseToErrorAsync(
+      new Error(errorMsg ? errorMsg : "Error setting key value pair on redis")
+    )
   );
 
 export const getTask = (
   redisClient: RedisClient,
   key: string
-): TE.TaskEither<Error, Option<string>> =>
+): TE.TaskEither<Error, O.Option<string>> =>
   pipe(
-    TE.tryCatch(
-      () =>
-        new Promise<Either<Error, Option<string>>>(resolve =>
-          // Set key to hold the string value. If key already holds a value, it is overwritten, regardless of its type.
-          // @see https://redis.io/commands/set
-          redisClient.get(key, (err, response) =>
-            resolve(singleValueReply(err, response))
-          )
-        ),
-      toError
-    ),
-    TE.chain(TE.fromEither)
+    TE.tryCatch(() => redisClient.get(key), E.toError),
+    singleValueReplyAsync
   );
 
 export const existsKeyTask = (
@@ -125,16 +137,6 @@ export const existsKeyTask = (
   key: string
 ): TE.TaskEither<Error, boolean> =>
   pipe(
-    TE.tryCatch(
-      () =>
-        new Promise<Either<Error, boolean>>(resolve =>
-          // Set key to hold the string value. If key already holds a value, it is overwritten, regardless of its type.
-          // @see https://redis.io/commands/set
-          redisClient.exists(key, (err, response) =>
-            resolve(integerRepl(err, response, 1))
-          )
-        ),
-      toError
-    ),
-    TE.chain(TE.fromEither)
+    TE.tryCatch(() => redisClient.exists(key), E.toError),
+    integerReplAsync(1)
   );

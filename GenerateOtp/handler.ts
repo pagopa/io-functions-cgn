@@ -22,7 +22,7 @@ import * as E from "fp-ts/lib/Either";
 import { flow, pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
-import { RedisClient } from "redis";
+import { RedisClient } from "../utils/redis";
 import { CardActivated } from "../generated/definitions/CardActivated";
 import { Otp } from "../generated/definitions/Otp";
 import { UserCgnModel } from "../models/user_cgn";

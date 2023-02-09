@@ -5,7 +5,7 @@ import { pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
-import { RedisClient } from "redis";
+import { RedisClient } from "../utils/redis";
 import { Otp } from "../generated/definitions/Otp";
 import { OtpCode } from "../generated/definitions/OtpCode";
 import { Timestamp } from "../generated/definitions/Timestamp";
