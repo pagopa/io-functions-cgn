@@ -57,7 +57,7 @@ export const createClusterRedisClient = async (
   return redisClient;
 };
 
-export const redisClientFactory = () =>
+export const redisClientFactory = (): Promise<RedisClient> =>
   pipe(
     config.isProduction,
     O.fromPredicate<boolean>(identity),
