@@ -10,7 +10,7 @@ import { setAppContext } from "@pagopa/io-functions-commons/dist/src/utils/middl
 import { USER_CGN_COLLECTION_NAME, UserCgnModel } from "../models/user_cgn";
 import { getConfigOrThrow } from "../utils/config";
 import { cosmosdbClient } from "../utils/cosmosdb";
-import { REDIS_CLIENT } from "../utils/redis";
+import { redisClientFactory } from "../utils/redis";
 import { GetGenerateOtp } from "./handler";
 
 //
@@ -38,7 +38,7 @@ secureExpressApp(app);
 
 // Binds the express app to an Azure Function handler
 const httpStart = async (context: Context): Promise<void> => {
-  const redisClient = await REDIS_CLIENT;
+  const redisClient = await redisClientFactory();
 
   // Add express route
   app.post(

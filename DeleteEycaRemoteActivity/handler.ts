@@ -18,14 +18,14 @@ export const ActivityInput = t.interface({
 export type ActivityInput = t.TypeOf<typeof ActivityInput>;
 
 export const getDeleteEycaRemoteActivityHandler = (
-  redisClientPromise: Promise<RedisClient>,
+  redisClientFactory: () => Promise<RedisClient>,
   eycaClient: ReturnType<EycaAPIClient>,
   eycaApiUsername: NonEmptyString,
   eycaApiPassword: NonEmptyString,
   logPrefix: string = "DeleteEycaRemoteActivityHandler"
 ) => async (context: Context, input: unknown): Promise<ActivityResult> => {
   const fail = trackFailure(context, logPrefix);
-  const redisClient = await redisClientPromise;
+  const redisClient = await redisClientFactory();
   return pipe(
     input,
     ActivityInput.decode,

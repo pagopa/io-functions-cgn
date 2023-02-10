@@ -57,24 +57,25 @@ export const createClusterRedisClient = async (
   return redisClient;
 };
 
-export const REDIS_CLIENT = pipe(
-  config.isProduction,
-  O.fromPredicate<boolean>(identity),
-  O.chainNullableK(_ => config.REDIS_CLUSTER_ENABLED),
-  O.chain(O.fromPredicate(identity)),
-  O.map(() =>
-    createClusterRedisClient(
-      config.REDIS_URL,
-      config.REDIS_PASSWORD,
-      config.REDIS_PORT
+export const redisClientFactory = () =>
+  pipe(
+    config.isProduction,
+    O.fromPredicate<boolean>(identity),
+    O.chainNullableK(_ => config.REDIS_CLUSTER_ENABLED),
+    O.chain(O.fromPredicate(identity)),
+    O.map(() =>
+      createClusterRedisClient(
+        config.REDIS_URL,
+        config.REDIS_PASSWORD,
+        config.REDIS_PORT
+      )
+    ),
+    O.getOrElse(() =>
+      createSimpleRedisClient(
+        config.REDIS_URL,
+        config.REDIS_PASSWORD,
+        config.REDIS_PORT,
+        config.REDIS_TLS_ENABLED
+      )
     )
-  ),
-  O.getOrElse(() =>
-    createSimpleRedisClient(
-      config.REDIS_URL,
-      config.REDIS_PASSWORD,
-      config.REDIS_PORT,
-      config.REDIS_TLS_ENABLED
-    )
-  )
-);
+  );
