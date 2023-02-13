@@ -5,10 +5,12 @@ import {
 } from "../models/user_eyca_card";
 import { getConfigOrThrow } from "../utils/config";
 import { cosmosdbClient } from "../utils/cosmosdb";
-import { redisClientFactory } from "../utils/redis";
+import { RedisClientFactory } from "../utils/redis";
 import { getSuccessEycaActivationActivityHandler } from "./handler";
 
 const config = getConfigOrThrow();
+
+const redisClientFactory = new RedisClientFactory(config);
 
 const userEycaCardsContainer = cosmosdbClient
   .database(config.COSMOSDB_CGN_DATABASE_NAME)

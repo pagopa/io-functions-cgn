@@ -17,9 +17,15 @@ import * as TE from "fp-ts/lib/TaskEither";
 
 import { sequenceT } from "fp-ts/lib/Apply";
 import fetch from "node-fetch";
+import { RedisClientFactory } from "../utils/redis";
 import { getConfig, IConfig } from "./config";
 
-type ProblemSource = "AzureCosmosDB" | "AzureStorage" | "Config" | "Url";
+type ProblemSource =
+  | "AzureCosmosDB"
+  | "AzureStorage"
+  | "Config"
+  | "Url"
+  | "RedisConnection";
 export type HealthProblem<S extends ProblemSource> = string & {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   readonly __source: S;
@@ -150,6 +156,20 @@ export const checkUrlHealth = (url: string): HealthCheck<"Url", true> =>
   );
 
 /**
+ * Check redis connection is available
+ */
+export const checkRedisConnection = (
+  config: IConfig
+): HealthCheck<"RedisConnection", true> =>
+  pipe(
+    TE.tryCatch(
+      () => new RedisClientFactory(config).getInstance(),
+      toHealthProblems("RedisConnection")
+    ),
+    TE.map(_ => true)
+  );
+
+/**
  * Execute all the health checks for the application
  *
  * @returns either true or an array of error messages
@@ -167,7 +187,8 @@ export const checkApplicationHealth = (): HealthCheck<ProblemSource, true> => {
     TE.chain(config =>
       // run each taskEither and collect validation errors from each one of them, if any
       sequenceT(applicativeValidation)(
-        checkAzureStorageHealth(config.CGN_STORAGE_CONNECTION_STRING)
+        checkAzureStorageHealth(config.CGN_STORAGE_CONNECTION_STRING),
+        checkRedisConnection(config)
       )
     ),
     TE.map(_ => true)

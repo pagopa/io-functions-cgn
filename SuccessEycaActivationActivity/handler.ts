@@ -5,7 +5,7 @@ import * as E from "fp-ts/lib/Either";
 import { flow, pipe } from "fp-ts/lib/function";
 import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
-import { RedisClient } from "../utils/redis";
+import { RedisClientFactory } from "../utils/redis";
 import { EycaAPIClient } from "../clients/eyca";
 import { StatusEnum } from "../generated/definitions/CardActivated";
 import { Timestamp } from "../generated/definitions/Timestamp";
@@ -28,7 +28,7 @@ export const ActivityInput = t.interface({
 export type ActivityInput = t.TypeOf<typeof ActivityInput>;
 
 export const getSuccessEycaActivationActivityHandler = (
-  redisClientFactory: () => Promise<RedisClient>,
+  redisClientFactory: RedisClientFactory,
   eycaClient: ReturnType<EycaAPIClient>,
   eycaApiUsername: NonEmptyString,
   eycaApiPassword: NonEmptyString,
@@ -36,7 +36,7 @@ export const getSuccessEycaActivationActivityHandler = (
   logPrefix: string = "SuccessEycaActivationActivityHandler"
 ) => async (context: Context, input: unknown): Promise<ActivityResult> => {
   const fail = trackFailure(context, logPrefix);
-  const redisClient = await redisClientFactory();
+  const redisClient = await redisClientFactory.getInstance();
   return pipe(
     input,
     ActivityInput.decode,

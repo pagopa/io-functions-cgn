@@ -21,6 +21,7 @@ import {
 } from "../handler";
 import { toError } from "fp-ts/lib/Either";
 import { pipe } from "fp-ts/lib/function";
+import { RedisClientFactory } from "../../utils/redis";
 
 const aFiscalCode = "RODFDS92S10H501T" as FiscalCode;
 const aUserEycaCardNumber = "X321-Y321-Z321-W321" as CcdbNumber;
@@ -76,7 +77,9 @@ const anActivityInput: ActivityInput = {
   fiscalCode: aFiscalCode
 };
 
-const redisClientFactoryMock = jest.fn();
+const redisClientFactoryMock = {
+  getInstance: jest.fn()
+} as unknown as RedisClientFactory;
 
 describe("SuccessEycaActivationActivity", () => {
   beforeEach(() => {
