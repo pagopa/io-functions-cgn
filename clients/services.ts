@@ -1,5 +1,9 @@
 import { agent } from "@pagopa/ts-commons";
-import { AbortableFetch, setFetchTimeout } from "@pagopa/ts-commons/lib/fetch";
+import {
+  AbortableFetch,
+  setFetchTimeout,
+  toFetch
+} from "@pagopa/ts-commons/lib/fetch";
 import { Millisecond } from "@pagopa/ts-commons/lib/units";
 import nodeFetch from "node-fetch";
 import { createClient } from "../generated/services-api/client";
@@ -20,15 +24,7 @@ const abortableFetch = AbortableFetch(agent.getHttpFetch(process.env));
 //   setFetchTimeout(DEFAULT_REQUEST_TIMEOUT_MS as Millisecond, abortableFetch)
 // );
 
-// this method can be removed after we migrate @pagopa/ts-commons to node 18 so we can use the new
-// implementation of toFetch
-// eslint-disable-next-line
-export const toRemoveToFetch = (f: any) => (
-  input: RequestInfo | URL,
-  init?: RequestInit
-) => f(input, init).e1;
-
-const fetchWithTimeout = toRemoveToFetch(
+const fetchWithTimeout = toFetch(
   setFetchTimeout(DEFAULT_REQUEST_TIMEOUT_MS as Millisecond, abortableFetch)
 );
 
