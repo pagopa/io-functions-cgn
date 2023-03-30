@@ -1050,6 +1050,22 @@
     semver "^7.3.7"
     validator "^13.7.0"
 
+"@pagopa/ts-commons@^11.0.0":
+  version "11.0.0"
+  resolved "https://registry.yarnpkg.com/@pagopa/ts-commons/-/ts-commons-11.0.0.tgz#e0384863e564e87815c43b2ab7999af682ee5fc1"
+  integrity sha512-KA+riHTKhNcv5UGP33+AIYBWx7bAwk3c5/eQAUFl16gDYeXrceQpJ/cq0fyOC0AnUmNuMPiHQOksgjjeioaLIQ==
+  dependencies:
+    abort-controller "^3.0.0"
+    agentkeepalive "^4.1.4"
+    applicationinsights "^1.8.10"
+    fp-ts "^2.11.0"
+    io-ts "^2.2.16"
+    jose "^4.11.2"
+    json-set-map "^1.1.2"
+    node-fetch "^2.6.0"
+    semver "^7.3.7"
+    validator "^13.7.0"
+
 "@pnpm/network.ca-file@^1.0.1":
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/@pnpm/network.ca-file/-/network.ca-file-1.0.2.tgz#2ab05e09c1af0cdf2fcf5035bea1484e222f7983"
