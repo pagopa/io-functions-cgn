@@ -13,6 +13,7 @@ import {
   retrieveOtpByFiscalCode,
   storeOtpAndRelatedFiscalCode
 } from "../redis";
+import { RedisClientFactory } from "../../utils/redis";
 const anOtpTtl = 10 as NonNegativeInteger;
 const anOtpCode = "1234567890A" as OtpCode;
 const setWithExpirationTaskMock = jest
@@ -39,17 +40,22 @@ const getTaskMock = jest
   .mockImplementation(() => TE.of(O.some(anOtpCode)));
 jest.spyOn(redis_storage, "getTask").mockImplementation(getTaskMock);
 
+const redisClientFactoryMock = {
+  getInstance: jest.fn()
+} as unknown as RedisClientFactory;
+
 describe("storeOtpAndRelatedFiscalCode", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
+  
   it("should return an error when otp store fails", async () => {
     setWithExpirationTaskMock.mockImplementationOnce(() =>
       TE.left(new Error("Cannot store OTP"))
     );
     await pipe(
       storeOtpAndRelatedFiscalCode(
-        {} as any,
+        redisClientFactoryMock,
         anOtpCode,
         anOtpPayload,
         anOtpTtl
@@ -68,7 +74,7 @@ describe("storeOtpAndRelatedFiscalCode", () => {
     );
     await pipe(
       storeOtpAndRelatedFiscalCode(
-        {} as any,
+        redisClientFactoryMock,
         anOtpCode,
         anOtpPayload,
         anOtpTtl
@@ -85,7 +91,7 @@ describe("storeOtpAndRelatedFiscalCode", () => {
     setWithExpirationTaskMock.mockImplementationOnce(() => TE.of(true));
     await pipe(
       storeOtpAndRelatedFiscalCode(
-        {} as any,
+        redisClientFactoryMock,
         anOtpCode,
         anOtpPayload,
         anOtpTtl
@@ -107,7 +113,7 @@ describe("retrieveOtpByFiscalCode", () => {
       TE.left(new Error("Cannot retrieve OTP"))
     );
     await pipe(
-      retrieveOtpByFiscalCode({} as any, aFiscalCode),
+      retrieveOtpByFiscalCode(redisClientFactoryMock, aFiscalCode),
       TE.bimap(
         _ => expect(_).toBeDefined(),
         () => fail()
@@ -118,7 +124,7 @@ describe("retrieveOtpByFiscalCode", () => {
   it("should return none if fiscalCode does not hit on Redis", async () => {
     getTaskMock.mockImplementationOnce(() => TE.of(O.none));
     await pipe(
-      retrieveOtpByFiscalCode({} as any, aFiscalCode),
+      retrieveOtpByFiscalCode(redisClientFactoryMock, aFiscalCode),
       TE.bimap(
         () => fail(),
         _ => expect(O.isNone(_)).toBeTruthy()
@@ -132,7 +138,7 @@ describe("retrieveOtpByFiscalCode", () => {
       TE.left(new Error("Cannot retrieve OTP code"))
     );
     await pipe(
-      retrieveOtpByFiscalCode({} as any, aFiscalCode),
+      retrieveOtpByFiscalCode(redisClientFactoryMock, aFiscalCode),
       TE.bimap(
         _ => expect(_).toBeDefined(),
         () => fail()
@@ -144,7 +150,7 @@ describe("retrieveOtpByFiscalCode", () => {
     getTaskMock.mockImplementationOnce(() => TE.of(O.some(anOtpCode)));
     getTaskMock.mockImplementationOnce(() => TE.of(O.none));
     await pipe(
-      retrieveOtpByFiscalCode({} as any, aFiscalCode),
+      retrieveOtpByFiscalCode(redisClientFactoryMock, aFiscalCode),
       TE.bimap(
         () => fail(),
         _ => expect(O.isNone(_)).toBeTruthy()
@@ -158,7 +164,7 @@ describe("retrieveOtpByFiscalCode", () => {
       TE.of(O.some("an invalid Payload"))
     );
     await pipe(
-      retrieveOtpByFiscalCode({} as any, aFiscalCode),
+      retrieveOtpByFiscalCode(redisClientFactoryMock, aFiscalCode),
       TE.bimap(
         _ => {
           expect(_).toBeDefined();
@@ -175,7 +181,7 @@ describe("retrieveOtpByFiscalCode", () => {
       TE.of(O.some(JSON.stringify({ ...anOtpPayload, ttl: "an invalid ttl" })))
     );
     await pipe(
-      retrieveOtpByFiscalCode({} as any, aFiscalCode),
+      retrieveOtpByFiscalCode(redisClientFactoryMock, aFiscalCode),
       TE.bimap(
         _ => expect(_).toBeDefined(),
         () => fail()
@@ -189,7 +195,7 @@ describe("retrieveOtpByFiscalCode", () => {
       TE.of(O.some(JSON.stringify({ ...anOtpPayload })))
     );
     await pipe(
-      retrieveOtpByFiscalCode({} as any, aFiscalCode),
+      retrieveOtpByFiscalCode(redisClientFactoryMock, aFiscalCode),
       TE.bimap(
         () => fail(),
 

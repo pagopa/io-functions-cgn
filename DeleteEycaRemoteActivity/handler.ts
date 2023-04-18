@@ -3,7 +3,7 @@ import { flow, pipe } from "fp-ts/lib/function";
 import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
 import { NonEmptyString } from "@pagopa/ts-commons/lib/strings";
-import { RedisClient } from "redis";
+import { RedisClientFactory } from "../utils/redis";
 import { EycaAPIClient } from "../clients/eyca";
 import { CcdbNumber } from "../generated/eyca-api/CcdbNumber";
 import { ActivityResult, success } from "../utils/activity";
@@ -18,12 +18,12 @@ export const ActivityInput = t.interface({
 export type ActivityInput = t.TypeOf<typeof ActivityInput>;
 
 export const getDeleteEycaRemoteActivityHandler = (
-  redisClient: RedisClient,
+  redisClientFactory: RedisClientFactory,
   eycaClient: ReturnType<EycaAPIClient>,
   eycaApiUsername: NonEmptyString,
   eycaApiPassword: NonEmptyString,
   logPrefix: string = "DeleteEycaRemoteActivityHandler"
-) => (context: Context, input: unknown): Promise<ActivityResult> => {
+) => async (context: Context, input: unknown): Promise<ActivityResult> => {
   const fail = trackFailure(context, logPrefix);
   return pipe(
     input,
@@ -36,7 +36,7 @@ export const getDeleteEycaRemoteActivityHandler = (
     ),
     TE.chain(_ =>
       deleteCard(
-        redisClient,
+        redisClientFactory,
         eycaClient,
         eycaApiUsername,
         eycaApiPassword,
