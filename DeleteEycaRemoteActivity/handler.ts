@@ -25,7 +25,6 @@ export const getDeleteEycaRemoteActivityHandler = (
   logPrefix: string = "DeleteEycaRemoteActivityHandler"
 ) => async (context: Context, input: unknown): Promise<ActivityResult> => {
   const fail = trackFailure(context, logPrefix);
-  const redisClient = await redisClientFactory.getInstance();
   return pipe(
     input,
     ActivityInput.decode,
@@ -37,7 +36,7 @@ export const getDeleteEycaRemoteActivityHandler = (
     ),
     TE.chain(_ =>
       deleteCard(
-        redisClient,
+        redisClientFactory,
         eycaClient,
         eycaApiUsername,
         eycaApiPassword,

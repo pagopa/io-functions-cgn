@@ -6,7 +6,7 @@ import * as E from "fp-ts/lib/Either";
 import { flow, pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
-import { RedisClient } from "../utils/redis";
+import { RedisClientFactory } from "../utils/redis";
 import { EycaAPIClient } from "../clients/eyca";
 import { Timestamp } from "../generated/definitions/Timestamp";
 import { CcdbNumber } from "../generated/eyca-api/CcdbNumber";
@@ -86,13 +86,13 @@ const ccdbLogin = (
  * is stored on Redis.
  */
 const retrieveCcdbSessionId = (
-  redisClient: RedisClient,
+  redisClientFactory: RedisClientFactory,
   eycaClient: ReturnType<EycaAPIClient>,
   username: NonEmptyString,
   password: NonEmptyString
 ): TE.TaskEither<Failure, NonEmptyString> =>
   pipe(
-    getTask(redisClient, CCDB_SESSION_ID_KEY),
+    getTask(redisClientFactory, CCDB_SESSION_ID_KEY),
     TE.mapLeft(toTransientFailure),
     TE.chain(
       O.fold(
@@ -102,7 +102,7 @@ const retrieveCcdbSessionId = (
             TE.chain(sessionId =>
               pipe(
                 setWithExpirationTask(
-                  redisClient,
+                  redisClientFactory,
                   CCDB_SESSION_ID_KEY,
                   sessionId,
                   CCDB_SESSION_ID_TTL
@@ -117,7 +117,7 @@ const retrieveCcdbSessionId = (
   );
 
 export const updateCard = (
-  redisClient: RedisClient,
+  redisClientFactory: RedisClientFactory,
   eycaClient: ReturnType<EycaAPIClient>,
   username: NonEmptyString,
   password: NonEmptyString,
@@ -125,7 +125,7 @@ export const updateCard = (
   cardDateExpiration: Timestamp
 ): TE.TaskEither<Failure, NonEmptyString> =>
   pipe(
-    retrieveCcdbSessionId(redisClient, eycaClient, username, password),
+    retrieveCcdbSessionId(redisClientFactory, eycaClient, username, password),
     TE.chain(sessionId =>
       pipe(
         TE.tryCatch(
@@ -175,13 +175,13 @@ export const updateCard = (
   );
 
 export const preIssueCard = (
-  redisClient: RedisClient,
+  redisClientFactory: RedisClientFactory,
   eycaClient: ReturnType<EycaAPIClient>,
   username: NonEmptyString,
   password: NonEmptyString
 ): TE.TaskEither<Failure, CcdbNumber> =>
   pipe(
-    retrieveCcdbSessionId(redisClient, eycaClient, username, password),
+    retrieveCcdbSessionId(redisClientFactory, eycaClient, username, password),
     TE.chain(sessionId =>
       pipe(
         TE.tryCatch(
@@ -236,14 +236,14 @@ export const preIssueCard = (
   );
 
 export const deleteCard = (
-  redisClient: RedisClient,
+  redisClientFactory: RedisClientFactory,
   eycaClient: ReturnType<EycaAPIClient>,
   username: NonEmptyString,
   password: NonEmptyString,
   ccdbNumber: CcdbNumber
 ): TE.TaskEither<Failure, NonEmptyString> =>
   pipe(
-    retrieveCcdbSessionId(redisClient, eycaClient, username, password),
+    retrieveCcdbSessionId(redisClientFactory, eycaClient, username, password),
     TE.chain(sessionId =>
       pipe(
         TE.tryCatch(

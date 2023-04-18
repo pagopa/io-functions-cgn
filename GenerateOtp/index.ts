@@ -38,18 +38,16 @@ secureExpressApp(app);
 
 const redisClientFactory = new RedisClientFactory(config);
 
+// Add express route
+app.post(
+  "/api/v1/cgn/otp/:fiscalcode",
+  GetGenerateOtp(userCgnModel, redisClientFactory, config.OTP_TTL_IN_SECONDS)
+);
+
+const azureFunctionHandler = createAzureFunctionHandler(app);
+
 // Binds the express app to an Azure Function handler
-const httpStart = async (context: Context): Promise<void> => {
-  const redisClient = await redisClientFactory.getInstance();
-
-  // Add express route
-  app.post(
-    "/api/v1/cgn/otp/:fiscalcode",
-    GetGenerateOtp(userCgnModel, redisClient, config.OTP_TTL_IN_SECONDS)
-  );
-
-  const azureFunctionHandler = createAzureFunctionHandler(app);
-
+const httpStart = (context: Context): void => {
   logger = context.log;
   setAppContext(app, context);
   azureFunctionHandler(context);

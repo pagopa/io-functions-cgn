@@ -8,27 +8,31 @@ import {
   getTask,
   setWithExpirationTask
 } from "../redis_storage";
+import { RedisClient, RedisClientFactory } from "../redis";
 
 const aRedisKey = "KEY";
 const aRedisValue = "VALUE";
 const aRedisDefaultExpiration = 10;
 
-const setExMock = jest
-  .fn()
-  .mockImplementation((_, __, ___) => Promise.resolve("OK"));
-const getMock = jest.fn().mockImplementation(_ => Promise.resolve(aRedisValue));
-const existsMock = jest.fn().mockImplementation(_ => Promise.resolve(1));
-const redisClientMock = {
+const setExMock = jest.fn().mockResolvedValue("OK");
+const getMock = jest.fn().mockResolvedValue(aRedisValue);
+const existsMock = jest.fn().mockResolvedValue(1);
+
+const redisClientMock = ({
   EXISTS: existsMock,
   GET: getMock,
   SETEX: setExMock
-};
+} as unknown) as RedisClient;
+
+const redisClientFactoryMock = {
+  getInstance: async () => redisClientMock
+} as RedisClientFactory;
 
 describe("setWithExpirationTask", () => {
   it("should return true if redis store key-value pair correctly", async () => {
     await pipe(
       setWithExpirationTask(
-        redisClientMock as any,
+        redisClientFactoryMock,
         aRedisKey,
         aRedisValue,
         aRedisDefaultExpiration
@@ -46,7 +50,7 @@ describe("setWithExpirationTask", () => {
     );
     await pipe(
       setWithExpirationTask(
-        redisClientMock as any,
+        redisClientFactoryMock,
         aRedisKey,
         aRedisValue,
         aRedisDefaultExpiration
@@ -64,7 +68,7 @@ describe("setWithExpirationTask", () => {
     );
     await pipe(
       setWithExpirationTask(
-        redisClientMock as any,
+        redisClientFactoryMock,
         aRedisKey,
         aRedisValue,
         aRedisDefaultExpiration
@@ -80,7 +84,7 @@ describe("setWithExpirationTask", () => {
 describe("getTask", () => {
   it("should return a value if redis get key-value pair correctly", async () => {
     await pipe(
-      getTask(redisClientMock as any, aRedisKey),
+      getTask(redisClientFactoryMock, aRedisKey),
       TE.bimap(
         () => fail(),
         O.fold(
@@ -94,7 +98,7 @@ describe("getTask", () => {
   it("should return none if no value was found for the provided key", async () => {
     getMock.mockImplementationOnce(_ => Promise.resolve(undefined));
     await pipe(
-      getTask(redisClientMock as any, aRedisKey),
+      getTask(redisClientFactoryMock, aRedisKey),
       TE.bimap(
         () => fail(),
         maybeResult => expect(O.isNone(maybeResult)).toBeTruthy()
@@ -107,7 +111,7 @@ describe("getTask", () => {
       Promise.reject(new Error("Cannot get value"))
     );
     await pipe(
-      getTask(redisClientMock as any, aRedisKey),
+      getTask(redisClientFactoryMock, aRedisKey),
       TE.bimap(
         _ => expect(_).toBeDefined(),
         () => fail()
@@ -119,7 +123,7 @@ describe("getTask", () => {
 describe("existsTask", () => {
   it("should return true if key exists in redis", async () => {
     await pipe(
-      existsKeyTask(redisClientMock as any, aRedisKey),
+      existsKeyTask(redisClientFactoryMock, aRedisKey),
       TE.bimap(
         () => fail(),
         exists => expect(exists).toBeTruthy()
@@ -130,7 +134,7 @@ describe("existsTask", () => {
   it("should return false if key does not exists in redis", async () => {
     existsMock.mockImplementationOnce(_ => Promise.resolve(0));
     await pipe(
-      existsKeyTask(redisClientMock as any, aRedisKey),
+      existsKeyTask(redisClientFactoryMock, aRedisKey),
       TE.bimap(
         () => fail(),
         exists => expect(exists).toBeFalsy()
@@ -143,7 +147,7 @@ describe("existsTask", () => {
       Promise.reject(new Error("Cannot recognize exists on redis"))
     );
     await pipe(
-      existsKeyTask(redisClientMock as any, aRedisKey),
+      existsKeyTask(redisClientFactoryMock, aRedisKey),
       TE.bimap(
         _ => expect(_).toBeDefined(),
         () => fail()

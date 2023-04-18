@@ -5,7 +5,7 @@ import { pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
 import * as t from "io-ts";
-import { RedisClient } from "../utils/redis";
+import { RedisClientFactory } from "../utils/redis";
 import { Otp } from "../generated/definitions/Otp";
 import { OtpCode } from "../generated/definitions/OtpCode";
 import { Timestamp } from "../generated/definitions/Timestamp";
@@ -24,21 +24,21 @@ const OTP_FISCAL_CODE_PREFIX = "OTP_FISCALCODE_";
 const OTP_PREFIX = "OTP_";
 
 export const storeOtpAndRelatedFiscalCode = (
-  redisClient: RedisClient,
+  redisClientFactory: RedisClientFactory,
   otpCode: OtpCode,
   payload: OtpPayload,
   otpTtl: NonNegativeInteger
 ): TE.TaskEither<Error, true> =>
   pipe(
     setWithExpirationTask(
-      redisClient,
+      redisClientFactory,
       `${OTP_PREFIX}${otpCode}`,
       JSON.stringify(payload),
       otpTtl
     ),
     TE.chain(() =>
       setWithExpirationTask(
-        redisClient,
+        redisClientFactory,
         `${OTP_FISCAL_CODE_PREFIX}${payload.fiscalCode}`,
         otpCode,
         otpTtl
@@ -47,17 +47,17 @@ export const storeOtpAndRelatedFiscalCode = (
   );
 
 export const retrieveOtpByFiscalCode = (
-  redisClient: RedisClient,
+  redisClientFactory: RedisClientFactory,
   fiscalCode: FiscalCode
 ): TE.TaskEither<Error, O.Option<Otp>> =>
   pipe(
-    getTask(redisClient, `${OTP_FISCAL_CODE_PREFIX}${fiscalCode}`),
+    getTask(redisClientFactory, `${OTP_FISCAL_CODE_PREFIX}${fiscalCode}`),
     TE.chain(
       O.fold(
         () => TE.of(O.none),
         otpCode =>
           pipe(
-            getTask(redisClient, `${OTP_PREFIX}${otpCode}`),
+            getTask(redisClientFactory, `${OTP_PREFIX}${otpCode}`),
             TE.chain(
               O.fold(
                 () => TE.of(O.none),

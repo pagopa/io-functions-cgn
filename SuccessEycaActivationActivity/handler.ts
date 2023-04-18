@@ -36,7 +36,6 @@ export const getSuccessEycaActivationActivityHandler = (
   logPrefix: string = "SuccessEycaActivationActivityHandler"
 ) => async (context: Context, input: unknown): Promise<ActivityResult> => {
   const fail = trackFailure(context, logPrefix);
-  const redisClient = await redisClientFactory.getInstance();
   return pipe(
     input,
     ActivityInput.decode,
@@ -67,7 +66,7 @@ export const getSuccessEycaActivationActivityHandler = (
         TE.chain(eycaCard =>
           pipe(
             preIssueCard(
-              redisClient,
+              redisClientFactory,
               eycaClient,
               eycaApiUsername,
               eycaApiPassword
@@ -88,7 +87,7 @@ export const getSuccessEycaActivationActivityHandler = (
     TE.chain(_ =>
       pipe(
         updateCard(
-          redisClient,
+          redisClientFactory,
           eycaClient,
           eycaApiUsername,
           eycaApiPassword,

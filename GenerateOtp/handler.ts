@@ -22,7 +22,7 @@ import * as E from "fp-ts/lib/Either";
 import { flow, pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
-import { RedisClient } from "../utils/redis";
+import { RedisClientFactory } from "../utils/redis";
 import { CardActivated } from "../generated/definitions/CardActivated";
 import { Otp } from "../generated/definitions/Otp";
 import { UserCgnModel } from "../models/user_cgn";
@@ -40,7 +40,7 @@ type IGetGenerateOtpHandler = (
 ) => Promise<ResponseTypes>;
 
 const generateNewOtpAndStore = (
-  redisClient: RedisClient,
+  redisClientFactory: RedisClientFactory,
   fiscalCode: FiscalCode,
   otpTtl: NonNegativeInteger
 ): TE.TaskEither<IResponseErrorInternal, Otp> =>
@@ -57,7 +57,7 @@ const generateNewOtpAndStore = (
     TE.chain(newOtp =>
       pipe(
         storeOtpAndRelatedFiscalCode(
-          redisClient,
+          redisClientFactory,
           newOtp.code,
           {
             expiresAt: newOtp.expires_at,
@@ -77,7 +77,7 @@ const generateNewOtpAndStore = (
 // eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function GetGenerateOtpHandler(
   userCgnModel: UserCgnModel,
-  redisClient: RedisClient,
+  redisClientFactory: RedisClientFactory,
   otpTtl: NonNegativeInteger
 ): IGetGenerateOtpHandler {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -96,7 +96,7 @@ export function GetGenerateOtpHandler(
       ),
       TE.chainW(() =>
         pipe(
-          retrieveOtpByFiscalCode(redisClient, fiscalCode),
+          retrieveOtpByFiscalCode(redisClientFactory, fiscalCode),
           TE.mapLeft(e =>
             ResponseErrorInternal(
               `Cannot retrieve OTP from fiscalCode| ${e.message}`
@@ -105,7 +105,12 @@ export function GetGenerateOtpHandler(
           TE.chain(
             flow(
               O.fold(
-                () => generateNewOtpAndStore(redisClient, fiscalCode, otpTtl),
+                () =>
+                  generateNewOtpAndStore(
+                    redisClientFactory,
+                    fiscalCode,
+                    otpTtl
+                  ),
                 otp => TE.of(otp)
               )
             )
@@ -120,10 +125,14 @@ export function GetGenerateOtpHandler(
 // eslint-disable-next-line prefer-arrow/prefer-arrow-functions
 export function GetGenerateOtp(
   userCgnModel: UserCgnModel,
-  redisClient: RedisClient,
+  redisClientFactory: RedisClientFactory,
   otpTtl: NonNegativeInteger
 ): express.RequestHandler {
-  const handler = GetGenerateOtpHandler(userCgnModel, redisClient, otpTtl);
+  const handler = GetGenerateOtpHandler(
+    userCgnModel,
+    redisClientFactory,
+    otpTtl
+  );
 
   const middlewaresWrap = withRequestMiddlewares(
     ContextMiddleware(),

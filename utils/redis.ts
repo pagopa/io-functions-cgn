@@ -62,7 +62,7 @@ export class RedisClientFactory {
         port: redisPort,
         tls: useTls
       },
-      url: redisUrl
+      url: `redis://${redisUrl}`
     });
     await redisClientConnection.connect();
     return redisClientConnection;
@@ -85,7 +85,7 @@ export class RedisClientFactory {
       },
       rootNodes: [
         {
-          url: `${redisUrl}:${redisPort}`
+          url: `redis://${redisUrl}:${redisPort}`
         }
       ],
       useReplicas: true
