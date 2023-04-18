@@ -10,7 +10,7 @@ import { setAppContext } from "@pagopa/io-functions-commons/dist/src/utils/middl
 import { USER_CGN_COLLECTION_NAME, UserCgnModel } from "../models/user_cgn";
 import { getConfigOrThrow } from "../utils/config";
 import { cosmosdbClient } from "../utils/cosmosdb";
-import { REDIS_CLIENT } from "../utils/redis";
+import { RedisClientFactory } from "../utils/redis";
 import { GetGenerateOtp } from "./handler";
 
 //
@@ -36,20 +36,21 @@ winston.add(contextTransport);
 const app = express();
 secureExpressApp(app);
 
+const redisClientFactory = new RedisClientFactory(config);
+
 // Add express route
 app.post(
   "/api/v1/cgn/otp/:fiscalcode",
-  GetGenerateOtp(userCgnModel, REDIS_CLIENT, config.OTP_TTL_IN_SECONDS)
+  GetGenerateOtp(userCgnModel, redisClientFactory, config.OTP_TTL_IN_SECONDS)
 );
 
 const azureFunctionHandler = createAzureFunctionHandler(app);
 
 // Binds the express app to an Azure Function handler
-// eslint-disable-next-line prefer-arrow/prefer-arrow-functions
-function httpStart(context: Context): void {
+const httpStart = (context: Context): void => {
   logger = context.log;
   setAppContext(app, context);
   azureFunctionHandler(context);
-}
+};
 
 export default httpStart;

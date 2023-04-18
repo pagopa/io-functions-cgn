@@ -1,69 +1,96 @@
+/* eslint-disable no-invalid-this */
 import { identity, pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/lib/Option";
 import * as redis from "redis";
-import RedisClustr = require("redis-clustr");
-import { getConfigOrThrow } from "./config";
-const config = getConfigOrThrow();
+import { IConfig } from "./config";
 
-const createSimpleRedisClient = (
-  redisUrl: string,
-  password?: string,
-  port?: string,
-  useTls: boolean = true
-): redis.RedisClient => {
-  const DEFAULT_REDIS_PORT = "6379";
+const DEFAULT_REDIS_PORT = "6379";
 
-  const redisPort: number = parseInt(port || DEFAULT_REDIS_PORT, 10);
-  return redis.createClient({
-    auth_pass: password,
-    host: redisUrl,
-    port: redisPort,
-    tls: useTls ? { servername: redisUrl } : undefined
-  });
-};
+export type RedisClient = redis.RedisClientType | redis.RedisClusterType;
 
-const createClusterRedisClient = (
-  redisUrl: string,
-  password?: string,
-  port?: string
-): redis.RedisClient => {
-  const DEFAULT_REDIS_PORT = "6379";
+export class RedisClientFactory {
+  protected readonly config: IConfig;
+  // eslint-disable-next-line functional/prefer-readonly-type
+  protected redisClient: RedisClient | undefined;
 
-  const redisPort: number = parseInt(port || DEFAULT_REDIS_PORT, 10);
-  return new RedisClustr({
-    redisOptions: {
-      auth_pass: password,
-      tls: {
-        servername: redisUrl
-      }
-    },
-    servers: [
-      {
-        host: redisUrl,
-        port: redisPort
-      }
-    ]
-  }) as redis.RedisClient; // Casting RedisClustr with missing typings to RedisClient (same usage).
-};
+  constructor(config: IConfig) {
+    this.config = config;
+  }
 
-export const REDIS_CLIENT = pipe(
-  config.isProduction,
-  O.fromPredicate<boolean>(identity),
-  O.chainNullableK(_ => config.REDIS_CLUSTER_ENABLED),
-  O.chain(O.fromPredicate(identity)),
-  O.map(() =>
-    createClusterRedisClient(
-      config.REDIS_URL,
-      config.REDIS_PASSWORD,
-      config.REDIS_PORT
-    )
-  ),
-  O.getOrElse(() =>
-    createSimpleRedisClient(
-      config.REDIS_URL,
-      config.REDIS_PASSWORD,
-      config.REDIS_PORT,
-      config.REDIS_TLS_ENABLED
-    )
-  )
-);
+  public readonly getInstance = async (): Promise<RedisClient> => {
+    if (!this.redisClient) {
+      // eslint-disable-next-line functional/immutable-data
+      this.redisClient = await pipe(
+        this.config.isProduction,
+        O.fromPredicate(identity),
+        O.chainNullableK(_ => this.config.REDIS_CLUSTER_ENABLED),
+        O.chain(O.fromPredicate(identity)),
+        O.map(() =>
+          this.createClusterRedisClient(
+            this.config.REDIS_URL,
+            this.config.REDIS_PASSWORD,
+            this.config.REDIS_PORT
+          )
+        ),
+        O.getOrElse(() =>
+          this.createSimpleRedisClient(
+            this.config.REDIS_URL,
+            this.config.REDIS_PASSWORD,
+            this.config.REDIS_PORT,
+            this.config.REDIS_TLS_ENABLED
+          )
+        )
+      );
+    }
+    return this.redisClient;
+  };
+
+  protected readonly createSimpleRedisClient = async (
+    redisUrl: string,
+    password?: string,
+    port?: string,
+    useTls: boolean = true
+  ): Promise<RedisClient> => {
+    const redisPort: number = parseInt(port || DEFAULT_REDIS_PORT, 10);
+    const redisClientConnection = redis.createClient<
+      redis.RedisDefaultModules,
+      Record<string, never>,
+      Record<string, never>
+    >({
+      password,
+      socket: {
+        port: redisPort,
+        tls: useTls
+      },
+      url: `redis://${redisUrl}`
+    });
+    await redisClientConnection.connect();
+    return redisClientConnection;
+  };
+
+  protected readonly createClusterRedisClient = async (
+    redisUrl: string,
+    password?: string,
+    port?: string
+  ): Promise<RedisClient> => {
+    const redisPort: number = parseInt(port || DEFAULT_REDIS_PORT, 10);
+    const redisClientConnection = redis.createCluster<
+      redis.RedisDefaultModules,
+      Record<string, never>,
+      Record<string, never>
+    >({
+      defaults: {
+        legacyMode: true,
+        password
+      },
+      rootNodes: [
+        {
+          url: `redis://${redisUrl}:${redisPort}`
+        }
+      ],
+      useReplicas: true
+    });
+    await redisClientConnection.connect();
+    return redisClientConnection;
+  };
+}

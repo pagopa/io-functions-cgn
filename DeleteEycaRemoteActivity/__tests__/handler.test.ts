@@ -8,6 +8,7 @@ import { ActivityInput, getDeleteEycaRemoteActivityHandler } from "../handler";
 import { pipe } from "fp-ts/lib/function";
 import { toError } from "fp-ts/lib/Either";
 import { testFail } from "../../__mocks__/mock";
+import { RedisClientFactory } from "../../utils/redis";
 
 const anActivityInput: ActivityInput = {
   cardNumber: "A234-B333-C222-D444" as CcdbNumber
@@ -22,13 +23,18 @@ jest.spyOn(eycaUtils, "deleteCard").mockImplementation(deleteCardMock);
 
 const anEycaUsername = "EYCA_USERNAME" as NonEmptyString;
 const anEycaPassword = "EYCA_PASSWORD" as NonEmptyString;
+
+const redisClientFactoryMock = {
+  getInstance: jest.fn()
+} as unknown as RedisClientFactory;
+
 describe("DeleteEycaRemoteActivity", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
   it("should return failure caused by wrong input", async () => {
     const deleteEycaRemoteActivityHandler = getDeleteEycaRemoteActivityHandler(
-      {} as any,
+      redisClientFactoryMock,
       {} as any,
       anEycaUsername,
       anEycaPassword
@@ -45,7 +51,7 @@ describe("DeleteEycaRemoteActivity", () => {
       TE.left({ kind: "TRANSIENT", reason: "Cannot delete card" })
     );
     const deleteEycaRemoteActivityHandler = getDeleteEycaRemoteActivityHandler(
-      {} as any,
+      redisClientFactoryMock,
       {} as any,
       anEycaUsername,
       anEycaPassword
@@ -67,7 +73,7 @@ describe("DeleteEycaRemoteActivity", () => {
       TE.left({ kind: "PERMANENT", reason: "Cannot delete card" })
     );
     const deleteEycaRemoteActivityHandler = getDeleteEycaRemoteActivityHandler(
-      {} as any,
+      redisClientFactoryMock,
       {} as any,
       anEycaUsername,
       anEycaPassword
@@ -88,7 +94,7 @@ describe("DeleteEycaRemoteActivity", () => {
 
   it("should return success if a delete of Eyca Card succeded", async () => {
     const deleteEycaRemoteActivityHandler = getDeleteEycaRemoteActivityHandler(
-      {} as any,
+      redisClientFactoryMock,
       {} as any,
       anEycaUsername,
       anEycaPassword

@@ -21,6 +21,7 @@ import {
 } from "../handler";
 import { toError } from "fp-ts/lib/Either";
 import { pipe } from "fp-ts/lib/function";
+import { RedisClientFactory } from "../../utils/redis";
 
 const aFiscalCode = "RODFDS92S10H501T" as FiscalCode;
 const aUserEycaCardNumber = "X321-Y321-Z321-W321" as CcdbNumber;
@@ -76,6 +77,10 @@ const anActivityInput: ActivityInput = {
   fiscalCode: aFiscalCode
 };
 
+const redisClientFactoryMock = {
+  getInstance: jest.fn()
+} as unknown as RedisClientFactory;
+
 describe("SuccessEycaActivationActivity", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -83,7 +88,7 @@ describe("SuccessEycaActivationActivity", () => {
 
   it("should return success if card activation succeded", async () => {
     const handler = getSuccessEycaActivationActivityHandler(
-      {} as any,
+      redisClientFactoryMock,
       {} as any,
       anEycaApiUsername,
       anEycaApiPassword,
@@ -98,7 +103,7 @@ describe("SuccessEycaActivationActivity", () => {
       TE.left(toCosmosErrorResponse(new Error("query error")))
     );
     const handler = getSuccessEycaActivationActivityHandler(
-      {} as any,
+      redisClientFactoryMock,
       {} as any,
       anEycaApiUsername,
       anEycaApiPassword,
@@ -118,7 +123,7 @@ describe("SuccessEycaActivationActivity", () => {
   it("should return failure if no UserEycaCard was found", async () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(O.none));
     const handler = getSuccessEycaActivationActivityHandler(
-      {} as any,
+      redisClientFactoryMock,
       {} as any,
       anEycaApiUsername,
       anEycaApiPassword,
@@ -138,7 +143,7 @@ describe("SuccessEycaActivationActivity", () => {
       TE.left({ kind: "TRANSIENT", reason: "Error on PreIssueCard" })
     );
     const handler = getSuccessEycaActivationActivityHandler(
-      {} as any,
+      redisClientFactoryMock,
       {} as any,
       anEycaApiUsername,
       anEycaApiPassword,
@@ -158,7 +163,7 @@ describe("SuccessEycaActivationActivity", () => {
       TE.left({ kind: "TRANSIENT", reason: "Error on UpdateCard" })
     );
     const handler = getSuccessEycaActivationActivityHandler(
-      {} as any,
+      redisClientFactoryMock,
       {} as any,
       anEycaApiUsername,
       anEycaApiPassword,
@@ -176,7 +181,7 @@ describe("SuccessEycaActivationActivity", () => {
   it("should throw if EYCA card update fails", async () => {
     updateMock.mockImplementationOnce(() => TE.left("Cannot update EYCA Card"));
     const handler = getSuccessEycaActivationActivityHandler(
-      {} as any,
+      redisClientFactoryMock,
       {} as any,
       anEycaApiUsername,
       anEycaApiPassword,

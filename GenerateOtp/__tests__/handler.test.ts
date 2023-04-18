@@ -20,6 +20,7 @@ import { UserCgn } from "../../models/user_cgn";
 import * as cgnCode from "../../utils/cgnCode";
 import { GetGenerateOtpHandler } from "../handler";
 import * as redis_util from "../redis";
+import { RedisClientFactory } from "../../utils/redis";
 
 const aFiscalCode = "RODFDS82S10H501T" as FiscalCode;
 const aUserCgnId = "AN_ID" as NonEmptyString;
@@ -50,12 +51,15 @@ const anOtp: Otp = {
 const storeOtpAndRelatedFiscalCodeMock = jest
   .fn()
   .mockImplementation(() => TE.of(true));
+
 const retrieveOtpByFiscalCodeMock = jest
   .fn()
   .mockImplementation(() => TE.of(O.none));
+
 jest
   .spyOn(redis_util, "retrieveOtpByFiscalCode")
   .mockImplementation(retrieveOtpByFiscalCodeMock);
+
 jest
   .spyOn(redis_util, "storeOtpAndRelatedFiscalCode")
   .mockImplementation(storeOtpAndRelatedFiscalCodeMock);
@@ -65,6 +69,7 @@ const findLastVersionByModelIdMock = jest
   .mockImplementation(() =>
     TE.of(O.some({ ...aUserCgn, card: anActivatedCgn }))
   );
+
 const userCgnModelMock = {
   findLastVersionByModelId: findLastVersionByModelIdMock
 };
@@ -77,7 +82,7 @@ jest.spyOn(cgnCode, "generateOtpCode").mockImplementation(generateOtpCodeMock);
 const successImpl = async () => {
   const handler = GetGenerateOtpHandler(
     userCgnModelMock as any,
-    {} as any,
+    redisClientFactoryMock,
     aDefaultOtpTtl
   );
   const response = await handler({} as any, aFiscalCode);
@@ -88,6 +93,11 @@ const successImpl = async () => {
     });
   }
 };
+
+const redisClientFactoryMock = {
+  getInstance: jest.fn()
+} as unknown as RedisClientFactory;
+
 describe("GetGenerateOtpHandler", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -98,7 +108,7 @@ describe("GetGenerateOtpHandler", () => {
     );
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
-      {} as any,
+      redisClientFactoryMock,
       aDefaultOtpTtl
     );
     const response = await handler({} as any, aFiscalCode);
@@ -111,7 +121,7 @@ describe("GetGenerateOtpHandler", () => {
     );
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
-      {} as any,
+      redisClientFactoryMock,
       aDefaultOtpTtl
     );
     const response = await handler({} as any, aFiscalCode);
@@ -124,7 +134,7 @@ describe("GetGenerateOtpHandler", () => {
     );
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
-      {} as any,
+      redisClientFactoryMock,
       aDefaultOtpTtl
     );
     const response = await handler({} as any, aFiscalCode);
@@ -137,7 +147,7 @@ describe("GetGenerateOtpHandler", () => {
     );
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
-      {} as any,
+      redisClientFactoryMock,
       aDefaultOtpTtl
     );
     const response = await handler({} as any, aFiscalCode);
@@ -148,7 +158,7 @@ describe("GetGenerateOtpHandler", () => {
     findLastVersionByModelIdMock.mockImplementationOnce(() => TE.of(O.none));
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
-      {} as any,
+      redisClientFactoryMock,
       aDefaultOtpTtl
     );
     const response = await handler({} as any, aFiscalCode);
@@ -161,7 +171,7 @@ describe("GetGenerateOtpHandler", () => {
     );
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
-      {} as any,
+      redisClientFactoryMock,
       aDefaultOtpTtl
     );
     const response = await handler({} as any, aFiscalCode);
@@ -174,7 +184,7 @@ describe("GetGenerateOtpHandler", () => {
     );
     const handler = GetGenerateOtpHandler(
       userCgnModelMock as any,
-      {} as any,
+      redisClientFactoryMock,
       aDefaultOtpTtl
     );
     const response = await handler({} as any, aFiscalCode);
