@@ -30,6 +30,7 @@ const httpApiFetch = agent.getHttpFetch(process.env);
 
 // a fetch that can be aborted and that gets cancelled after fetchTimeoutMs
 const abortableFetch = AbortableFetch(httpApiFetch);
+
 const timeoutFetch = toFetch(
   setFetchTimeout(SERVICES_REQUEST_TIMEOUT_MS as Millisecond, abortableFetch)
 );

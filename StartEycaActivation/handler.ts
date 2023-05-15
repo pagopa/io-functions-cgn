@@ -196,7 +196,7 @@ export function StartEycaActivationHandler(
                 )
         )
       ),
-      TE.chain(() =>
+      TE.chainW(() =>
         // now we check if exists another update process for the same EYCA Card
         pipe(
           checkUpdateCardIsRunning(

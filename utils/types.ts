@@ -5,7 +5,8 @@
  *
  * @returns the keys of the provided object
  */
-export const keys = <T>(o: T): ReadonlyArray<keyof T> =>
+// eslint-disable-next-line
+export const keys = <T extends Object>(o: T): ReadonlyArray<keyof T> =>
   (Object.keys(o) as unknown) as ReadonlyArray<keyof T>;
 
 /**

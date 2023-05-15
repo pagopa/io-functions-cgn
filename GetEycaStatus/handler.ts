@@ -80,8 +80,7 @@ export function GetEycaStatusHandler(
               "User's EYCA Card status not found"
             )
           ),
-          TE.chain(card => TE.of(card)),
-          TE.orElse(notFoundError =>
+          TE.orElseW(notFoundError =>
             pipe(
               userCgnModel.findLastVersionByModelId([fiscalCode]),
               TE.mapLeft(() =>
