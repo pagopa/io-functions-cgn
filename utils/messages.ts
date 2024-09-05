@@ -36,7 +36,7 @@ en:
 ---
 Buone notizie! La tua Carta Giovani Nazionale è attiva. Vai alla sezione Portafoglio per visualizzarla e iniziare a usarla.
 
-Ricorda che solo tu puoi accedere alle proposte degli operatori.
+Ricorda che solo tu puoi accedere alle opportunità messe a disposizione dai partner.
 
 La Carta Giovani Nazionale sarà valida da oggi fino al compimento dei 36 anni.
 
