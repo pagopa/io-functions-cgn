@@ -27,18 +27,20 @@ Non sarà più possibile utilizzare la carta né nei punti fisici né online.`
       markdown: `---
 it:
     cta_1: 
-        text: "Visualizza la Carta"
+        text: "Usa la Carta"
         action: "ioit://CGN_DETAILS"
 en:
     cta_1: 
-        text: "View Card"
+        text: "Use Card"
         action: "ioit://CGN_DETAILS"
 ---
-Buone notizie! **La tua Carta Giovani Nazionale è attiva** e la potrai trovare all’interno della sezione Portafoglio.
+Buone notizie! La tua Carta Giovani Nazionale è attiva. Vai alla sezione Portafoglio per visualizzarla e iniziare a usarla.
 
-Ti ricordiamo che solo tu puoi usufruire degli sconti presentando la Carta presso gli esercenti fisici aderenti, oppure inserendo i codici nell’apposito campo presso gli esercenti aderenti online.
+Ricorda che solo tu puoi accedere alle opportunità messe a disposizione dai partner.
 
-La Carta Giovani Nazionale sarà valida da oggi fino al compimento dei 36 anni. Inizia subito a usarla!
+La Carta Giovani Nazionale sarà valida da oggi fino al compimento dei 36 anni.
+
+Inizia subito a usarla!
 `
     } as MessageContent),
   CardExpired: (): MessageContent =>
@@ -87,9 +89,8 @@ en:
         text: "Retry"
         action: "ioit://CTA_START_CGN"
 ---
-Purtroppo, non siamo riusciti a emettere la tua Carta.
-Ti chiediamo di riprovare.
+Ci dispiace, ma per un errore nella lavorazione della tua richiesta, non è stato possibile attivare Carta Giovani Nazionale.
 
-Ci scusiamo per il disagio.
+Prova ad inserire una nuova richiesta.
 `
   } as MessageContent);
